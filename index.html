@@ -2472,7 +2472,11 @@ function createNodeEl(n) {
   div.style.top = n.y + 'px';
   div.style.width = n.w + 'px';
   div.style.minHeight = n.h + 'px';
-  if (n.color) div.style.setProperty('background', n.color + '33');
+  if (n.color) {
+    const op = n.colorOpacity !== undefined ? n.colorOpacity : 51;
+    const hex = op.toString(16).padStart(2,'0');
+    div.style.setProperty('background', n.color + hex);
+  }
   if (selectedNode === n.id) div.classList.add('selected');
 
   const inner = document.createElement('div');
@@ -3109,12 +3113,31 @@ function renderPropsPanel() {
     const colorInline = document.createElement('div'); colorInline.className='prop-row-inline';
     const colorInp = document.createElement('input'); colorInp.type='color'; colorInp.className='prop-input';
     colorInp.value = n.color || getComputedStyle(document.documentElement).getPropertyValue('--node-internal-border').trim() || '#c89000';
-    colorInp.addEventListener('input', () => { pushUndoDebounced(); n.color = colorInp.value; renderNodes(); });
+    colorInp.addEventListener('input', () => { pushUndoDebounced(); n.color = colorInp.value; updateNodeBg(); });
     const colorReset = document.createElement('button'); colorReset.className='prop-btn'; colorReset.textContent='Reset'; colorReset.style.marginBottom='0';
-    colorReset.addEventListener('click', () => { pushUndo(); n.color=''; renderNodes(); });
+    colorReset.addEventListener('click', () => { pushUndo(); n.color=''; n.colorOpacity=undefined; opacitySlider.value=51; renderNodes(); });
     colorInline.appendChild(colorInp); colorInline.appendChild(colorReset);
     colorRow.appendChild(colorInline);
     body.appendChild(colorRow);
+    // Opacity slider
+    const opRow = document.createElement('div'); opRow.className='prop-row';
+    const opLbl = document.createElement('div'); opLbl.className='prop-label';
+    const currentOp = n.colorOpacity !== undefined ? n.colorOpacity : 51;
+    opLbl.textContent = 'Fill opacity — ' + Math.round(currentOp/255*100) + '%';
+    opRow.appendChild(opLbl);
+    const opSlider = document.createElement('input'); opSlider.type='range'; opSlider.className='prop-input';
+    opSlider.min=0; opSlider.max=255; opSlider.value=currentOp;
+    const opacitySlider = opSlider;
+    function updateNodeBg() {
+      pushUndoDebounced();
+      n.color = colorInp.value;
+      n.colorOpacity = parseInt(opSlider.value);
+      opLbl.textContent = 'Fill opacity — ' + Math.round(n.colorOpacity/255*100) + '%';
+      renderNodes();
+    }
+    opSlider.addEventListener('input', updateNodeBg);
+    opRow.appendChild(opSlider);
+    body.appendChild(opRow);
 
     // Functions — compact summary + open modal button
     if (n.type !== 'boundary') {
@@ -4326,7 +4349,7 @@ function buildExportHTML(opts) {
       default: return{x:n.x+n.w/2,y:n.y+h/2};}
   }
 
-  let svgArrows = `<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;overflow:visible;pointer-events:none;" width="${W}" height="${H}"><defs id="edefs"></defs>`;
+  let svgArrows = `<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;overflow:visible;pointer-events:none;z-index:2;" width="${W}" height="${H}"><defs id="edefs"></defs>`;
 
   // Port stagger — mirrors canvas renderArrows logic exactly
   const ePortGroups = {};
@@ -4429,7 +4452,9 @@ function buildExportHTML(opts) {
   const sortedN = [...nodes].sort((a,b)=>(a.type==='boundary'?-1:1)-(b.type==='boundary'?-1:1));
   sortedN.forEach(n => {
     const hasDetail = !!nodeDetailData[n.id];
-    const colorStyle = n.color ? `background:${n.color}33;` : '';
+    const op = n.colorOpacity !== undefined ? n.colorOpacity : 51;
+    const opHex = op.toString(16).padStart(2,'0');
+    const colorStyle = n.color ? `background:${n.color}${opHex};` : '';
     const detailBtn = hasDetail && n.type !== 'boundary'
       ? `<button class="detail-btn" onclick="openDetail('${n.id}')">i</button>`
       : '';
@@ -4494,10 +4519,10 @@ body{background:var(--bg);font-family:'Inter',sans-serif;display:flex;flex-direc
 /* ── Grid ── */
 .grid-bg{position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:40px 40px;opacity:0.22;pointer-events:none;z-index:0;}
 /* ── Nodes — exact replica of builder CSS ── */
-.node{position:absolute;border-radius:var(--radius);cursor:default;min-width:120px;}
+.node{position:absolute;border-radius:var(--radius);cursor:default;min-width:120px;z-index:3;}
 .node.internal{background:var(--node-internal);border:1px solid #e8e0c8;border-left:3px solid var(--node-internal-border);box-shadow:var(--shadow);}
 .node.external{background:var(--node-external);border:1px solid #c8d8e8;border-left:3px dashed var(--node-external-border);box-shadow:var(--shadow);}
-.node.boundary{background:transparent;border:1px dashed #cccccc;box-shadow:none;}
+.node.boundary{background:transparent;border:1px dashed #cccccc;box-shadow:none;z-index:1;}
 .node-inner{padding:12px 14px;}
 .node.boundary .node-inner{padding:10px 14px;}
 .node-tag{font-family:'IBM Plex Mono',monospace;font-size:8.5px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:5px;}
@@ -4587,8 +4612,8 @@ ${opts.showGrid ? '<div class="grid-bg"></div>' : ''}
 <div id="viewport">
   <div id="canvas-root">
     <div class="diagram">
-      ${svgArrows}
       ${nodeHtml}
+      ${svgArrows}
     </div>
   </div>
 </div>
