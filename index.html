@@ -30,6 +30,12 @@
     --node-external-border: #6c8ead;
     --arrow-color: #ff8c42;
     --label-bg: #f5f5f5cc;
+    --io-input-bg: #e8f2fa;
+    --io-input-border: #a8c8e8;
+    --io-input-text: #2a5880;
+    --io-output-bg: #fff4e0;
+    --io-output-border: #e8c870;
+    --io-output-text: #804800;
     --shadow: 0 1px 4px rgba(0,0,0,0.08), 0 4px 16px rgba(0,0,0,0.06);
     --radius: 6px;
   }
@@ -58,7 +64,7 @@
     border-top: 2px solid var(--accent);
     padding: 0 14px;
     flex-shrink: 0;
-    z-index: 100;
+    z-index: 600;
     box-shadow: 0 1px 3px rgba(0,0,0,0.06);
   }
   #topbar .logo {
@@ -130,6 +136,8 @@
     overflow-y: auto;
     flex-shrink: 0;
     transition: width 0.2s;
+    z-index: 2;
+    position: relative;
   }
   #sidebar.collapsed { width: 0; min-width: 0; border: none; overflow: hidden; }
   .sb-section { border-bottom: 1px solid var(--border); }
@@ -197,7 +205,39 @@
   }
   .prop-input:focus { border-color: var(--accent); }
   .prop-input[type="color"] { height: 30px; padding: 2px 4px; cursor: pointer; }
-  .prop-input[type="range"] { padding: 4px 0; accent-color: var(--accent); background: transparent; appearance: auto; }
+  .prop-input[type="range"] {
+    padding: 0; margin: 4px 0;
+    -webkit-appearance: none; appearance: none;
+    background: transparent; border: none; border-radius: 0; outline: none;
+    width: 100%; height: 18px; cursor: pointer;
+  }
+  .prop-input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px; border-radius: 2px;
+    background: linear-gradient(to right, var(--accent) 0%, var(--accent) var(--slider-pct, 20%), var(--border2) var(--slider-pct, 20%), var(--border2) 100%);
+  }
+  .prop-input[type="range"]:hover::-webkit-slider-runnable-track {
+    background: linear-gradient(to right, var(--accent3) 0%, var(--accent3) var(--slider-pct, 20%), var(--border2) var(--slider-pct, 20%), var(--border2) 100%);
+  }
+  .prop-input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 13px; height: 13px; border-radius: 50%; margin-top: -4.5px;
+    background: var(--accent); border: none; outline: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+    transition: background 0.12s, transform 0.12s;
+  }
+  .prop-input[type="range"]:hover::-webkit-slider-thumb { background: var(--accent3); transform: scale(1.15); }
+  .prop-input[type="range"]::-moz-range-track {
+    height: 4px; border-radius: 2px; background: var(--border2); border: none;
+  }
+  .prop-input[type="range"]::-moz-range-progress {
+    height: 4px; border-radius: 2px; background: var(--accent);
+  }
+  .prop-input[type="range"]:hover::-moz-range-progress { background: var(--accent3); }
+  .prop-input[type="range"]::-moz-range-thumb {
+    width: 13px; height: 13px; border-radius: 50%; border: none; outline: none;
+    background: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,0.18);
+  }
+  .prop-input[type="range"]:hover::-moz-range-thumb { background: var(--accent3); }
   .prop-row-inline { display: flex; gap: 6px; align-items: center; }
   .prop-row-inline .prop-input { flex: 1; }
   .prop-select {
@@ -362,8 +402,8 @@
     padding: 1px 6px; border-radius: 10px; font-size: 8.5px;
     font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.02em;
   }
-  .node-io-pill.input  { background: #e8f2fa; border: 1px solid #a8c8e8; color: #2a5880; }
-  .node-io-pill.output { background: #fff4e0; border: 1px solid #e8c870; color: #804800; }
+  .node-io-pill.input  { background: var(--io-input-bg); border: 1px solid var(--io-input-border); color: var(--io-input-text); }
+  .node-io-pill.output { background: var(--io-output-bg); border: 1px solid var(--io-output-border); color: var(--io-output-text); }
   /* Sidebar functions editor */
   .fn-editor-list { margin-bottom: 6px; }
   .fn-editor-row {
@@ -534,6 +574,113 @@
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
 
+
+  /* ── Appearance slide-out panel ── */
+  #appearance-panel {
+    position: fixed;
+    bottom: 24px;
+    top: auto;
+    height: calc((100vh - 70px) / 2);
+    left: 268px;
+    width: 220px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    border-left: 1px solid var(--border2);
+    display: flex; flex-direction: column;
+    z-index: 1;
+    transform: translateX(-100%) translateX(-268px);
+    transition: transform 0.35s cubic-bezier(0.16,1,0.3,1);
+    box-shadow: 4px 0 20px rgba(0,0,0,0.08);
+  }
+  #appearance-panel.open {
+    transform: translateX(0);
+  }
+  #ap-header {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px 9px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+  #ap-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    color: var(--text3); flex: 1;
+  }
+  #ap-close {
+    width: 22px; height: 22px; border-radius: 4px;
+    background: transparent; border: 1px solid transparent;
+    color: var(--text3); cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.12s;
+  }
+  #ap-close:hover { background: var(--surface2); border-color: var(--border); color: var(--text); }
+  #ap-body { flex: 1; overflow-y: auto; padding: 10px 12px; }
+  .ap-section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 8.5px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--text3); margin-bottom: 8px; margin-top: 12px;
+  }
+  .ap-section-label:first-child { margin-top: 0; }
+  .ap-row {
+    display: flex; align-items: center; gap: 6px;
+    margin-bottom: 6px;
+  }
+  .ap-row-label {
+    font-family: 'Inter', sans-serif;
+    font-size: 10px; color: var(--text2);
+    flex: 1; min-width: 0;
+  }
+  .ap-color {
+    width: 28px; height: 22px;
+    border-radius: 4px; border: 1px solid var(--border);
+    padding: 1px 2px; cursor: pointer;
+    background: var(--surface2);
+    flex-shrink: 0;
+  }
+  .ap-reset {
+    width: 22px; height: 22px; border-radius: 4px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text3); cursor: pointer; font-size: 11px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.12s; flex-shrink: 0; padding: 0;
+    font-family: 'Inter', sans-serif;
+  }
+  .ap-reset:hover { border-color: var(--border2); color: var(--text); background: var(--surface2); }
+  /* Button in props panel to open content style panel */
+  .prop-btn.accent.ap-open-btn.active { background: #fff4ec; border-color: var(--accent); color: var(--accent3); }
+  .prop-btn.accent.brush-btn.active { background: #fff4ec; border-color: var(--accent); color: var(--accent3); }
+
+  /* ── Style brush ── */
+  #style-brush-banner {
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    display: none; align-items: center; gap: 8px;
+    padding: 7px 14px 7px 10px;
+    background: var(--accent); color: #fff;
+    border-radius: 8px; z-index: 50;
+    font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
+    box-shadow: 0 2px 12px rgba(255,140,66,0.4), 0 4px 24px rgba(0,0,0,0.12);
+    white-space: nowrap; letter-spacing: -0.01em;
+    pointer-events: all;
+  }
+  #style-brush-banner.active { display: flex; }
+  #style-brush-banner svg { flex-shrink: 0; opacity: 0.9; }
+  #style-brush-cancel {
+    background: rgba(255,255,255,0.25); border: none; border-radius: 4px;
+    color: #fff; cursor: pointer; font-size: 11px; padding: 1px 7px;
+    font-family: 'Inter', sans-serif; font-weight: 500; margin-left: 4px;
+    transition: background 0.12s;
+  }
+  #style-brush-cancel:hover { background: rgba(255,255,255,0.4); }
+  .style-brush-active-node { outline: 2px dashed var(--accent) !important; outline-offset: 3px; cursor: crosshair !important; }
+  #canvas-wrap.brush-mode::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: rgba(255,140,66,0.05);
+    pointer-events: none;
+    z-index: 1;
+  }
   /* ── Help overlay ── */
   #help-tip {
     position: absolute; left: 14px; bottom: 14px;
@@ -1474,8 +1621,8 @@
 
   /* ══ THEME PANEL ══ */
   #theme-panel {
-    position: fixed; top: 48px; right: 0;
-    width: 280px; bottom: 26px;
+    position: fixed; top: 46px; right: 0;
+    width: 280px; bottom: 24px;
     background: var(--surface);
     border-left: 1px solid var(--border2);
     display: flex; flex-direction: column;
@@ -1580,7 +1727,7 @@
     background: var(--surface); border: 1px solid var(--border2);
     border-radius: 8px; padding: 4px;
     box-shadow: 0 8px 32px #00000070;
-    z-index: 200; min-width: 170px;
+    z-index: 601; min-width: 170px;
     display: none; flex-direction: column; gap: 1px;
   }
   .tb-dropdown-menu.align-right { left: auto; right: 0; }
@@ -2027,7 +2174,14 @@
   </div>
 
   <!-- CANVAS -->
-  <div id="canvas-wrap">
+  <div id="appearance-panel">
+  <div id="ap-header">
+    <span id="ap-title">Content Style</span>
+    <button id="ap-close" onclick="closeAppearancePanel()" title="Close">×</button>
+  </div>
+  <div id="ap-body"></div>
+</div>
+<div id="canvas-wrap">
     <div id="canvas">
       <svg id="arrow-svg" class="arrow-layer" style="width:4000px;height:3000px;"></svg>
     </div>
@@ -2053,6 +2207,11 @@
       <button class="zoom-btn" onclick="fitDiagram()" title="Fit diagram to screen" style="font-size:11px;">⊡</button>
     </div>
 
+    <div id="style-brush-banner">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 12l3-3 5.5-5.5a1.5 1.5 0 0 0-2.1-2.1L3 7 2 12z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M9.5 3.5l1 1" stroke="currentColor" stroke-width="1.3"/><circle cx="2.5" cy="11.5" r="1" fill="currentColor" opacity="0.7"/></svg>
+      Style brush — click a node to apply
+      <button id="style-brush-cancel" onclick="cancelStyleBrush()">✕ Cancel</button>
+    </div>
     <div id="help-tip">
       <b>Drag</b> node body to move · <b>Drag port dots</b> to connect<br>
       <b>Drag canvas</b> to pan · <b>Scroll</b> to zoom · <b>Del</b> to delete · <b>Dbl-click</b> node to inspect
@@ -2070,7 +2229,7 @@
   <span id="sb-io">⇅ 0 I/O</span>
   <span id="sb-zoom">⊕ 100%</span>
   <span id="sb-mode" style="color:var(--accent3)"></span>
-  <span style="margin-left:auto;color:var(--text3);font-size:9px;font-family:'IBM Plex Mono',monospace;opacity:0.5;">v1.0</span>
+  <span style="margin-left:auto;color:var(--text3);font-size:9px;font-family:'IBM Plex Mono',monospace;opacity:0.5;">v1.1</span>
   <span style="color:var(--text3);font-size:9px;font-family:'IBM Plex Mono',monospace;opacity:0.4;">· Created by Luke Darragh</span>
   <span id="sb-autosave" style="color:var(--accent3);font-size:9px;font-family:'IBM Plex Mono',monospace;opacity:0;transition:opacity 0.5s;letter-spacing:0.04em;">✓ saved</span>
 </div>
@@ -2368,6 +2527,10 @@
       <div class="theme-section-label">Accents</div>
       <div id="theme-rows-accents"></div>
     </div>
+    <div class="theme-section">
+      <div class="theme-section-label">I/O Pills</div>
+      <div id="theme-rows-io"></div>
+    </div>
     <button class="theme-reset-btn" onclick="resetTheme()">↺ Reset to default</button>
   </div>
 </div>
@@ -2486,19 +2649,22 @@ function createNodeEl(n) {
       const tag = document.createElement('div');
       tag.className = 'node-tag';
       tag.textContent = n.tag;
+      if (n.tagColor) tag.style.color = n.tagColor;
       inner.appendChild(tag);
     }
     const title = document.createElement('div');
     title.className = 'node-title';
     title.style.whiteSpace = 'pre-line';
     title.textContent = n.title;
-    if (n.textColor) title.style.color = n.textColor;
+    if (n.textColor) title.style.color = n.textColor; // textColor kept as title override for legacy
     inner.appendChild(title);
     if (n.subtitle) {
       const sub = document.createElement('div');
       sub.className = 'node-subtitle';
       sub.style.whiteSpace = 'pre-line';
       sub.textContent = n.subtitle;
+      if (n.subtitleColor) sub.style.color = n.subtitleColor;
+      else if (n.textColor) sub.style.color = n.textColor;
       inner.appendChild(sub);
     }
     // Functions list
@@ -2509,6 +2675,8 @@ function createNodeEl(n) {
       const fnsLbl = document.createElement('div');
       fnsLbl.className = 'node-functions-label';
       fnsLbl.textContent = 'Functions';
+      if (n.fnLabelColor) fnsLbl.style.color = n.fnLabelColor;
+      else if (n.textColor) fnsLbl.style.color = n.textColor;
       fnsWrap.appendChild(fnsLbl);
       n.functions.forEach(fn => {
         const name = typeof fn === 'string' ? fn : (fn.name || '');
@@ -2517,6 +2685,8 @@ function createNodeEl(n) {
         const item = document.createElement('div');
         item.className = 'node-fn-item';
         item.textContent = name;
+        if (n.fnTextColor) item.style.color = n.fnTextColor;
+        else if (n.textColor) item.style.color = n.textColor;
         fnsWrap.appendChild(item);
         // Visible IO pills
         const hidIn  = fn.hiddenInputs  || [];
@@ -2529,12 +2699,18 @@ function createNodeEl(n) {
           visIns.forEach(v => {
             const p = document.createElement('span');
             p.className = 'node-io-pill input';
+            if (n.ioInputBg)     p.style.background = n.ioInputBg;
+            if (n.ioInputBorder) p.style.borderColor = n.ioInputBorder;
+            if (n.ioInputText)   p.style.color = n.ioInputText;
             p.textContent = '↓ ' + v;
             pillWrap.appendChild(p);
           });
           visOuts.forEach(v => {
             const p = document.createElement('span');
             p.className = 'node-io-pill output';
+            if (n.ioOutputBg)     p.style.background = n.ioOutputBg;
+            if (n.ioOutputBorder) p.style.borderColor = n.ioOutputBorder;
+            if (n.ioOutputText)   p.style.color = n.ioOutputText;
             p.textContent = '↑ ' + v;
             pillWrap.appendChild(p);
           });
@@ -2549,12 +2725,15 @@ function createNodeEl(n) {
       const title = document.createElement('div');
       title.className = 'node-title';
       title.textContent = n.title;
+      if (n.textColor) title.style.color = n.textColor;
       inner.appendChild(title);
     }
     if (n.subtitle) {
       const sub = document.createElement('div');
       sub.className = 'node-boundary-sub';
       sub.textContent = n.subtitle;
+      if (n.subtitleColor) sub.style.color = n.subtitleColor;
+      else if (n.textColor) sub.style.color = n.textColor;
       inner.appendChild(sub);
     }
   }
@@ -2612,7 +2791,12 @@ function createNodeEl(n) {
 
   div.addEventListener('mousedown', e => {
     if (e.target && e.target.classList && (e.target.classList.contains('conn-point') || e.target.classList.contains('node-resize'))) return;
-    if (wireActive) return; // wire drag is handled globally
+    if (wireActive) return;
+    if (_brushActive) {
+      e.stopPropagation();
+      applyStyleBrush(n.id);
+      return; // don't select, don't drag
+    }
     selectNode(n.id);
     startDrag(e, n.id);
   });
@@ -3011,8 +3195,8 @@ function renderArrows() {
           // Sync sidebar sliders
           const slA = document.getElementById('ortho-slider-bend');
           const slB = document.getElementById('ortho-slider-orthoY');
-          if (slA) slA.value = Math.round(a.bend || 0);
-          if (slB) slB.value = Math.round(a.orthoY || 0);
+          if (slA) { slA.value = Math.round(a.bend || 0); updateSliderPct(slA); }
+          if (slB) { slB.value = Math.round(a.orthoY || 0); updateSliderPct(slB); }
         });
         window.addEventListener('mouseup', () => {
           if (dragging) { dragging = false; saveToLocalStorage(); }
@@ -3030,6 +3214,153 @@ function bezierPt(p0,p1,p2,p3,t) {
 }
 
 // ── SIDEBAR ──
+
+// ══════════════════════════════════════════════
+// APPEARANCE PANEL
+// ══════════════════════════════════════════════
+let _apNodeId = null;
+
+function openAppearancePanel(nodeId) {
+  _apNodeId = nodeId;
+  buildAppearancePanel(nodeId);
+  document.getElementById('appearance-panel').classList.add('open');
+  // Highlight the open button
+  document.querySelectorAll('.ap-open-btn').forEach(b => b.classList.toggle('active', b.dataset.node === nodeId));
+}
+
+function closeAppearancePanel() {
+  _apNodeId = null;
+  document.getElementById('appearance-panel').classList.remove('open');
+  document.querySelectorAll('.ap-open-btn').forEach(b => b.classList.remove('active'));
+}
+
+function buildAppearancePanel(nodeId) {
+  const n = state.nodes.find(x => x.id === nodeId);
+  if (!n) return;
+  const body = document.getElementById('ap-body');
+  body.innerHTML = '';
+
+  const cs = getComputedStyle(document.documentElement);
+  const dfltText  = cs.getPropertyValue('--text').trim()  || '#111111';
+  const dfltText2 = cs.getPropertyValue('--text2').trim() || '#555555';
+  const dfltText3 = cs.getPropertyValue('--text3').trim() || '#999999';
+  const dfltIIBg  = cs.getPropertyValue('--io-input-bg').trim();
+  const dfltIIBr  = cs.getPropertyValue('--io-input-border').trim();
+  const dfltIITx  = cs.getPropertyValue('--io-input-text').trim();
+  const dfltIOBg  = cs.getPropertyValue('--io-output-bg').trim();
+  const dfltIOBr  = cs.getPropertyValue('--io-output-border').trim();
+  const dfltIOTx  = cs.getPropertyValue('--io-output-text').trim();
+
+  function makeRow(labelText, field, defaultVal) {
+    const row = document.createElement('div');
+    row.className = 'ap-row';
+    const lbl = document.createElement('span');
+    lbl.className = 'ap-row-label';
+    lbl.textContent = labelText;
+    const inp = document.createElement('input');
+    inp.type = 'color';
+    inp.className = 'ap-color';
+    inp.value = toHex6(n[field] || defaultVal);
+    inp.title = labelText;
+    inp.addEventListener('input', () => {
+      pushUndoDebounced();
+      n[field] = inp.value;
+      renderNodes();
+      saveToLocalStorage();
+    });
+    const rst = document.createElement('button');
+    rst.className = 'ap-reset';
+    rst.title = 'Reset';
+    rst.textContent = '↺';
+    rst.addEventListener('click', () => {
+      pushUndo();
+      n[field] = '';
+      inp.value = toHex6(defaultVal);
+      renderNodes();
+      saveToLocalStorage();
+    });
+    row.appendChild(lbl); row.appendChild(inp); row.appendChild(rst);
+    body.appendChild(row);
+  }
+
+  // ── Text section ──
+  const tHdr = document.createElement('div'); tHdr.className = 'ap-section-label'; tHdr.textContent = 'Text';
+  body.appendChild(tHdr);
+  makeRow('Tag',              'tagColor',    dfltText3);
+  makeRow('Title',            'textColor',   dfltText);
+  makeRow('Subtitle',         'subtitleColor', dfltText2);
+  makeRow('Functions label',  'fnLabelColor', dfltText3);
+  makeRow('Function items',   'fnTextColor',  dfltText2);
+
+  // ── IO Pills section ──
+  const pHdr = document.createElement('div'); pHdr.className = 'ap-section-label'; pHdr.textContent = 'Input pills';
+  body.appendChild(pHdr);
+  makeRow('Background', 'ioInputBg',    dfltIIBg);
+  makeRow('Border',     'ioInputBorder', dfltIIBr);
+  makeRow('Text',       'ioInputText',  dfltIITx);
+
+  const oHdr = document.createElement('div'); oHdr.className = 'ap-section-label'; oHdr.textContent = 'Output pills';
+  body.appendChild(oHdr);
+  makeRow('Background', 'ioOutputBg',    dfltIOBg);
+  makeRow('Border',     'ioOutputBorder', dfltIOBr);
+  makeRow('Text',       'ioOutputText',  dfltIOTx);
+}
+
+function toHex6(val) {
+  if (!val) return '#000000';
+  // Strip alpha if 8-char hex
+  return val.replace(/^(#[0-9a-fA-F]{6})[0-9a-fA-F]{2}$/, '$1');
+}
+
+// ══════════════════════════════════════════════
+// STYLE BRUSH
+// ══════════════════════════════════════════════
+const STYLE_BRUSH_FIELDS = [
+  'color','colorOpacity',
+  'textColor','tagColor','subtitleColor','fnLabelColor','fnTextColor',
+  'ioInputBg','ioInputBorder','ioInputText',
+  'ioOutputBg','ioOutputBorder','ioOutputText'
+];
+
+let _brushActive = false;
+let _brushData = null;
+
+function startStyleBrush(nodeId) {
+  const n = state.nodes.find(x => x.id === nodeId);
+  if (!n) return;
+  _brushData = {};
+  STYLE_BRUSH_FIELDS.forEach(f => { _brushData[f] = n[f]; });
+  _brushActive = true;
+  document.getElementById('style-brush-banner').classList.add('active');
+  document.getElementById('canvas-wrap').classList.add('brush-mode');
+  document.getElementById('canvas-wrap').style.cursor = 'crosshair';
+  document.querySelectorAll('.brush-btn').forEach(b => b.classList.add('active'));
+}
+
+function cancelStyleBrush() {
+  _brushActive = false;
+  _brushData = null;
+  document.getElementById('style-brush-banner').classList.remove('active');
+  document.getElementById('canvas-wrap').classList.remove('brush-mode');
+  document.getElementById('canvas-wrap').style.cursor = '';
+  document.querySelectorAll('.brush-btn').forEach(b => b.classList.remove('active'));
+}
+
+function applyStyleBrush(nodeId) {
+  if (!_brushActive || !_brushData) return;
+  const n = state.nodes.find(x => x.id === nodeId);
+  if (!n) return;
+  pushUndo();
+  STYLE_BRUSH_FIELDS.forEach(f => { n[f] = _brushData[f]; });
+  renderNodes();
+  saveToLocalStorage();
+  // Re-render sidebar only if this was the selected node (to update pickers)
+  if (selectedNode === nodeId) renderSidebar();
+}
+function updateSliderPct(el) {
+  const pct = ((el.value - el.min) / (el.max - el.min) * 100).toFixed(1) + '%';
+  el.style.setProperty('--slider-pct', pct);
+}
 function renderSidebar() {
   document.getElementById('node-count').textContent = state.nodes.filter(n=>n.type!=='boundary').length;
   const list = document.getElementById('node-list');
@@ -3063,10 +3394,11 @@ function renderPropsPanel() {
     const n = state.nodes.find(x => x.id===selectedNode);
     if (!n) return;
 
+    const isBoundary = n.type === 'boundary';
     const fields = [
       {label:'Tag / ID', key:'tag', type:'text', placeholder:'e.g. ERP-01'},
-      {label:'Title', key:'title', type:'textarea', placeholder:'System name'},
-      {label:'Subtitle / Description', key:'subtitle', type:'textarea', placeholder:'Short description'},
+      {label: isBoundary ? 'Label' : 'Title', key:'title', type:'textarea', placeholder: isBoundary ? 'Boundary label' : 'System name'},
+      {label: isBoundary ? 'Description' : 'Subtitle / Description', key:'subtitle', type:'textarea', placeholder:'Short description'},
     ];
     fields.forEach(f => {
       const row = document.createElement('div');
@@ -3091,6 +3423,33 @@ function renderPropsPanel() {
       body.appendChild(row);
     });
 
+    // Text colour controls for boundary nodes (no Content Style panel for them)
+    if (n.type === 'boundary') {
+      function makeBoundaryColorRow(labelText, field, defaultVar) {
+        const row = document.createElement('div'); row.className = 'prop-row';
+        const lbl = document.createElement('div'); lbl.className='prop-label'; lbl.textContent=labelText;
+        row.appendChild(lbl);
+        const inline = document.createElement('div'); inline.className='prop-row-inline';
+        const inp = document.createElement('input'); inp.type='color'; inp.className='prop-input';
+        inp.style.cssText = 'flex:1;min-width:0;height:32px;padding:2px 4px;cursor:pointer;';
+        const dflt = getComputedStyle(document.documentElement).getPropertyValue(defaultVar).trim() || '#999999';
+        inp.value = n[field] || dflt;
+        inp.addEventListener('input', () => { pushUndoDebounced(); n[field] = inp.value; renderNodes(); saveToLocalStorage(); });
+        const rst = document.createElement('button'); rst.className='prop-btn'; rst.title='Reset colour'; rst.textContent='↺';
+        rst.style.cssText = 'flex-shrink:0;width:28px;height:28px;padding:0;margin-bottom:0;font-size:13px;display:flex;align-items:center;justify-content:center;';
+        rst.addEventListener('click', () => {
+          pushUndo(); n[field] = '';
+          inp.value = getComputedStyle(document.documentElement).getPropertyValue(defaultVar).trim() || '#999999';
+          renderNodes(); saveToLocalStorage();
+        });
+        inline.appendChild(inp); inline.appendChild(rst);
+        row.appendChild(inline);
+        body.appendChild(row);
+      }
+      makeBoundaryColorRow('Label colour',       'textColor',     '--text3');
+      makeBoundaryColorRow('Description colour', 'subtitleColor', '--text3');
+    }
+
     // Type
     addPropRow(body, 'Node type', () => {
       const sel = document.createElement('select');
@@ -3108,26 +3467,38 @@ function renderPropsPanel() {
     // Color
     const colorRow = document.createElement('div');
     colorRow.className = 'prop-row';
-    const colorLbl = document.createElement('div'); colorLbl.className='prop-label'; colorLbl.textContent='Accent colour';
+    const colorLbl = document.createElement('div'); colorLbl.className='prop-label'; colorLbl.textContent='Background colour';
     colorRow.appendChild(colorLbl);
     const colorInline = document.createElement('div'); colorInline.className='prop-row-inline';
     const colorInp = document.createElement('input'); colorInp.type='color'; colorInp.className='prop-input';
-    colorInp.value = n.color || getComputedStyle(document.documentElement).getPropertyValue('--node-internal-border').trim() || '#c89000';
+    colorInp.style.cssText = 'flex:1;min-width:0;height:32px;padding:2px 4px;cursor:pointer;';
+    const _defaultNodeColor = getComputedStyle(document.documentElement).getPropertyValue(
+      n.type === 'external' ? '--node-external' : '--node-internal'
+    ).trim().replace(/^#([0-9a-f]{6})[0-9a-f]{0,2}$/i,'#$1') || '#ffffff';
+    colorInp.value = n.color || _defaultNodeColor;
     colorInp.addEventListener('input', () => { pushUndoDebounced(); n.color = colorInp.value; updateNodeBg(); });
-    const colorReset = document.createElement('button'); colorReset.className='prop-btn'; colorReset.textContent='Reset'; colorReset.style.marginBottom='0';
-    colorReset.addEventListener('click', () => { pushUndo(); n.color=''; n.colorOpacity=undefined; opacitySlider.value=51; renderNodes(); });
+    const colorReset = document.createElement('button'); colorReset.className='prop-btn'; colorReset.title='Reset colour'; colorReset.textContent='↺';
+    colorReset.style.cssText = 'flex-shrink:0;width:28px;height:28px;padding:0;margin-bottom:0;font-size:13px;display:flex;align-items:center;justify-content:center;';
+    colorReset.addEventListener('click', () => {
+      pushUndo(); n.color=''; n.colorOpacity=undefined;
+      colorInp.value = getComputedStyle(document.documentElement).getPropertyValue(
+        n.type === 'external' ? '--node-external' : '--node-internal'
+      ).trim().replace(/^#([0-9a-f]{6})[0-9a-f]{0,2}$/i,'#$1') || '#ffffff';
+      opacitySlider.value=255; updateSliderPct(opacitySlider); renderNodes();
+    });
     colorInline.appendChild(colorInp); colorInline.appendChild(colorReset);
     colorRow.appendChild(colorInline);
     body.appendChild(colorRow);
     // Opacity slider
     const opRow = document.createElement('div'); opRow.className='prop-row';
     const opLbl = document.createElement('div'); opLbl.className='prop-label';
-    const currentOp = n.colorOpacity !== undefined ? n.colorOpacity : 51;
+    const currentOp = n.colorOpacity !== undefined ? n.colorOpacity : 255;
     opLbl.textContent = 'Fill opacity — ' + Math.round(currentOp/255*100) + '%';
     opRow.appendChild(opLbl);
     const opSlider = document.createElement('input'); opSlider.type='range'; opSlider.className='prop-input';
     opSlider.min=0; opSlider.max=255; opSlider.value=currentOp;
     const opacitySlider = opSlider;
+    updateSliderPct(opSlider);
     function updateNodeBg() {
       pushUndoDebounced();
       n.color = colorInp.value;
@@ -3135,9 +3506,37 @@ function renderPropsPanel() {
       opLbl.textContent = 'Fill opacity — ' + Math.round(n.colorOpacity/255*100) + '%';
       renderNodes();
     }
-    opSlider.addEventListener('input', updateNodeBg);
+    opSlider.addEventListener('input', () => { updateSliderPct(opSlider); updateNodeBg(); });
     opRow.appendChild(opSlider);
     body.appendChild(opRow);
+
+
+
+    // Appearance slide-out button — not shown for boundary nodes
+    if (n.type !== 'boundary') {
+      const apBtn = document.createElement('button');
+      apBtn.className = 'prop-btn accent ap-open-btn';
+      apBtn.dataset.node = n.id;
+      apBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2"/><path d="M6 3.5v1M6 7.5v1M3.5 6h1M7.5 6h1" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg> Content Style…';
+      if (_apNodeId === n.id) apBtn.classList.add('active');
+      apBtn.addEventListener('click', () => {
+        if (_apNodeId === n.id) { closeAppearancePanel(); }
+        else { openAppearancePanel(n.id); }
+      });
+      body.appendChild(apBtn);
+    }
+
+    // Style brush button
+    const brushBtn = document.createElement('button');
+    brushBtn.className = 'prop-btn accent brush-btn';
+    brushBtn.dataset.node = n.id;
+    if (_brushActive) brushBtn.classList.add('active');
+    brushBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 12l3-3 5.5-5.5a1.5 1.5 0 0 0-2.1-2.1L3 7 2 12z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M9.5 3.5l1 1" stroke="currentColor" stroke-width="1.3"/><circle cx="2.5" cy="11.5" r="1" fill="currentColor" opacity="0.7"/></svg> Copy style…`;
+    brushBtn.addEventListener('click', () => {
+      if (_brushActive) { cancelStyleBrush(); }
+      else { startStyleBrush(n.id); }
+    });
+    body.appendChild(brushBtn);
 
     // Functions — compact summary + open modal button
     if (n.type !== 'boundary') {
@@ -3247,7 +3646,23 @@ function renderPropsPanel() {
     const a = state.arrows.find(x => x.id===selectedArrow);
     if (!a) return;
 
-    addPropTextInput(body, 'Label', a, 'label', () => renderArrows());
+    addPropRow(body, 'Label', () => {
+      const ta = document.createElement('textarea');
+      ta.className = 'prop-input';
+      ta.rows = 2;
+      ta.style.cssText = 'resize:vertical;min-height:42px;line-height:1.4;font-family:inherit;font-size:11.5px;';
+      ta.placeholder = 'Connection label… (Shift+Enter for new line)';
+      ta.value = a.label || '';
+      ta.addEventListener('input', () => {
+        pushUndoDebounced();
+        a.label = ta.value;
+        renderArrows(); saveToLocalStorage();
+      });
+      ta.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) e.preventDefault();
+      });
+      return ta;
+    });
 
     // Line style
     addPropRow(body, 'Line style', () => {
@@ -3260,19 +3675,10 @@ function renderPropsPanel() {
         b.textContent = s.l; b.title = s.v.charAt(0).toUpperCase()+s.v.slice(1);
         b.addEventListener('click', () => {
           pushUndo(); a.lineStyle = s.v;
-          row.querySelectorAll('.line-style-btn').forEach(x=>x.classList.remove('active'));
-          b.classList.add('active');
-          const br = body.querySelector('.bend-row');
-          if (br) {
-            br.style.display = s.v === 'straight' ? 'none' : '';
-            const lbl = br.querySelector('.prop-label');
-            if (lbl) lbl.textContent = s.v === 'orthogonal' ? 'Crossbar position' : 'Curve / bend';
-            // Reset offsets when switching styles
-            a.bend = 0; a.orthoY = 0;
-            const sl = br.querySelector('input[type=range]');
-            if (sl) sl.value = 0;
-          }
+          // Reset offsets when switching styles
+          a.bend = 0; a.orthoY = 0;
           renderArrows(); saveToLocalStorage();
+          renderPropsPanel(); // rebuild so correct sliders render
         });
         row.appendChild(b);
       });
@@ -3315,7 +3721,8 @@ function renderPropsPanel() {
       bendRow.appendChild(bendLbl);
       const bendInp = document.createElement('input'); bendInp.type='range'; bendInp.className='prop-input';
       bendInp.min=-120; bendInp.max=120; bendInp.value=a.bend||0;
-      bendInp.addEventListener('input', () => { pushUndoDebounced(); a.bend = parseInt(bendInp.value); renderArrows(); });
+      updateSliderPct(bendInp);
+      bendInp.addEventListener('input', () => { updateSliderPct(bendInp); pushUndoDebounced(); a.bend = parseInt(bendInp.value); renderArrows(); });
       bendRow.appendChild(bendInp);
       body.appendChild(bendRow);
     }
@@ -3337,7 +3744,8 @@ function renderPropsPanel() {
         pushUndo(); a.bend = 0; a.orthoY = 0;
         const slA = document.getElementById('ortho-slider-bend');
         const slB = document.getElementById('ortho-slider-orthoY');
-        if (slA) slA.value = 0; if (slB) slB.value = 0;
+        if (slA) { slA.value = 0; updateSliderPct(slA); }
+        if (slB) { slB.value = 0; updateSliderPct(slB); }
         renderArrows(); saveToLocalStorage();
       });
       resetRouteRow.appendChild(resetRouteBtn);
@@ -3350,7 +3758,8 @@ function renderPropsPanel() {
         row.appendChild(rl);
         const sl = document.createElement('input'); sl.type = 'range'; sl.className = 'prop-input';
         sl.id = sid; sl.min = -300; sl.max = 300; sl.value = Math.round(a[prop] || 0);
-        sl.addEventListener('input', () => { pushUndoDebounced(); a[prop] = parseInt(sl.value); renderArrows(); saveToLocalStorage(); });
+        updateSliderPct(sl);
+        sl.addEventListener('input', () => { updateSliderPct(sl); pushUndoDebounced(); a[prop] = parseInt(sl.value); renderArrows(); saveToLocalStorage(); });
         row.appendChild(sl);
         body.appendChild(row);
       });
@@ -3368,12 +3777,22 @@ function renderPropsPanel() {
     // Color
     const colorRow2 = document.createElement('div');
     colorRow2.className = 'prop-row';
-    const cl2 = document.createElement('div'); cl2.className='prop-label'; cl2.textContent='Arrow colour';
+    const cl2 = document.createElement('div'); cl2.className='prop-label'; cl2.textContent='Connector colour';
     colorRow2.appendChild(cl2);
+    const ci2Inline = document.createElement('div'); ci2Inline.className='prop-row-inline';
     const ci2 = document.createElement('input'); ci2.type='color'; ci2.className='prop-input';
+    ci2.style.cssText = 'flex:1;min-width:0;height:32px;padding:2px 4px;cursor:pointer;';
     ci2.value = a.color || getComputedStyle(document.documentElement).getPropertyValue('--arrow-color').trim() || '#ff8c42';
     ci2.addEventListener('input', () => { pushUndoDebounced(); a.color=ci2.value; renderArrows(); });
-    colorRow2.appendChild(ci2);
+    const ci2Reset = document.createElement('button'); ci2Reset.className='prop-btn'; ci2Reset.title='Reset colour'; ci2Reset.textContent='↺';
+    ci2Reset.style.cssText = 'flex-shrink:0;width:28px;height:28px;padding:0;margin-bottom:0;font-size:13px;display:flex;align-items:center;justify-content:center;';
+    ci2Reset.addEventListener('click', () => {
+      pushUndo(); a.color='';
+      ci2.value = getComputedStyle(document.documentElement).getPropertyValue('--arrow-color').trim() || '#ff8c42';
+      renderArrows(); saveToLocalStorage();
+    });
+    ci2Inline.appendChild(ci2); ci2Inline.appendChild(ci2Reset);
+    colorRow2.appendChild(ci2Inline);
     body.appendChild(colorRow2);
 
     // ── Label section ──
@@ -3485,16 +3904,23 @@ function makePortSelect(obj, key, onChange) {
 function selectNode(id) {
   selectedNode = id;
   selectedArrow = null;
-  arrowSVG.style.zIndex = '2'; // restore below nodes
+  arrowSVG.style.zIndex = '2';
   document.querySelectorAll('.node').forEach(e => e.classList.remove('selected'));
   const el = document.getElementById(`node-${id}`);
   if (el) el.classList.add('selected');
+  // If appearance panel is open, update it for the new node (close for boundary)
+  if (_apNodeId) {
+    const selN = state.nodes.find(x => x.id === id);
+    if (selN && selN.type === 'boundary') closeAppearancePanel();
+    else if (_apNodeId !== id) openAppearancePanel(id);
+  }
   renderSidebar();
 }
 
 function selectArrow(id) {
   selectedArrow = id;
   selectedNode = null;
+  closeAppearancePanel();
   document.querySelectorAll('.node').forEach(e => { e.classList.remove('selected'); e.classList.remove('arrow-endpoint'); });
   document.querySelectorAll('.conn-point.arrow-endpoint-port').forEach(cp => cp.classList.remove('arrow-endpoint-port'));
   const arr = state.arrows.find(a => a.id === id);
@@ -3522,6 +3948,7 @@ function deselect(e) {
   if (e && (e.target !== canvas && !e.target.closest('#canvas-wrap') || e.target.closest('.node') || e.target.closest('.arrow-path'))) return;
   selectedNode = null;
   selectedArrow = null;
+  closeAppearancePanel();
   document.querySelectorAll('.node').forEach(e => { e.classList.remove('selected'); e.classList.remove('arrow-endpoint'); });
   document.querySelectorAll('.conn-point.arrow-endpoint-port').forEach(cp => cp.classList.remove('arrow-endpoint-port'));
   arrowSVG.style.zIndex = '2'; // restore below nodes
@@ -3979,6 +4406,8 @@ document.addEventListener('keydown', e => {
   if ((e.key==='Delete'||e.key==='Backspace') && (selectedNode||selectedArrow)) deleteSelected();
   if (e.key==='Escape') {
     if (wireActive) cancelWire();
+    if (_brushActive) { cancelStyleBrush(); return; }
+    closeAppearancePanel();
     deselect();
   }
   if ((e.ctrlKey||e.metaKey) && e.key==='z') undo();
@@ -4169,7 +4598,9 @@ canvasWrap.addEventListener('wheel', e => {
 // SIDEBAR TOGGLES
 // ══════════════════════════════════════════════
 function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('collapsed');
+  const sb = document.getElementById('sidebar');
+  sb.classList.toggle('collapsed');
+  if (sb.classList.contains('collapsed')) closeAppearancePanel();
 }
 function toggleSection(header) {
   header.classList.toggle('open');
@@ -4289,7 +4720,10 @@ function buildExportHTML(opts) {
     '--text','--text2','--text3',
     '--node-internal','--node-internal-border',
     '--node-external','--node-external-border',
-    '--arrow-color','--label-bg','--shadow','--radius'
+    '--arrow-color','--label-bg',
+    '--io-input-bg','--io-input-border','--io-input-text',
+    '--io-output-bg','--io-output-border','--io-output-text',
+    '--shadow','--radius'
   ].map(v => v + ':' + cs.getPropertyValue(v).trim()).join(';');
 
   // Build static SVG arrows and nodes for the export
@@ -4456,17 +4890,20 @@ function buildExportHTML(opts) {
     const opHex = op.toString(16).padStart(2,'0');
     const colorStyle = n.color ? `background:${n.color}${opHex};` : '';
     const detailBtn = hasDetail && n.type !== 'boundary'
-      ? `<button class="detail-btn" onclick="openDetail('${n.id}')">i</button>`
+      ? `<span class="detail-btn">i</span>`
       : '';
 
     let innerHtml = '';
     if (n.type === 'boundary') {
       innerHtml = `<div class="node-inner">`
         + (n.title ? `<div class="node-title">${n.title}</div>` : '')
-        + (n.subtitle ? `<div class="node-boundary-sub">${n.subtitle}</div>` : '')
+        + (n.subtitle ? `<div class="node-boundary-sub" style="${n.subtitleColor ? 'color:'+n.subtitleColor+';' : (n.textColor ? 'color:'+n.textColor+';' : '')}">${n.subtitle}</div>` : '')
         + `</div>`;
     } else {
       // Always render exactly what the canvas shows — visibility controlled in editor
+      const tc = n.textColor ? `color:${n.textColor};` : '';
+      const inSt = [n.ioInputBg&&`background:${n.ioInputBg}`, n.ioInputBorder&&`border-color:${n.ioInputBorder}`, n.ioInputText&&`color:${n.ioInputText}`].filter(Boolean).join(';');
+      const outSt = [n.ioOutputBg&&`background:${n.ioOutputBg}`, n.ioOutputBorder&&`border-color:${n.ioOutputBorder}`, n.ioOutputText&&`color:${n.ioOutputText}`].filter(Boolean).join(';');
       const fnItems = (() => {
         const fns2 = (n.functions||[]).filter(f => (typeof f === 'string' ? f : (f.name || '')).trim() && !f.hidden);
         if (!fns2.length) return '';
@@ -4477,22 +4914,22 @@ function buildExportHTML(opts) {
           const ins  = (Array.isArray(f.inputs)  ? f.inputs  : (f.inputs  ? [f.inputs]  : [])).filter((_,i) => !hidIn.includes(i));
           const outs = (Array.isArray(f.outputs) ? f.outputs : (f.outputs ? [f.outputs] : [])).filter((_,i) => !hidOut.includes(i));
           let ioHtml = '';
-          if (ins.length)  ioHtml += `<div class="node-io-wrap">${ins.map(v=>`<span class="node-io-pill input">↓ ${v}</span>`).join('')}</div>`;
-          if (outs.length) ioHtml += `<div class="node-io-wrap">${outs.map(v=>`<span class="node-io-pill output">↑ ${v}</span>`).join('')}</div>`;
-          return `<div class="node-fn-item">${name}</div>${ioHtml}`;
+          if (ins.length)  ioHtml += `<div class="node-io-wrap">${ins.map(v=>`<span class="node-io-pill input" ${inSt?`style="${inSt}"`:''}>↓ ${v}</span>`).join('')}</div>`;
+          if (outs.length) ioHtml += `<div class="node-io-wrap">${outs.map(v=>`<span class="node-io-pill output" ${outSt?`style="${outSt}"`:''}>↑ ${v}</span>`).join('')}</div>`;
+          return `<div class="node-fn-item" style="${n.fnTextColor ? 'color:'+n.fnTextColor+';' : tc}">${name}</div>${ioHtml}`;
         }).join('');
-        return `<div class="node-functions"><div class="node-functions-label">Functions</div>${items}</div>`;
+        return `<div class="node-functions"><div class="node-functions-label" style="${n.fnLabelColor ? 'color:'+n.fnLabelColor+';' : tc}">Functions</div>${items}</div>`;
       })();
-      const titleColor = n.textColor ? `style="color:${n.textColor};"` : '';
       innerHtml = `<div class="node-inner" style="padding-right:${hasDetail?'26px':'14px'};">`
-        + (n.tag ? `<div class="node-tag">${n.tag}</div>` : '')
-        + `<div class="node-title" ${titleColor}>${n.title}</div>`
-        + (n.subtitle ? `<div class="node-subtitle">${n.subtitle}</div>` : '')
+        + (n.tag ? `<div class="node-tag" style="${n.tagColor ? 'color:'+n.tagColor+';' : tc}">${n.tag}</div>` : '')
+        + `<div class="node-title" style="${tc}">${n.title}</div>`
+        + (n.subtitle ? `<div class="node-subtitle" style="${n.subtitleColor ? 'color:'+n.subtitleColor+';' : tc}">${n.subtitle}</div>` : '')
         + fnItems
         + `</div>`;
     }
 
-    nodeHtml += `<div class="node ${n.type}" style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${colorStyle}">${innerHtml}${detailBtn}</div>`;
+    const clickAttr = (n.type !== 'boundary' && hasDetail) ? `onclick="openDetail('${n.id}')" style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${colorStyle}cursor:pointer;"` : `style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${colorStyle}"`;
+    nodeHtml += `<div class="node ${n.type}" ${clickAttr}>${innerHtml}${detailBtn}</div>`;
   });
 
   const html = `<!DOCTYPE html>
@@ -4537,11 +4974,11 @@ body{background:var(--bg);font-family:'Inter',sans-serif;display:flex;flex-direc
 .node.external .node-fn-item::before{background:var(--accent2);}
 .node-io-wrap{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;margin-bottom:1px;}
 .node-io-pill{padding:1px 6px;border-radius:10px;font-size:8.5px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.02em;}
-.node-io-pill.input{background:#e8f2fa;border:1px solid #a8c8e8;color:#2a5880;}
-.node-io-pill.output{background:#fff4e0;border:1px solid #e8c870;color:#804800;}
+.node-io-pill.input{background:var(--io-input-bg);border:1px solid var(--io-input-border);color:var(--io-input-text);}
+.node-io-pill.output{background:var(--io-output-bg);border:1px solid var(--io-output-border);color:var(--io-output-text);}
 /* ── Detail trigger button ── */
-.detail-btn{position:absolute;top:7px;right:7px;width:16px;height:16px;border-radius:50%;background:transparent;border:1px solid #00c49a90;color:#00c49a;font-size:9px;font-style:italic;font-family:Georgia,serif;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;opacity:0.7;transition:opacity 0.15s;}
-.detail-btn:hover{opacity:1;}
+.detail-btn{position:absolute;top:7px;right:8px;width:10px;height:10px;border-radius:50%;background:transparent;border:1px solid var(--accent3);color:var(--accent3);font-size:7px;font-style:italic;font-family:Georgia,serif;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;opacity:0.75;transition:opacity 0.15s;pointer-events:none;}
+.node:hover .detail-btn{opacity:1;}
 /* ── Zoom controls ── */
 #zoom-hud{position:fixed;bottom:16px;right:16px;display:flex;flex-direction:column;gap:4px;z-index:20;}
 .zoom-hud-btn{width:28px;height:28px;background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.12s;font-family:'IBM Plex Mono',monospace;}
@@ -4561,33 +4998,33 @@ body{background:var(--bg);font-family:'Inter',sans-serif;display:flex;flex-direc
 #detail-overlay.open{display:block;}
 #detail-panel{position:fixed;top:0;right:0;bottom:0;width:360px;max-width:96vw;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;z-index:1001;transform:translateX(100%);transition:transform 0.22s cubic-bezier(0.16,1,0.3,1);box-shadow:-12px 0 40px #00000080;}
 #detail-panel.open{transform:translateX(0);}
-#dp-header{padding:18px 18px 14px;border-bottom:1px solid #1a1e28;flex-shrink:0;display:flex;align-items:flex-start;gap:10px;}
+#dp-header{padding:18px 18px 14px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:flex-start;gap:10px;}
 #dp-header-text{flex:1;}
-#dp-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#5c6380;margin-bottom:4px;}
-#dp-title{font-size:15px;font-weight:600;color:#e8eaf0;line-height:1.3;}
-#dp-close{width:26px;height:26px;border-radius:5px;background:transparent;border:1px solid transparent;color:#5c6380;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;}
-#dp-close:hover{background:#1a1e28;border-color:#2a2f3e;color:#e8eaf0;}
+#dp-tag{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:4px;}
+#dp-title{font-size:15px;font-weight:600;color:var(--text);line-height:1.3;}
+#dp-close{width:26px;height:26px;border-radius:5px;background:transparent;border:1px solid transparent;color:var(--text3);cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;}
+#dp-close:hover{background:var(--surface2);border-color:var(--border);color:var(--text);}
 #dp-body{flex:1;overflow-y:auto;padding:16px 18px;}
 .dp-section{margin-bottom:20px;}
-.dp-section-label{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:#5c6380;margin-bottom:8px;}
-.dp-notes{font-size:12px;color:#9aa0b8;line-height:1.65;white-space:pre-wrap;}
-.dp-fn{border:1px solid #1a1e28;border-radius:7px;margin-bottom:8px;overflow:hidden;}
-.dp-fn-header{padding:9px 12px;background:#1a1e28;cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none;}
-.dp-fn-header:hover{background:#1f2433;}
-.dp-fn-name{font-size:12px;font-weight:500;color:#e8eaf0;flex:1;}
-.dp-fn-chevron{font-size:10px;color:#5c6380;transition:transform 0.15s;flex-shrink:0;}
+.dp-section-label{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;}
+.dp-notes{font-size:12px;color:var(--text2);line-height:1.65;white-space:pre-wrap;}
+.dp-fn{border:1px solid var(--border);border-radius:7px;margin-bottom:8px;overflow:hidden;}
+.dp-fn-header{padding:9px 12px;background:var(--surface2);cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none;}
+.dp-fn-header:hover{background:var(--surface3);}
+.dp-fn-name{font-size:12px;font-weight:500;color:var(--text);flex:1;}
+.dp-fn-chevron{font-size:10px;color:var(--text3);transition:transform 0.15s;flex-shrink:0;}
 .dp-fn.open .dp-fn-chevron{transform:rotate(180deg);}
-.dp-fn-body{display:none;padding:10px 12px;border-top:1px solid #1a1e28;}
+.dp-fn-body{display:none;padding:10px 12px;border-top:1px solid var(--border);}
 .dp-fn.open .dp-fn-body{display:block;}
-.dp-fn-desc{font-size:11px;color:#9aa0b8;line-height:1.6;margin-bottom:8px;}
+.dp-fn-desc{font-size:11px;color:var(--text2);line-height:1.6;margin-bottom:8px;}
 .dp-io-row{display:flex;gap:8px;margin-bottom:6px;}
-.dp-io-label{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#5c6380;width:52px;flex-shrink:0;padding-top:2px;}
+.dp-io-label{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text3);width:52px;flex-shrink:0;padding-top:2px;}
 .dp-pills{display:flex;flex-wrap:wrap;gap:4px;}
-.dp-pill-in{padding:2px 8px;border-radius:10px;font-size:10px;background:#0d1f2d;border:1px solid #2a4a6a;color:#5fa8d3;}
-.dp-pill-out{padding:2px 8px;border-radius:10px;font-size:10px;background:#0d2018;border:1px solid #2a5a3a;color:#5fd38a;}
+.dp-pill-in{padding:2px 8px;border-radius:10px;font-size:10px;background:var(--io-input-bg);border:1px solid var(--io-input-border);color:var(--io-input-text);}
+.dp-pill-out{padding:2px 8px;border-radius:10px;font-size:10px;background:var(--io-output-bg);border:1px solid var(--io-output-border);color:var(--io-output-text);}
 .dp-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
-.dp-meta-chip{padding:2px 8px;border-radius:4px;font-size:10px;background:#222736;color:#5c6380;font-family:'IBM Plex Mono',monospace;}
-.dp-empty{font-size:11px;color:#5c6380;font-style:italic;}
+.dp-meta-chip{padding:2px 8px;border-radius:4px;font-size:10px;background:var(--surface3);color:var(--text3);font-family:'IBM Plex Mono',monospace;}
+.dp-empty{font-size:11px;color:var(--text3);font-style:italic;}
 </style>
 </head>
 <body>
@@ -6050,6 +6487,12 @@ const THEME_DEFAULTS = {
   '--node-external':        '#ffffff',
   '--node-external-border': '#6c8ead',
   '--arrow-color':          '#ff8c42',
+  '--io-input-bg':          '#e8f2fa',
+  '--io-input-border':      '#a8c8e8',
+  '--io-input-text':        '#2a5880',
+  '--io-output-bg':         '#fff4e0',
+  '--io-output-border':     '#e8c870',
+  '--io-output-text':       '#804800',
 };
 
 const THEME_LS_KEY = 'conduit_theme';
@@ -6091,6 +6534,8 @@ const THEME_PRESETS = [
       '--node-internal':'#1e1b4b','--node-internal-border':'#6366f1',
       '--node-external':'#2d1b4e','--node-external-border':'#a855f7',
       '--arrow-color':'#6366f1',
+      '--io-input-bg':'#1e1b4b','--io-input-border':'#6366f1','--io-input-text':'#a5b4fc',
+      '--io-output-bg':'#2d1b4e','--io-output-border':'#a855f7','--io-output-text':'#d8b4fe',
     }
   },
   {
@@ -6104,6 +6549,8 @@ const THEME_PRESETS = [
       '--node-internal':'#052e16','--node-internal-border':'#22c55e',
       '--node-external':'#1a2e05','--node-external-border':'#84cc16',
       '--arrow-color':'#22c55e',
+      '--io-input-bg':'#052e16','--io-input-border':'#22c55e','--io-input-text':'#86efac',
+      '--io-output-bg':'#1a2e05','--io-output-border':'#84cc16','--io-output-text':'#d9f99d',
     }
   },
   {
@@ -6117,6 +6564,8 @@ const THEME_PRESETS = [
       '--node-internal':'#3d1400','--node-internal-border':'#f97316',
       '--node-external':'#3d0b00','--node-external-border':'#ef4444',
       '--arrow-color':'#f97316',
+      '--io-input-bg':'#3d1400','--io-input-border':'#f97316','--io-input-text':'#fed7aa',
+      '--io-output-bg':'#3d0b00','--io-output-border':'#ef4444','--io-output-text':'#fca5a5',
     }
   },
   {
@@ -6130,6 +6579,8 @@ const THEME_PRESETS = [
       '--node-internal':'#0c2240','--node-internal-border':'#38bdf8',
       '--node-external':'#1e1040','--node-external-border':'#818cf8',
       '--arrow-color':'#38bdf8',
+      '--io-input-bg':'#0c2240','--io-input-border':'#38bdf8','--io-input-text':'#7dd3fc',
+      '--io-output-bg':'#1e1040','--io-output-border':'#818cf8','--io-output-text':'#c7d2fe',
     }
   },
   {
@@ -6144,6 +6595,8 @@ const THEME_PRESETS = [
       '--node-internal':'#1a2340','--node-internal-border':'#4f8ef7',
       '--node-external':'#231a2a','--node-external-border':'#7c5cfc',
       '--arrow-color':'#4f8ef7',
+      '--io-input-bg':'#0d1f2d','--io-input-border':'#2a4a6a','--io-input-text':'#5fa8d3',
+      '--io-output-bg':'#0d2018','--io-output-border':'#2a5a3a','--io-output-text':'#5fd38a',
     }
   },
 ];
@@ -6170,6 +6623,14 @@ const THEME_ROWS = {
     { label: 'Accent (highlight)',  var: '--accent3' },
     { label: 'Arrow colour',        var: '--arrow-color' },
     { label: 'Delete / Remove',     var: '--danger' },
+  ],
+  io: [
+    { label: 'Input fill',    var: '--io-input-bg' },
+    { label: 'Input border',  var: '--io-input-border' },
+    { label: 'Input text',    var: '--io-input-text' },
+    { label: 'Output fill',   var: '--io-output-bg' },
+    { label: 'Output border', var: '--io-output-border' },
+    { label: 'Output text',   var: '--io-output-text' },
   ],
 };
 
@@ -6231,6 +6692,7 @@ function buildThemePanel() {
   buildThemeRows('theme-rows-ui', THEME_ROWS.ui);
   buildThemeRows('theme-rows-nodes', THEME_ROWS.nodes);
   buildThemeRows('theme-rows-accents', THEME_ROWS.accents);
+  buildThemeRows('theme-rows-io', THEME_ROWS.io);
 }
 
 function buildThemeRows(containerId, rows) {
