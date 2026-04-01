@@ -28,7 +28,16 @@
     --node-internal-border: #c89000;
     --node-external: #ffffff;
     --node-external-border: #6c8ead;
+    --node-internal-edge: color-mix(in srgb, var(--node-internal-border) 22%, var(--surface) 78%);
+    --node-external-edge: color-mix(in srgb, var(--node-external-border) 22%, var(--surface) 78%);
     --arrow-color: #ff8c42;
+    --accent-soft: color-mix(in srgb, var(--accent) 14%, var(--surface) 86%);
+    --accent-glow: color-mix(in srgb, var(--accent) 42%, transparent);
+    --accent-wash: color-mix(in srgb, var(--accent) 8%, transparent);
+    --accent-ring: color-mix(in srgb, var(--accent) 12%, transparent);
+    --accent2-soft: color-mix(in srgb, var(--accent2) 14%, var(--surface) 86%);
+    --accent2-ring: color-mix(in srgb, var(--accent2) 15%, transparent);
+    --accent3-ring: color-mix(in srgb, var(--accent3) 20%, transparent);
     --label-bg: #f5f5f5cc;
     --io-input-bg: #e8f2fa;
     --io-input-border: #a8c8e8;
@@ -98,24 +107,168 @@
   #undo-btn[disabled] { opacity: 0.3; cursor: default; }
   .tb-btn.danger:hover { background: #fdf0f0; border-color: var(--danger); }
   .tb-btn svg { flex-shrink: 0; }
-  #topbar .right { margin-left: auto; display: flex; align-items: center; gap: 3px; }
-  #diagram-title-input {
-    background: transparent; border: none; outline: none;
-    font-family: 'Inter', sans-serif;
-    font-size: 13px; font-weight: 600; color: var(--text);
-    letter-spacing: -0.02em;
-    width: 200px; padding: 3px 7px; border-radius: 4px;
-    transition: background 0.15s;
-  }
-  #diagram-title-input:hover, #diagram-title-input:focus { background: var(--surface2); }
-  #diagram-subtitle-input {
-    background: transparent; border: none; outline: none;
+  #active-draft-chip {
+    display: inline-flex;
+    align-items: center;
+    max-width: 160px;
+    min-width: 0;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px; color: var(--text3);
-    width: 200px; padding: 3px 7px; border-radius: 4px;
-    transition: background 0.15s;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  #diagram-subtitle-input:hover, #diagram-subtitle-input:focus { background: var(--surface2); }
+  #topbar .right { margin-left: auto; display: flex; align-items: center; gap: 3px; }
+  #diagram-title-input,
+  #diagram-subtitle-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  #document-panel {
+    position: fixed;
+    top: 56px;
+    left: 282px;
+    width: 300px;
+    max-width: min(300px, calc(100vw - 28px));
+    background: color-mix(in srgb, var(--surface) 96%, var(--bg) 4%);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: 0 10px 34px rgba(0,0,0,0.12);
+    z-index: 45;
+    overflow: hidden;
+    transition: left 0.2s ease, transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  #document-panel:hover { box-shadow: 0 14px 38px rgba(0,0,0,0.14); }
+  #document-panel.open { box-shadow: 0 16px 42px rgba(0,0,0,0.16); }
+  #document-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    border-bottom: 1px solid transparent;
+  }
+  #document-panel.open #document-panel-header { border-bottom-color: var(--border); }
+  #document-panel-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    flex: 1;
+  }
+  .doc-panel-toggle {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text3);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+    padding: 0;
+  }
+  .doc-panel-toggle:hover { background: var(--surface2); border-color: var(--border); color: var(--text); }
+  #document-panel-preview {
+    padding: 0 12px 12px;
+    cursor: pointer;
+  }
+  #document-panel.open #document-panel-preview {
+    padding-top: 10px;
+  }
+  .doc-panel-preview-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: pre-wrap;
+  }
+  .doc-panel-preview-subtitle {
+    margin-top: 4px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text3);
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    white-space: pre-wrap;
+  }
+  #document-panel-body {
+    display: none;
+    padding: 12px;
+    border-top: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface) 92%, var(--surface2) 8%);
+  }
+  #document-panel.open #document-panel-body { display: block; }
+  .doc-panel-field-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: 6px;
+  }
+  .doc-panel-field + .doc-panel-field { margin-top: 10px; }
+  .doc-panel-textarea {
+    width: 100%;
+    resize: none;
+    box-sizing: border-box;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    padding: 8px 10px;
+    outline: none;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .doc-panel-textarea:hover { background: var(--surface3); }
+  .doc-panel-textarea:focus { border-color: var(--accent); background: var(--surface); }
+  #doc-title-input {
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+    min-height: calc(1.3em * 2 + 18px);
+    max-height: calc(1.3em * 4 + 22px);
+  }
+  #doc-subtitle-input {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    line-height: 1.5;
+    color: var(--text2);
+    min-height: calc(1.5em * 2 + 18px);
+    max-height: calc(1.5em * 5 + 22px);
+  }
 
   /* ── MAIN LAYOUT ── */
   #main {
@@ -187,7 +340,7 @@
     font-size: 10px; cursor: pointer; text-align: center;
     transition: all 0.12s;
   }
-  .arrow-type-btn:hover, .arrow-type-btn.active { border-color: var(--accent); color: var(--accent); background: #fff4ec; }
+  .arrow-type-btn:hover, .arrow-type-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 
   /* Properties panel */
   .prop-row { margin-bottom: 10px; }
@@ -257,7 +410,39 @@
   .prop-btn.danger { color: var(--danger); }
   .prop-btn.danger:hover { background: #fdf0f0; border-color: var(--danger); }
   .prop-btn.accent { color: var(--accent); }
-  .prop-btn.accent:hover { background: #fff4ec; border-color: var(--accent); }
+  .prop-btn.accent:hover { background: var(--accent-soft); border-color: var(--accent); }
+  .prop-section-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .prop-section-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+  }
+  .prop-section-chevron {
+    width: 10px;
+    height: 10px;
+    color: var(--text3);
+    transition: transform 0.2s;
+    flex-shrink: 0;
+  }
+  .prop-section-head.open .prop-section-chevron { transform: rotate(180deg); }
+  .prop-section-body.hidden { display: none; }
+  .prop-divider {
+    width: calc(100% - 28px);
+    height: 1px;
+    margin: 8px auto;
+    background: var(--border);
+    opacity: 0.9;
+    border-radius: 999px;
+  }
 
   /* Node list */
   #node-list { max-height: 180px; overflow-y: auto; }
@@ -267,7 +452,7 @@
     transition: background 0.1s; font-size: 11.5px; color: var(--text2); font-family: 'Inter', sans-serif;
   }
   .node-list-item:hover { background: var(--surface2); color: var(--text); }
-  .node-list-item.selected { background: #fff4ec; color: var(--accent3); }
+  .node-list-item.selected { background: var(--accent-soft); color: var(--accent3); }
   .node-list-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
 
   /* ── CANVAS ── */
@@ -314,16 +499,16 @@
     z-index: 3;
   }
   .node:active { cursor: grabbing; }
-  .node.selected { box-shadow: 0 0 0 2px var(--accent), 0 0 0 5px rgba(255,140,66,0.12), var(--shadow); }
+  .node.selected { box-shadow: 0 0 0 2px var(--accent), 0 0 0 5px var(--accent-ring), var(--shadow); }
   .node.internal {
     background: var(--node-internal);
-    border: 1px solid #e8e0c8;
+    border: 1px solid var(--node-internal-edge);
     border-left: 3px solid var(--node-internal-border);
     box-shadow: var(--shadow);
   }
   .node.external {
     background: var(--node-external);
-    border: 1px solid #c8d8e8;
+    border: 1px solid var(--node-external-edge);
     border-left: 3px dashed var(--node-external-border);
     box-shadow: var(--shadow);
   }
@@ -335,11 +520,11 @@
   }
   .node.internal.selected,
   .node.external.selected {
-    box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 5px rgba(255,140,66,0.12), var(--shadow);
+    box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 5px var(--accent-ring), var(--shadow);
   }
   .node.arrow-endpoint.internal,
   .node.arrow-endpoint.external {
-    box-shadow: 0 0 0 1.5px var(--accent2), 0 0 0 5px rgba(108,142,173,0.15) !important;
+    box-shadow: 0 0 0 1.5px var(--accent2), 0 0 0 5px var(--accent2-ring) !important;
   }
   .node-inner { padding: 12px 14px; }
   .node-tag {
@@ -402,6 +587,13 @@
     padding: 1px 6px; border-radius: 10px; font-size: 8.5px;
     font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.02em;
   }
+  .io-pill-prefix {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.95em;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    margin-right: 0.45em;
+  }
   .node-io-pill.input  { background: var(--io-input-bg); border: 1px solid var(--io-input-border); color: var(--io-input-text); }
   .node-io-pill.output { background: var(--io-output-bg); border: 1px solid var(--io-output-border); color: var(--io-output-text); }
   /* Sidebar functions editor */
@@ -444,6 +636,33 @@
     border-right: 1.5px solid var(--text3);
     border-bottom: 1.5px solid var(--text3);
   }
+  .node-boundary-edge {
+    position: absolute;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.12s;
+    z-index: 4;
+  }
+  .node:hover .node-boundary-edge,
+  .node.selected .node-boundary-edge { opacity: 1; }
+  .node-boundary-edge:hover { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+  .node-boundary-edge.n,
+  .node-boundary-edge.s {
+    left: 12px;
+    right: 12px;
+    height: 10px;
+    cursor: ns-resize;
+  }
+  .node-boundary-edge.n { top: -5px; }
+  .node-boundary-edge.s { bottom: -5px; }
+  .node-boundary-edge.e,
+  .node-boundary-edge.w {
+    top: 12px;
+    bottom: 12px;
+    width: 10px;
+    cursor: ew-resize;
+  }
+  .node-boundary-edge.e { right: -5px; }
+  .node-boundary-edge.w { left: -5px; }
   /* connection points */
   .conn-point {
     position: absolute;
@@ -466,14 +685,14 @@
   .conn-point[data-pos="e"] { top: 50%; left: 100%; }
   .conn-point[data-pos="w"] { top: 50%; left: 0; }
   /* target node highlight during drag-connect */
-  .node.connect-target { box-shadow: 0 0 0 2px var(--accent3), 0 0 8px rgba(232,94,0,0.2) !important; }
-  .node.arrow-endpoint { box-shadow: 0 0 0 1.5px var(--accent2), 0 0 0 4px rgba(108,142,173,0.15) !important; }
+  .node.connect-target { box-shadow: 0 0 0 2px var(--accent3), 0 0 8px var(--accent3-ring) !important; }
+  .node.arrow-endpoint { box-shadow: 0 0 0 1.5px var(--accent2), 0 0 0 4px var(--accent2-ring) !important; }
   .node.connect-target .conn-point { opacity: 1; background: var(--accent3); }
   /* Port dot explicitly snapped to during wire drag */
   .conn-point.snap-target {
     opacity: 1 !important;
-    background: #fff !important;
-    box-shadow: 0 0 0 3px var(--accent), 0 0 8px rgba(255,140,66,0.4) !important;
+    background: var(--surface) !important;
+    box-shadow: 0 0 0 3px var(--accent), 0 0 8px var(--accent-glow) !important;
     transform: translate(-50%, -50%) scale(1.5) !important;
   }
   /* Endpoint port dots on a selected arrow — shown persistently, draggable */
@@ -649,8 +868,8 @@
   }
   .ap-reset:hover { border-color: var(--border2); color: var(--text); background: var(--surface2); }
   /* Button in props panel to open content style panel */
-  .prop-btn.accent.ap-open-btn.active { background: #fff4ec; border-color: var(--accent); color: var(--accent3); }
-  .prop-btn.accent.brush-btn.active { background: #fff4ec; border-color: var(--accent); color: var(--accent3); }
+  .prop-btn.accent.ap-open-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent3); }
+  .prop-btn.accent.brush-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent3); }
 
   /* ── Style brush ── */
   #style-brush-banner {
@@ -660,7 +879,7 @@
     background: var(--accent); color: #fff;
     border-radius: 8px; z-index: 50;
     font-family: 'Inter', sans-serif; font-size: 12px; font-weight: 500;
-    box-shadow: 0 2px 12px rgba(255,140,66,0.4), 0 4px 24px rgba(0,0,0,0.12);
+    box-shadow: 0 2px 12px var(--accent-glow), 0 4px 24px rgba(0,0,0,0.12);
     white-space: nowrap; letter-spacing: -0.01em;
     pointer-events: all;
   }
@@ -677,17 +896,17 @@
   #canvas-wrap.brush-mode::after {
     content: '';
     position: absolute; inset: 0;
-    background: rgba(255,140,66,0.05);
+    background: var(--accent-wash);
     pointer-events: none;
     z-index: 1;
   }
   /* ── Help overlay ── */
   #help-tip {
     position: absolute; left: 14px; bottom: 14px;
-    background: rgba(255,255,255,0.95); border: 1px solid #e0e0e0; color: #555555;
+    background: color-mix(in srgb, var(--surface) 94%, transparent); border: 1px solid var(--border); color: var(--text3);
     backdrop-filter: blur(8px);
     border-radius: 6px; padding: 7px 11px;
-    font-size: 9.5px; color: var(--text3); z-index: 50;
+    font-size: 9.5px; color: var(--text3); z-index: 0;
     line-height: 1.75;
     font-family: 'IBM Plex Mono', monospace;
   }
@@ -704,7 +923,7 @@
     font-family: 'IBM Plex Mono', monospace;
   }
   .line-style-btn:hover { border-color: var(--border2); color: var(--text); }
-  .line-style-btn.active { border-color: var(--accent); color: var(--accent3); background: #fff4ec; }
+  .line-style-btn.active { border-color: var(--accent); color: var(--accent3); background: var(--accent-soft); }
 
   /* Arrow direction toggle */
   .dir-toggle-row { display: flex; gap: 4px; margin-bottom: 10px; }
@@ -714,7 +933,7 @@
     color: var(--text2); font-size: 13px; cursor: pointer;
     transition: all 0.15s; text-align: center;
   }
-  .dir-btn:hover, .dir-btn.active { border-color: var(--accent); color: var(--accent3); background: #fff4ec; }
+  .dir-btn:hover, .dir-btn.active { border-color: var(--accent); color: var(--accent3); background: var(--accent-soft); }
 
   #legend {
     padding: 4px 0 2px;
@@ -771,9 +990,9 @@
     font-family: 'IBM Plex Mono', monospace; font-size: 8px;
     font-weight: 700; letter-spacing: 0.08em;
   }
-  #nm-type-badge.internal { background: #fff4ec; border: 1px solid #f0c090; color: var(--accent3); }
-  #nm-type-badge.external { background: #eef4fa; border: 1px dashed #a8c8e8; color: #2a5880; }
-  #nm-header-text { flex: 1; }
+  #nm-type-badge.internal { background: var(--accent-soft); border: 1px solid var(--accent); color: var(--accent3); }
+  #nm-type-badge.external { background: var(--accent2-soft); border: 1px dashed var(--accent2); color: var(--accent2); }
+  #nm-header-text { flex: 1; min-width: 0; }
   #nm-tag { font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: var(--text3); margin-bottom: 4px; letter-spacing: 0.08em; }
   #nm-title { font-family: 'Inter', sans-serif; font-size: 17px; font-weight: 700; color: var(--text); line-height: 1.2; margin-bottom: 3px; letter-spacing: -0.03em; }
   #nm-subtitle { font-family: 'Inter', sans-serif; font-size: 12px; color: var(--text2); line-height: 1.5; }
@@ -828,9 +1047,9 @@
     padding: 2px 6px; border-radius: 4px; flex-shrink: 0;
     background: var(--surface3); color: var(--text3);
   }
-  .nm-conn-dir-badge.out { background: #fff4ec; color: var(--accent3); }
-  .nm-conn-dir-badge.in { background: #eef4fa; color: #2a5880; }
-  .nm-conn-dir-badge.both { background: #fff4ec; color: var(--accent3); }
+  .nm-conn-dir-badge.out { background: var(--accent-soft); color: var(--accent3); }
+  .nm-conn-dir-badge.in { background: var(--accent2-soft); color: var(--accent2); }
+  .nm-conn-dir-badge.both { background: var(--accent-soft); color: var(--accent3); }
   .nm-empty { font-size: 12px; color: var(--text3); font-style: italic; padding: 8px 0; }
 
   /* Functions tab */
@@ -896,7 +1115,7 @@
     font-family: 'IBM Plex Sans', sans-serif; font-size: 12px;
     transition: all 0.15s;
   }
-  .nm-add-fn-btn:hover { border-color: var(--accent); color: var(--accent3); background: #fff4ec; }
+  .nm-add-fn-btn:hover { border-color: var(--accent); color: var(--accent3); background: var(--accent-soft); }
 
   /* Notes tab */
   #nm-notes-area {
@@ -932,8 +1151,8 @@
     font-family: 'IBM Plex Mono', monospace; font-weight: 600;
     letter-spacing: 0.06em;
   }
-  .nm-badge.internal { background: #fff4ec; color: var(--accent3); }
-  .nm-badge.external { background: #eef4fa; color: #2a5880; }
+  .nm-badge.internal { background: var(--accent-soft); color: var(--accent3); }
+  .nm-badge.external { background: var(--accent2-soft); color: var(--accent2); }
 
   /* Node top-right info/detail hint */
   .node-info-hint {
@@ -1000,7 +1219,7 @@
   }
   #fn-modal-header .fn-modal-icon {
     width: 32px; height: 32px; border-radius: 7px; flex-shrink: 0;
-    background: #fff4ec80; border: 1px solid var(--accent);
+    background: var(--accent-soft); border: 1px solid var(--accent);
     display: flex; align-items: center; justify-content: center;
     color: var(--accent3); font-size: 14px;
   }
@@ -1080,7 +1299,7 @@
     justify-content: center; gap: 5px;
   }
   #fn-list-add button:hover {
-    border-color: var(--accent); color: var(--accent3); background: #fff4ec;
+    border-color: var(--accent); color: var(--accent3); background: var(--accent-soft);
   }
 
   /* Right: function detail form */
@@ -1180,8 +1399,8 @@
     border: 1px solid; cursor: default;
     transition: all 0.1s;
   }
-  .io-tag.input-tag  { background: #e8f2fa; border-color: #a8c8e8; color: #2a5880; }
-  .io-tag.output-tag { background: #fff4e0; border-color: #e8c870; color: #804800; }
+  .io-tag.input-tag  { background: var(--io-input-bg); border-color: var(--io-input-border); color: var(--io-input-text); }
+  .io-tag.output-tag { background: var(--io-output-bg); border-color: var(--io-output-border); color: var(--io-output-text); }
   .io-tag.io-tag-hidden { opacity: 0.45; text-decoration: line-through; }
   .io-tag .io-tag-remove {
     width: 14px; height: 14px; border-radius: 50%;
@@ -1220,8 +1439,8 @@
     letter-spacing: 0.12em; text-transform: uppercase;
     margin-bottom: 4px; display: flex; align-items: center; gap: 6px;
   }
-  .io-col-label.input-label  { color: #5fa8d3; }
-  .io-col-label.output-label { color: #5fd38a; }
+  .io-col-label.input-label  { color: var(--io-input-text); }
+  .io-col-label.output-label { color: var(--io-output-text); }
   .io-empty { font-size: 10px; color: var(--text3); font-style: italic; padding: 3px 0; }
 
   /* Hidden toggle */
@@ -1300,7 +1519,7 @@
     transition: all 0.15s; flex-shrink: 0; white-space: nowrap;
   }
   .nm-fn-edit-btn:hover {
-    border-color: var(--accent); color: var(--accent3); background: #fff4ec;
+    border-color: var(--accent); color: var(--accent3); background: var(--accent-soft);
   }
   .nm-fn-card-body {
     padding: 0 14px 12px;
@@ -1315,14 +1534,14 @@
     font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase;
     margin-bottom: 5px; display: flex; align-items: center; gap: 4px;
   }
-  .nm-fn-io-label.in  { color: #5fa8d3; }
-  .nm-fn-io-label.out { color: #5fd38a; }
+  .nm-fn-io-label.in  { color: var(--io-input-text); }
+  .nm-fn-io-label.out { color: var(--io-output-text); }
   .nm-fn-pills { display: flex; flex-wrap: wrap; gap: 4px; }
   .nm-fn-pill {
     padding: 2px 7px; border-radius: 10px; font-size: 10px; border: 1px solid;
   }
-  .nm-fn-pill.in  { background: #e8f2fa; border-color: #a8c8e8; color: #2a5880; }
-  .nm-fn-pill.out { background: #fff4e0; border-color: #e8c870; color: #804800; }
+  .nm-fn-pill.in  { background: var(--io-input-bg); border-color: var(--io-input-border); color: var(--io-input-text); }
+  .nm-fn-pill.out { background: var(--io-output-bg); border-color: var(--io-output-border); color: var(--io-output-text); }
   .nm-fn-desc {
     font-size: 11px; color: var(--text2); line-height: 1.5;
     padding-top: 8px; border-top: 1px solid var(--border); margin-top: 10px;
@@ -1347,7 +1566,7 @@
     font-family: 'IBM Plex Sans', sans-serif; font-size: 12px;
     transition: all 0.15s;
   }
-  .nm-fn-add-btn:hover { border-color: var(--accent); color: var(--accent3); background: #fff4ec; }
+  .nm-fn-add-btn:hover { border-color: var(--accent); color: var(--accent3); background: var(--accent-soft); }
 
 
   /* ══ CONNECTION MODAL ══ */
@@ -1376,7 +1595,7 @@
   }
   .conn-modal-icon {
     width: 34px; height: 34px; border-radius: 8px; flex-shrink: 0;
-    background: #fff4ec; border: 1px solid var(--accent);
+    background: var(--accent-soft); border: 1px solid var(--accent);
     display: flex; align-items: center; justify-content: center;
   }
   #conn-modal-title { font-size: 14px; font-weight: 700; color: var(--text); font-family: 'Inter', sans-serif; letter-spacing: -0.02em; }
@@ -1417,9 +1636,9 @@
   }
   .conn-node-picker:hover { border-color: var(--border2); }
   .conn-node-picker.open  { border-color: var(--accent); border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-  .conn-node-picker.selected { border-color: var(--accent); background: #fff4ec; }
+  .conn-node-picker.selected { border-color: var(--accent); background: var(--accent-soft); }
   .conn-node-picker.selected.open { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-  .conn-node-picker.selected.external { border-color: var(--accent2); background: #eef4fa; }
+  .conn-node-picker.selected.external { border-color: var(--accent2); background: var(--accent2-soft); }
 
   .conn-node-picker-content { flex: 1; overflow: hidden; min-width: 0; max-width: 100%; }
   .conn-node-picker-name { font-size: 12px; color: var(--text); font-weight: 500; line-height: 1.3;
@@ -1475,13 +1694,13 @@
   }
   .conn-node-option:last-child { border-bottom: none; }
   .conn-node-option:hover { background: var(--surface3); }
-  .conn-node-option.active { background: #fff4ec; }
+  .conn-node-option.active { background: var(--accent-soft); }
   .conn-node-opt-badge {
     font-family: 'IBM Plex Mono', monospace; font-size: 8px; font-weight: 700;
     letter-spacing: 0.1em; padding: 2px 5px; border-radius: 3px; flex-shrink: 0;
   }
-  .conn-node-opt-badge.internal { background: #fff4ec; color: var(--accent3); border: 1px solid #f0c090; }
-  .conn-node-opt-badge.external { background: #eef4fa; color: #2a5880; border: 1px dashed #a8c8e8; }
+  .conn-node-opt-badge.internal { background: var(--accent-soft); color: var(--accent3); border: 1px solid var(--accent); }
+  .conn-node-opt-badge.external { background: var(--accent2-soft); color: var(--accent2); border: 1px dashed var(--accent2); }
   .conn-node-opt-badge.boundary { background: transparent; color: var(--text3); border: 1px dashed var(--border2); }
   .conn-node-opt-text { flex: 1; min-width: 0; overflow: hidden; }
   .conn-node-opt-name { font-size: 12px; color: var(--text); font-weight: 500;
@@ -1518,7 +1737,7 @@
     transition: all 0.15s;
   }
   .conn-dir-btn:hover { border-color: var(--border2); color: var(--text); }
-  .conn-dir-btn.active { border-color: var(--accent); background: #fff4ec; color: var(--accent3); }
+  .conn-dir-btn.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent3); }
   .conn-dir-icon { font-size: 18px; margin-bottom: 4px; }
   .conn-dir-name { font-size: 11px; }
 
@@ -1538,7 +1757,7 @@
     font-size: 10px; transition: all 0.15s;
   }
   .conn-port-btn:hover { border-color: var(--border2); color: var(--text2); }
-  .conn-port-btn.active { border-color: var(--accent); color: var(--accent3); background: #fff4ec; }
+  .conn-port-btn.active { border-color: var(--accent); color: var(--accent3); background: var(--accent-soft); }
 
   /* Label field */
   .conn-label-row { margin-bottom: 20px; }
@@ -1564,10 +1783,10 @@
     font-size: 11px; max-width: 160px;
     overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .conn-preview-from { background: #fff4ec; color: var(--accent3); border: 1px solid var(--accent); }
-  .conn-preview-to   { background: #fff4ec; color: var(--accent3); border: 1px solid var(--accent); }
-  .conn-preview-from.ext { background: #eef4fa; color: #2a5880; border-color: var(--accent2); }
-  .conn-preview-to.ext   { background: #eef4fa; color: #2a5880; border-color: var(--accent2); }
+  .conn-preview-from { background: var(--accent-soft); color: var(--accent3); border: 1px solid var(--accent); }
+  .conn-preview-to   { background: var(--accent-soft); color: var(--accent3); border: 1px solid var(--accent); }
+  .conn-preview-from.ext { background: var(--accent2-soft); color: var(--accent2); border-color: var(--accent2); }
+  .conn-preview-to.ext   { background: var(--accent2-soft); color: var(--accent2); border-color: var(--accent2); }
   .conn-preview-arrow {
     flex: 1; display: flex; align-items: center; justify-content: center;
     gap: 4px; color: var(--text3); font-size: 11px; flex-direction: column;
@@ -1665,7 +1884,7 @@
     transition: all 0.15s; white-space: nowrap;
   }
   .theme-preset-btn:hover { border-color: var(--border2); color: var(--text); }
-  .theme-preset-btn.active { border-color: var(--accent); color: var(--accent3); background: #fff4ec; }
+  .theme-preset-btn.active { border-color: var(--accent); color: var(--accent3); background: var(--accent-soft); }
   .theme-preset-swatch {
     display: flex; gap: 2px;
   }
@@ -1744,7 +1963,88 @@
   }
   .tb-dropdown-item:hover { background: var(--surface2); color: var(--text); }
   .tb-dropdown-item.primary { color: var(--accent); }
-  .tb-dropdown-item.primary:hover { background: #fff4ec; }
+  .tb-dropdown-item.primary:hover { background: var(--accent-soft); }
+  .tb-dropdown-item.danger { color: var(--danger); }
+  .tb-dropdown-item.danger:hover { background: color-mix(in srgb, var(--danger) 10%, var(--surface2)); }
+  .tb-dropdown-label {
+    padding: 6px 10px 4px;
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    pointer-events: none;
+  }
+  #file-draft-label {
+    max-width: 170px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .draft-list { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; }
+  .draft-row {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--surface2);
+    padding: 10px 12px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+  .draft-row.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent-soft) inset; }
+  .draft-row-main { flex: 1; min-width: 0; }
+  .draft-row-title {
+    font-size: 12px; font-weight: 600; color: var(--text);
+    display: flex; align-items: center; gap: 8px; min-width: 0;
+  }
+  .draft-row-title-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .draft-row-meta {
+    margin-top: 4px;
+    font-size: 10px;
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    line-height: 1.5;
+  }
+  .draft-active-badge {
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent3);
+    font-size: 9px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
+  .draft-row-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+  .draft-empty-note { font-size: 12px; color: var(--text3); font-style: italic; padding: 6px 0; }
+  .draft-modal-note { font-size: 12px; color: var(--text2); line-height: 1.6; margin-bottom: 12px; }
+  .draft-warning-note {
+    font-size: 11px;
+    color: var(--text2);
+    line-height: 1.6;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+    border-radius: 7px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+  }
+  .draft-name-input {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.15s;
+    box-sizing: border-box;
+  }
+  .draft-name-input:focus { border-color: var(--accent); }
   .tb-dropdown-sep {
     height: 1px; background: var(--border); margin: 3px 6px;
   }
@@ -1769,9 +2069,14 @@
     border: 1.5px dashed var(--border2);
     border-radius: 12px; padding: 40px 48px;
     text-align: center; max-width: 360px;
-    background: rgba(19,22,29,0.92);
+    background: color-mix(in srgb, var(--surface) 94%, var(--bg) 6%);
+    box-shadow: var(--shadow);
   }
-  .canvas-empty-icon { font-size: 32px; margin-bottom: 14px; opacity: 0.4; }
+  .canvas-empty-icon {
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 14px; opacity: 0.9;
+  }
+  .canvas-empty-icon svg { flex-shrink: 0; }
   .canvas-empty-title {
     font-size: 15px; font-weight: 600; color: var(--text2);
     margin-bottom: 6px;
@@ -1954,6 +2259,14 @@
     transition: background 0.15s, box-shadow 0.15s;
     cursor: text;
   }
+  textarea.nm-header-input {
+    box-sizing: border-box;
+    resize: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    height: auto;
+    white-space: pre-wrap;
+  }
   .nm-header-input::placeholder { color: var(--text3); }
   .nm-header-input:hover { background: var(--surface2); }
   .nm-header-input:focus { background: var(--surface2); box-shadow: 0 0 0 1.5px var(--accent); }
@@ -1966,10 +2279,14 @@
     font-family: 'Inter', sans-serif;
     font-size: 17px; font-weight: 700; line-height: 1.2;
     margin-bottom: 3px; letter-spacing: -0.03em;
+    min-height: calc(1.2em * 2 + 4px);
+    max-height: calc(1.2em * 5 + 8px);
   }
   .nm-subtitle-input {
     font-family: 'Inter', sans-serif;
     font-size: 12px; color: var(--text2); line-height: 1.5;
+    min-height: calc(1.5em * 2 + 4px);
+    max-height: calc(1.5em * 6 + 8px);
   }
 
 
@@ -1985,11 +2302,11 @@
   }
   #palette-drag-ghost.internal {
     background: var(--node-internal); border-left: 3px solid var(--node-internal-border);
-    border: 1px solid #e8e0c8; border-left: 3px solid var(--node-internal-border);
+    border: 1px solid var(--node-internal-edge); border-left: 3px solid var(--node-internal-border);
     color: var(--text);
   }
   #palette-drag-ghost.external {
-    background: var(--node-external); border: 1px solid #c8d8e8;
+    background: var(--node-external); border: 1px solid var(--node-external-edge);
     border-left: 3px dashed var(--node-external-border); color: var(--text);
   }
   #palette-drag-ghost.boundary {
@@ -2014,18 +2331,17 @@
 <!-- TOP BAR -->
 <div id="topbar">
   <div class="logo">
-    <svg width="24" height="24" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
-      <rect x="1" y="6" width="5" height="8" rx="1.5" fill="#4d7ef5" opacity="0.9"/>
-      <rect x="14" y="6" width="5" height="8" rx="1.5" fill="#4d7ef5" opacity="0.5"/>
-      <path d="M6 10 L9 10 L9 13 L11 13 L11 10 L14 10" stroke="#4d7ef5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
-      <circle cx="10" cy="13" r="1.2" fill="#00c49a"/>
+    <svg width="30" height="30" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+<rect x="1" y="6" width="5" height="8" rx="1.5" fill="#6c8ead" opacity="0.9"/>
+<rect x="14" y="6" width="5" height="8" rx="1.5" fill="#6c8ead" opacity="0.5"/>
+      <path d="M6 10 L9 10 L9 13 L11 13 L11 10 L14 10" stroke="#6c8ead" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+<circle cx="10" cy="13" r="1.2" fill="#ff8c42"/>
     </svg>
     Conduit
   </div>
   <div class="tb-sep"></div>
   <input id="diagram-title-input" type="text" value="SYSTEM INTERFACE MAP" placeholder="Diagram title…">
   <input id="diagram-subtitle-input" type="text" value="Manufacturing Execution · L3 / L4" placeholder="Subtitle…">
-  <div class="tb-sep"></div>
   <div class="tb-dropdown" id="add-dropdown">
     <button class="tb-btn dropdown-trigger" onclick="toggleDropdown('add-dropdown')">
       <svg width="12" height="12" viewBox="0 0 12 12"><line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -2040,7 +2356,7 @@
         <div class="node-dot-ext"></div> External Entity
       </button>
       <button class="tb-dropdown-item" onclick="addMode('boundary');closeDropdowns()">
-        <div class="node-dot-bnd"></div> Boundary Label
+        <div class="node-dot-bnd"></div> Boundary Box
       </button>
     </div>
   </div>
@@ -2054,6 +2370,8 @@
     Connect
   </button>
   <div class="right">
+    <div id="active-draft-chip" title="Active draft">Draft · Untitled draft</div>
+    <div class="tb-sep"></div>
     <div class="tb-dropdown" id="file-dropdown">
       <button class="tb-btn dropdown-trigger" onclick="toggleDropdown('file-dropdown')">
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 1h5l3 3v7H2V1z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M7 1v3h3" stroke="currentColor" stroke-width="1.3"/></svg>
@@ -2061,6 +2379,29 @@
         <svg class="caret" width="10" height="10" viewBox="0 0 10 10"><path d="M2 3.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>
       </button>
       <div class="tb-dropdown-menu align-right">
+        <div class="tb-dropdown-label" id="file-draft-label">Current Draft</div>
+        <button class="tb-dropdown-item" onclick="createNewDraft();closeDropdowns()">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 2v8M2 6h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+          New draft
+        </button>
+        <button class="tb-dropdown-item" onclick="openDraftManager();closeDropdowns()">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="2" width="9" height="8.5" rx="1.5" stroke="currentColor" stroke-width="1.2"/><path d="M4 4.5h4M4 6.5h4M4 8.5h2.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Open drafts...
+        </button>
+        <button class="tb-dropdown-item" onclick="renameCurrentDraft();closeDropdowns()">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2L3 11H1V9L8.5 1.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          Rename draft
+        </button>
+        <button class="tb-dropdown-item" onclick="duplicateCurrentDraft();closeDropdowns()">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="6.5" height="6.5" rx="1.2" stroke="currentColor" stroke-width="1.2"/><path d="M2 7V2.8A.8.8 0 0 1 2.8 2h4.2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Duplicate draft
+        </button>
+        <button class="tb-dropdown-item danger" onclick="deleteCurrentDraft();closeDropdowns()">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 3.5h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4.5 3.5v-1a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M3.5 4.5l.4 5a1 1 0 0 0 1 .9h2.2a1 1 0 0 0 1-.9l.4-5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Delete draft...
+        </button>
+        <div class="tb-dropdown-sep"></div>
+        <div class="tb-dropdown-label">Import & Save</div>
         <button class="tb-dropdown-item" onclick="importFile();closeDropdowns()">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 9v2h8V9M6 1v7M3.5 5.5L6 3l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
           Import…
@@ -2070,6 +2411,13 @@
           Save JSON
         </button>
         <div class="tb-dropdown-sep"></div>
+        <div class="tb-dropdown-label">Canvas</div>
+        <button class="tb-dropdown-item danger" onclick="confirmClearCanvas();closeDropdowns()">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2.5 3.5h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M4.5 3.5v-1a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M3.5 4.5l.4 5a1 1 0 0 0 1 .9h2.2a1 1 0 0 0 1-.9l.4-5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Clear canvas…
+        </button>
+        <div class="tb-dropdown-sep"></div>
+        <div class="tb-dropdown-label">Export</div>
         <button class="tb-dropdown-item primary" onclick="exportHTML();closeDropdowns()">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 9v2h8V9M6 8V1M3.5 5.5L6 8l2.5-2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
           Export HTML
@@ -2087,6 +2435,29 @@
     <button class="tb-btn" onclick="toggleSidebar()">
       <svg width="13" height="13" viewBox="0 0 13 13"><rect x="1" y="1" width="11" height="11" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.3"/><line x1="5" y1="1" x2="5" y2="12" stroke="currentColor" stroke-width="1.3"/></svg>
     </button>
+  </div>
+</div>
+
+<div id="document-panel">
+  <div id="document-panel-header">
+    <div id="document-panel-label">Document</div>
+    <button class="doc-panel-toggle" id="document-panel-toggle" onclick="toggleDocumentPanel()" title="Expand document details">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2L3 11H1V9L8.5 1.5z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+  <div id="document-panel-preview" onclick="toggleDocumentPanel(true)">
+    <div class="doc-panel-preview-title" id="document-panel-preview-title">SYSTEM INTERFACE MAP</div>
+    <div class="doc-panel-preview-subtitle" id="document-panel-preview-subtitle">Manufacturing Execution · L3 / L4</div>
+  </div>
+  <div id="document-panel-body">
+    <div class="doc-panel-field">
+      <div class="doc-panel-field-label">Title</div>
+      <textarea id="doc-title-input" class="doc-panel-textarea" rows="2" placeholder="Diagram title"></textarea>
+    </div>
+    <div class="doc-panel-field">
+      <div class="doc-panel-field-label">Description</div>
+      <textarea id="doc-subtitle-input" class="doc-panel-textarea" rows="2" placeholder="Short description or scope"></textarea>
+    </div>
   </div>
 </div>
 
@@ -2114,7 +2485,7 @@
         </button>
         <button class="add-node-btn" data-nodetype="boundary" onclick="addMode('boundary')">
           <div class="node-preview boundary">···</div>
-          Boundary Label
+          Boundary Box
         </button>
         <div style="margin-top:10px">
           <div class="prop-label">Arrow type for next connection</div>
@@ -2189,12 +2560,19 @@
     <!-- Empty state -->
     <div id="canvas-empty">
       <div class="canvas-empty-box">
-        <div class="canvas-empty-icon">⬡</div>
+        <div class="canvas-empty-icon">
+          <svg width="40" height="40" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+<rect x="1" y="6" width="5" height="8" rx="1.5" fill="#6c8ead" opacity="0.9"/>
+<rect x="14" y="6" width="5" height="8" rx="1.5" fill="#6c8ead" opacity="0.5"/>
+      <path d="M6 10 L9 10 L9 13 L11 13 L11 10 L14 10" stroke="#6c8ead" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.8"/>
+<circle cx="10" cy="13" r="1.2" fill="#ff8c42"/>
+          </svg>
+        </div>
         <div class="canvas-empty-title">Start your system map</div>
         <div class="canvas-empty-sub">Add nodes to represent systems, then connect them with arrows to show data flows.</div>
         <div class="canvas-empty-btns">
           <button class="canvas-empty-btn primary" onclick="addMode('internal')">+ Add first node</button>
-          <button class="canvas-empty-btn" onclick="loadSample();render()">Load sample</button>
+<button class="canvas-empty-btn" onclick="loadSampleIntoCurrentDraft()">Load sample</button>
         </div>
       </div>
     </div>
@@ -2228,8 +2606,8 @@
   <span id="sb-functions">⚙ 0 functions</span>
   <span id="sb-io">⇅ 0 I/O</span>
   <span id="sb-zoom">⊕ 100%</span>
-  <span id="sb-mode" style="color:var(--accent3)"></span>
-  <span style="margin-left:auto;color:var(--text3);font-size:9px;font-family:'IBM Plex Mono',monospace;opacity:0.5;">v1.1</span>
+  <span id="sb-mode" style="color:var(--accent3);opacity:0;transition:opacity 0.5s;"></span>
+  <span style="margin-left:auto;color:var(--text3);font-size:9px;font-family:'IBM Plex Mono',monospace;opacity:0.5;">v1.2</span>
   <span style="color:var(--text3);font-size:9px;font-family:'IBM Plex Mono',monospace;opacity:0.4;">· Created by Luke Darragh</span>
   <span id="sb-autosave" style="color:var(--accent3);font-size:9px;font-family:'IBM Plex Mono',monospace;opacity:0;transition:opacity 0.5s;letter-spacing:0.04em;">✓ saved</span>
 </div>
@@ -2266,7 +2644,7 @@
       <div class="conn-node-row">
         <div class="conn-node-col">
           <div class="conn-node-label">
-            <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="#4d7ef5"/></svg>
+            <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="var(--accent)"/></svg>
             From node
           </div>
           <div id="conn-from-display" class="conn-node-picker" onclick="openNodePicker('from')">
@@ -2283,7 +2661,7 @@
         </div>
         <div class="conn-node-col">
           <div class="conn-node-label">
-            <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="#00c49a"/></svg>
+            <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="var(--accent2)"/></svg>
             To node
           </div>
           <div id="conn-to-display" class="conn-node-picker" onclick="openNodePicker('to')">
@@ -2419,8 +2797,8 @@
       <div id="nm-type-badge" class="internal">INT</div>
       <div id="nm-header-text">
         <input id="nm-tag-input"      class="nm-header-input nm-tag-input"      placeholder="TAG" spellcheck="false"/>
-        <input id="nm-title-input"    class="nm-header-input nm-title-input"    placeholder="Node title" spellcheck="false"/>
-        <input id="nm-subtitle-input" class="nm-header-input nm-subtitle-input" placeholder="Add a description…" spellcheck="false"/>
+        <textarea id="nm-title-input"    class="nm-header-input nm-title-input"    placeholder="Node title" spellcheck="false" rows="2"></textarea>
+        <textarea id="nm-subtitle-input" class="nm-header-input nm-subtitle-input" placeholder="Add a description…" spellcheck="false" rows="2"></textarea>
       </div>
       <button id="nm-close" onclick="closeNodeModal()">×</button>
     </div>
@@ -2551,6 +2929,7 @@ let selectedArrow = null;
 let connectMode = false;
 let connectFrom = null; // {nodeId, pos}
 let nextArrowType = 'directed';
+let _propSectionState = { functions: true, connections: true };
 let draggingNode = null;
 let dragOffset = {x:0, y:0};
 let panDragging = false;
@@ -2564,37 +2943,52 @@ const canvasWrap = document.getElementById('canvas-wrap');
 const arrowSVG = document.getElementById('arrow-svg');
 let nodeIdCounter = 1;
 let arrowIdCounter = 1;
+let _clipboardNode = null; // copy/paste clipboard (internal, not system clipboard)
+let currentDraftId = null;
+let currentDraftName = '';
+let _quotaWarningShown = false;
 
 // ══════════════════════════════════════════════
 // INIT with sample diagram
 // ══════════════════════════════════════════════
 function init() {
-  loadSample();
+  const blank = createBlankDiagramPayload();
+  applyDiagramPayload(blank);
   render();
 }
 
 function loadSample() {
   state.nodes = [
-    {id:'n1', type:'external', tag:'EXT-01', title:'Customer /\nMarket', subtitle:'External demand and\nspecification inputs', x:60, y:160, w:170, h:100, color:'', textColor:'', functions:[{name:'Demand signalling',inputs:['Market data, forecasts'],outputs:['Sales order, forecast signal'],description:'Translates market demand into procurement signals',hidden:false},{name:'Spec submission',inputs:['Customer requirements'],outputs:['Spec / change request'],description:'Formal submission of product specifications',hidden:false},{name:'Change requests',inputs:['Design feedback'],outputs:['Change request document'],description:'',hidden:false}]},
-    {id:'n2', type:'internal', tag:'PLM', title:'Product Lifecycle\nManagement', subtitle:'Single source of truth for\nproduct structure and\nengineering change', x:320, y:60, w:200, h:120, color:'', textColor:'', notes:'PLM is the master for all product structure data. Any BoM changes must be approved via ECO before being consumed by ERP or MES.', functions:[{name:'BoM authoring',inputs:['Design data, components'],outputs:['Engineering BoM'],description:'Creates and maintains the engineering bill of materials',hidden:false},{name:'Engineering change mgmt',inputs:['Change requests'],outputs:['Approved ECO, revised BoM'],description:'Controls the engineering change order process',hidden:false},{name:'Document control',inputs:['Drawings, specs'],outputs:['Approved documents'],description:'',hidden:false},{name:'Part number governance',inputs:['New part requests'],outputs:['Assigned part numbers'],description:'',hidden:false}]},
-    {id:'n3', type:'internal', tag:'MES', title:'Manufacturing\nExecution System', subtitle:'Real-time shop-floor\norchestration and WIP\ntracking', x:620, y:160, w:200, h:120, color:'', textColor:'', notes:'MES is the real-time orchestration layer. Integration with ERP is batch (every 15 min). QMS inspection triggers are event-driven.', functions:[{name:'Work order dispatch',inputs:['Production schedule, routing'],outputs:['Work orders to operators'],description:'Releases and assigns work to shopfloor cells',hidden:false},{name:'WIP tracking',inputs:['Operator confirmations'],outputs:['WIP status, completion events'],description:'Real-time tracking of in-progress work',hidden:false},{name:'Labour booking',inputs:['Time records'],outputs:['Actual labour hours'],description:'',hidden:false},{name:'Shopfloor data capture',inputs:['Machine data, operator input'],outputs:['Quality records, cycle times'],description:'',hidden:false}]},
-    {id:'n4', type:'internal', tag:'ERP', title:'ERP', subtitle:'Financial, demand,\nprocurement and cost\nmanagement', x:320, y:280, w:200, h:100, color:'', textColor:'', functions:[{name:'Demand planning',inputs:['Sales forecast, orders'],outputs:['MRP demand signal'],description:'Converts demand signals into material requirements',hidden:false},{name:'Purchase order mgmt',inputs:['MRP output, supplier catalogue'],outputs:['POs to suppliers'],description:'',hidden:false},{name:'Cost accounting',inputs:['Actual BoM, labour hours'],outputs:['Product cost report'],description:'',hidden:false},{name:'Inventory valuation',inputs:['Stock movements'],outputs:['Inventory value'],description:'',hidden:false}]},
-    {id:'n5', type:'internal', tag:'SCM', title:'SCM', subtitle:'Supplier scheduling, in\nlogistics and inventory', x:60, y:380, w:200, h:100, color:'', textColor:'', functions:[{name:'Supplier scheduling',inputs:['POs, delivery windows'],outputs:['Confirmed delivery schedule'],description:'Manages supplier delivery commitments',hidden:false},{name:'Inbound logistics',inputs:['Despatch notes'],outputs:['Goods receipt confirmation'],description:'',hidden:false},{name:'Inventory management',inputs:['Receipts, issues'],outputs:['Stock levels, replenishment triggers'],description:'',hidden:false}]},
-    {id:'n6', type:'internal', tag:'QMS', title:'Quality Management\nSystem', subtitle:'Inspection, non-conformance\nand corrective action\nmanagement', x:620, y:380, w:200, h:110, color:'', textColor:'', functions:[{name:'Inspection plans',inputs:['Engineering specs, control plans'],outputs:['Inspection trigger, checksheet'],description:'Defines what to inspect and when',hidden:false},{name:'Non-conformance logging',inputs:['Failed inspection results'],outputs:['NCR, hold status'],description:'Records and classifies quality failures',hidden:false},{name:'CAPA management',inputs:['NCR, audit findings'],outputs:['Corrective action plans'],description:'',hidden:false},{name:'First-article inspection',inputs:['First-off parts, drawings'],outputs:['FAI report, pass/hold status'],description:'',hidden:false}]},
-    {id:'n7', type:'boundary', tag:'', title:'Manufacturing Execution · L3/L4 Boundary', subtitle:'', x:40, y:30, w:840, h:520, color:'', textColor:'', functions:[]},
+    {id:'n1', type:'external', tag:'CLIENT', title:'Customer Portal', subtitle:'Demand capture,\npriority updates,\nand service notes', x:90, y:190, w:190, h:110, color:'#f6efe6', colorOpacity:255, textColor:'#5a3820', subtitleColor:'#7a573f', functions:[{name:'Order intake',inputs:['Demand signal, service notes'],outputs:['Approved order, priority flag'],description:'Captures customer demand and pushes the approved request into planning.',hidden:false},{name:'Change requests',inputs:['Project feedback'],outputs:['Spec adjustment'],description:'',hidden:false}]},
+    {id:'n2', type:'internal', tag:'PLM', title:'Product Lifecycle\nManagement', subtitle:'Engineering source of truth\nwith richer style treatment', x:410, y:80, w:220, h:125, color:'#eef3f8', colorOpacity:255, textColor:'#223548', subtitleColor:'#4c6277', tagColor:'#6c8ead', fnLabelColor:'#4c6277', functions:[{name:'BoM authoring',inputs:['Design package'],outputs:['Released BoM'],description:'Creates and maintains the engineering BoM.',hidden:false},{name:'Change control',inputs:['Spec adjustment'],outputs:['Approved ECO'],description:'',hidden:false}], notes:'Styled to demonstrate custom background and text colours.'},
+    {id:'n3', type:'internal', tag:'MES', title:'Manufacturing\nExecution System', subtitle:'Shop-floor orchestration,\nWIP tracking,\nand event capture', x:820, y:180, w:230, h:130, color:'#fdf0e7', colorOpacity:255, textColor:'#4a2d18', subtitleColor:'#7d583c', functions:[{name:'Dispatch',inputs:['Released BoM, production plan'],outputs:['Digital work order'],description:'',hidden:false},{name:'WIP telemetry',inputs:['Operator updates'],outputs:['Completion event, trace data'],description:'',hidden:false}], notes:'This node uses warmer colours to show content styling and contrast.'},
+    {id:'n4', type:'internal', tag:'ERP', title:'ERP Planning Hub', subtitle:'Financial planning,\nprocurement,\nand replenishment', x:430, y:360, w:220, h:115, color:'#f4f6eb', colorOpacity:255, textColor:'#2f4127', subtitleColor:'#586a4d', functions:[{name:'MRP orchestration',inputs:['Approved order, stock'],outputs:['Supply plan'],description:'',hidden:false},{name:'Purchasing',inputs:['Supply plan'],outputs:['PO release'],description:'',hidden:false}]},
+    {id:'n5', type:'internal', tag:'SCM', title:'Supplier Collaboration', subtitle:'Inbound logistics,\nASN visibility,\nand inventory response', x:90, y:560, w:210, h:115, color:'#eff6f5', colorOpacity:255, textColor:'#1d3d3a', subtitleColor:'#4d6d69', functions:[{name:'Supplier scheduling',inputs:['PO release'],outputs:['Confirmed slot'],description:'',hidden:false},{name:'Inbound visibility',inputs:['ASN'],outputs:['Receipt forecast'],description:'',hidden:false}]},
+    {id:'n6', type:'internal', tag:'QMS', title:'Quality Management', subtitle:'Inspection triggers,\nnon-conformance,\nand release status', x:835, y:540, w:220, h:120, color:'#f6eef5', colorOpacity:255, textColor:'#492948', subtitleColor:'#755473', functions:[{name:'Inspection routing',inputs:['Completion event'],outputs:['Inspection trigger'],description:'',hidden:false},{name:'Disposition',inputs:['Test result'],outputs:['Pass / hold'],description:'',hidden:false}]},
+    {id:'n7', type:'boundary', tag:'', title:'Manufacturing Value Stream', subtitle:'Example boundary box with direct-resize handles', x:45, y:38, w:1080, h:700, color:'', textColor:'#777777', subtitleColor:'#8a8a8a', functions:[]},
   ];
   state.arrows = [
-    {id:'a1', from:'n1', to:'n2', fromPos:'n', toPos:'w', direction:'directed', label:'Sales order / forecast', labelOffsetX:0, labelOffsetY:-10, color:'', dash:false, bend:0},
-    {id:'a2', from:'n1', to:'n4', fromPos:'e', toPos:'w', direction:'bidirectional', label:'Spec / change request', labelOffsetX:0, labelOffsetY:0, color:'', dash:false, bend:0},
-    {id:'a3', from:'n2', to:'n3', fromPos:'e', toPos:'n', direction:'directed', label:'Module data / routing', labelOffsetX:0, labelOffsetY:-12, color:'', dash:false, bend:0},
-    {id:'a4', from:'n2', to:'n4', fromPos:'s', toPos:'n', direction:'bidirectional', label:'Engineering BoM', labelOffsetX:8, labelOffsetY:0, color:'', dash:false, bend:0},
-    {id:'a5', from:'n4', to:'n3', fromPos:'e', toPos:'s', direction:'directed', label:'Actual BoM / labour', labelOffsetX:0, labelOffsetY:0, color:'', dash:false, bend:0},
-    {id:'a6', from:'n4', to:'n5', fromPos:'w', toPos:'e', direction:'bidirectional', label:'Material consumption', labelOffsetX:0, labelOffsetY:-10, color:'', dash:false, bend:0},
-    {id:'a7', from:'n3', to:'n6', fromPos:'s', toPos:'n', direction:'directed', label:'Inspection trigger', labelOffsetX:8, labelOffsetY:0, color:'', dash:false, bend:0},
-    {id:'a8', from:'n6', to:'n4', fromPos:'w', toPos:'e', direction:'directed', label:'Stock confirmation', labelOffsetX:0, labelOffsetY:-10, color:'', dash:false, bend:0},
-    {id:'a9', from:'n6', to:'n3', fromPos:'n', toPos:'s', direction:'bidirectional', label:'Pass / hold status', labelOffsetX:8, labelOffsetY:0, color:'', dash:false, bend:0},
+    {id:'a1', from:'n1', to:'n2', fromPos:'e', toPos:'w', direction:'directed', label:'Approved order', labelOffsetX:0, labelOffsetY:-10, color:'#6c8ead', dash:false, bend:0, lineStyle:'curved'},
+    {id:'a2', from:'n1', to:'n4', fromPos:'s', toPos:'w', direction:'bidirectional', label:'Spec adjustment', labelOffsetX:-12, labelOffsetY:0, color:'#ff8c42', dash:true, bend:0, lineStyle:'orthogonal', orthoY:60},
+    {id:'a3', from:'n2', to:'n3', fromPos:'e', toPos:'n', direction:'directed', label:'Released BoM', labelOffsetX:0, labelOffsetY:-10, color:'', dash:false, bend:0, lineStyle:'orthogonal', orthoY:-30},
+    {id:'a4', from:'n2', to:'n4', fromPos:'s', toPos:'n', direction:'bidirectional', label:'Engineering sync', labelOffsetX:12, labelOffsetY:0, color:'#889b4a', dash:false, bend:0, lineStyle:'straight'},
+    {id:'a5', from:'n4', to:'n3', fromPos:'e', toPos:'w', direction:'directed', label:'Production plan', labelOffsetX:0, labelOffsetY:-12, color:'#e85e00', dash:false, bend:24, lineStyle:'curved'},
+    {id:'a6', from:'n4', to:'n5', fromPos:'w', toPos:'e', direction:'bidirectional', label:'PO release', labelOffsetX:0, labelOffsetY:-12, color:'#2f7a71', dash:true, bend:0, lineStyle:'orthogonal', orthoY:40},
+    {id:'a7', from:'n5', to:'n3', fromPos:'e', toPos:'s', direction:'directed', label:'Inbound readiness', labelOffsetX:16, labelOffsetY:0, color:'#6c8ead', dash:false, bend:0, lineStyle:'orthogonal', orthoY:120},
+    {id:'a8', from:'n3', to:'n6', fromPos:'s', toPos:'n', direction:'directed', label:'Inspection trigger', labelOffsetX:10, labelOffsetY:0, color:'', dash:false, bend:0, lineStyle:'straight'},
+    {id:'a9', from:'n6', to:'n4', fromPos:'w', toPos:'e', direction:'bidirectional', label:'Release status', labelOffsetX:0, labelOffsetY:-12, color:'#9b5f9a', dash:false, bend:0, lineStyle:'orthogonal', orthoY:-30},
   ];
   nodeIdCounter = 10; arrowIdCounter = 20;
+}
+
+function loadSampleIntoCurrentDraft() {
+  pushUndo();
+  loadSample();
+  selectedNode = null;
+  selectedArrow = null;
+  render();
+  saveToLocalStorage();
+  setStatusModeMessage('Sample loaded', { fade: true, autoClearMs: 1600 });
 }
 
 // ══════════════════════════════════════════════
@@ -2611,7 +3005,7 @@ function render() {
 function updateEmptyState() {
   const el = document.getElementById('canvas-empty');
   if (!el) return;
-  const hasNodes = state.nodes.filter(n => n.type !== 'boundary').length > 0;
+  const hasNodes = state.nodes.length > 0;
   el.classList.toggle('visible', !hasNodes);
 }
 
@@ -2702,7 +3096,7 @@ function createNodeEl(n) {
             if (n.ioInputBg)     p.style.background = n.ioInputBg;
             if (n.ioInputBorder) p.style.borderColor = n.ioInputBorder;
             if (n.ioInputText)   p.style.color = n.ioInputText;
-            p.textContent = '↓ ' + v;
+            setIOPillLabel(p, 'IN', v);
             pillWrap.appendChild(p);
           });
           visOuts.forEach(v => {
@@ -2711,7 +3105,7 @@ function createNodeEl(n) {
             if (n.ioOutputBg)     p.style.background = n.ioOutputBg;
             if (n.ioOutputBorder) p.style.borderColor = n.ioOutputBorder;
             if (n.ioOutputText)   p.style.color = n.ioOutputText;
-            p.textContent = '↑ ' + v;
+            setIOPillLabel(p, 'OUT', v);
             pillWrap.appendChild(p);
           });
           fnsWrap.appendChild(pillWrap);
@@ -2739,12 +3133,18 @@ function createNodeEl(n) {
   }
   div.appendChild(inner);
 
-  // Resize handle
-  if (n.type !== 'boundary' || true) {
-    const rh = document.createElement('div');
-    rh.className = 'node-resize';
-    rh.addEventListener('mousedown', e => startResize(e, n.id));
-    div.appendChild(rh);
+  // Resize handles
+  const rh = document.createElement('div');
+  rh.className = 'node-resize';
+  rh.addEventListener('mousedown', e => startResize(e, n.id, 'se'));
+  div.appendChild(rh);
+  if (n.type === 'boundary') {
+    ['n','e','s','w'].forEach(edge => {
+      const eh = document.createElement('div');
+      eh.className = 'node-boundary-edge ' + edge;
+      eh.addEventListener('mousedown', e => startResize(e, n.id, edge));
+      div.appendChild(eh);
+    });
   }
 
   // Connection points — all node types including boundary
@@ -3361,6 +3761,45 @@ function updateSliderPct(el) {
   const pct = ((el.value - el.min) / (el.max - el.min) * 100).toFixed(1) + '%';
   el.style.setProperty('--slider-pct', pct);
 }
+
+function createPropSectionHeader(labelText, badgeText, sectionKey, bodyEl) {
+  const header = document.createElement('div');
+  header.className = 'prop-section-head' + (_propSectionState[sectionKey] !== false ? ' open' : '');
+
+  const label = document.createElement('div');
+  label.className = 'prop-label';
+  label.style.marginBottom = '0';
+  label.textContent = labelText;
+  header.appendChild(label);
+
+  const meta = document.createElement('div');
+  meta.className = 'prop-section-meta';
+
+  const badge = document.createElement('span');
+  badge.style.cssText = 'font-family:"IBM Plex Mono",monospace;font-size:9px;background:var(--surface3);color:var(--text3);padding:1px 6px;border-radius:3px;';
+  badge.textContent = badgeText;
+  meta.appendChild(badge);
+
+  const chevron = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  chevron.setAttribute('class', 'prop-section-chevron');
+  chevron.setAttribute('viewBox', '0 0 10 10');
+  chevron.setAttribute('fill', 'none');
+  chevron.innerHTML = '<path d="M2 3.5l3 3 3-3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>';
+  meta.appendChild(chevron);
+
+  header.appendChild(meta);
+  if (_propSectionState[sectionKey] === false) bodyEl.classList.add('hidden');
+
+  header.addEventListener('click', () => {
+    const isOpen = _propSectionState[sectionKey] !== false;
+    _propSectionState[sectionKey] = !isOpen;
+    header.classList.toggle('open', !isOpen);
+    bodyEl.classList.toggle('hidden', isOpen);
+  });
+
+  return header;
+}
+
 function renderSidebar() {
   document.getElementById('node-count').textContent = state.nodes.filter(n=>n.type!=='boundary').length;
   const list = document.getElementById('node-list');
@@ -3464,6 +3903,10 @@ function renderPropsPanel() {
       return sel;
     });
 
+    const typeDivider = document.createElement('div');
+    typeDivider.className = 'prop-divider';
+    body.appendChild(typeDivider);
+
     // Color
     const colorRow = document.createElement('div');
     colorRow.className = 'prop-row';
@@ -3531,12 +3974,16 @@ function renderPropsPanel() {
     brushBtn.className = 'prop-btn accent brush-btn';
     brushBtn.dataset.node = n.id;
     if (_brushActive) brushBtn.classList.add('active');
-    brushBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 12l3-3 5.5-5.5a1.5 1.5 0 0 0-2.1-2.1L3 7 2 12z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M9.5 3.5l1 1" stroke="currentColor" stroke-width="1.3"/><circle cx="2.5" cy="11.5" r="1" fill="currentColor" opacity="0.7"/></svg> Copy style…`;
+    brushBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 12l3-3 5.5-5.5a1.5 1.5 0 0 0-2.1-2.1L3 7 2 12z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M9.5 3.5l1 1" stroke="currentColor" stroke-width="1.3"/><circle cx="2.5" cy="11.5" r="1" fill="currentColor" opacity="0.7"/></svg> Style Brush`;
     brushBtn.addEventListener('click', () => {
       if (_brushActive) { cancelStyleBrush(); }
       else { startStyleBrush(n.id); }
     });
     body.appendChild(brushBtn);
+
+    const functionsDivider = document.createElement('div');
+    functionsDivider.className = 'prop-divider';
+    body.appendChild(functionsDivider);
 
     // Functions — compact summary + open modal button
     if (n.type !== 'boundary') {
@@ -3546,19 +3993,11 @@ function renderPropsPanel() {
       const fnSection = document.createElement('div');
       fnSection.className = 'prop-row';
 
-      const fnHeader = document.createElement('div');
-      fnHeader.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;';
-      const fnLbl = document.createElement('div');
-      fnLbl.className = 'prop-label';
-      fnLbl.style.marginBottom = '0';
-      fnLbl.textContent = 'Internal Functions';
-      fnHeader.appendChild(fnLbl);
       const visibleFnCount = n.functions.filter(f => (f.name||'').trim() && !f.hidden).length;
       const hiddenFnCount = n.functions.filter(f => f.hidden).length;
-      const fnCountBadge = document.createElement('span');
-      fnCountBadge.style.cssText = 'font-family:"IBM Plex Mono",monospace;font-size:9px;background:var(--surface3);color:var(--text3);padding:1px 6px;border-radius:3px;';
-      fnCountBadge.textContent = visibleFnCount + ' visible' + (hiddenFnCount ? ', ' + hiddenFnCount + ' hidden' : '');
-      fnHeader.appendChild(fnCountBadge);
+      const fnBody = document.createElement('div');
+      fnBody.className = 'prop-section-body';
+      const fnHeader = createPropSectionHeader('Internal Functions', visibleFnCount + ' visible' + (hiddenFnCount ? ', ' + hiddenFnCount + ' hidden' : ''), 'functions', fnBody);
       fnSection.appendChild(fnHeader);
 
       // Per-function rows with visibility toggle + click-to-edit
@@ -3613,7 +4052,7 @@ function renderPropsPanel() {
           fnList.appendChild(row);
         });
       }
-      fnSection.appendChild(fnList);
+      fnBody.appendChild(fnList);
 
       // Edit button
       const editFnBtn = document.createElement('button');
@@ -3621,20 +4060,100 @@ function renderPropsPanel() {
       editFnBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;width:100%;';
       editFnBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2L3 11H1V9L8.5 1.5z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg> Edit functions…';
       editFnBtn.addEventListener('click', () => openFnModal(n.id));
-      fnSection.appendChild(editFnBtn);
+      fnBody.appendChild(editFnBtn);
 
+      fnSection.appendChild(fnBody);
       body.appendChild(fnSection);
     }
 
-    // Connect from this node
+    // Connections — compact summary above the action button
     if (n.type !== 'boundary') {
+      const connSection = document.createElement('div');
+      connSection.className = 'prop-row';
+
+      const relatedConnections = state.arrows.filter(a => a.from === n.id || a.to === n.id);
+      const connBody = document.createElement('div');
+      connBody.className = 'prop-section-body';
+      const connHeader = createPropSectionHeader('Connections', relatedConnections.length + ' total', 'connections', connBody);
+      connSection.appendChild(connHeader);
+
+      const connList = document.createElement('div');
+      connList.style.cssText = 'display:flex;flex-direction:column;gap:2px;margin-bottom:8px;';
+      if (relatedConnections.length === 0) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'font-size:11px;color:var(--text3);font-style:italic;padding:2px 0;';
+        empty.textContent = 'No connections yet';
+        connList.appendChild(empty);
+      } else {
+        relatedConnections.forEach(a => {
+          const otherId = a.from === n.id ? a.to : a.from;
+          const other = state.nodes.find(x => x.id === otherId);
+          const isOutgoing = a.from === n.id;
+          const isBidir = a.direction === 'bidirectional';
+
+          const row = document.createElement('div');
+          row.style.cssText = 'display:flex;align-items:center;gap:6px;padding:3px 6px;border-radius:4px;background:var(--surface2);border:1px solid var(--border);cursor:pointer;transition:border-color 0.12s;';
+          row.title = 'Click to select this connection';
+
+          const dir = document.createElement('span');
+          dir.style.cssText = 'flex-shrink:0;font-size:11px;color:var(--accent3);font-family:"IBM Plex Mono",monospace;';
+          dir.textContent = isBidir ? '↔' : (isOutgoing ? '→' : '←');
+          row.appendChild(dir);
+
+          const info = document.createElement('div');
+          info.style.cssText = 'flex:1;min-width:0;';
+
+          const name = document.createElement('div');
+          name.style.cssText = 'font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+          name.textContent = other
+            ? ((other.tag ? other.tag + ' · ' : '') + (other.title || '').replace(/\n/g, ' '))
+            : 'Unknown node';
+          info.appendChild(name);
+
+          const meta = document.createElement('div');
+          meta.style.cssText = 'font-size:9px;color:var(--text3);font-family:"IBM Plex Mono",monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;';
+          meta.textContent = a.label
+            ? ((isBidir ? 'bidirectional' : (isOutgoing ? 'outgoing' : 'incoming')) + ' · ' + a.label)
+            : (isBidir ? 'bidirectional' : (isOutgoing ? 'outgoing' : 'incoming'));
+          info.appendChild(meta);
+
+          row.appendChild(info);
+          const editArrow = document.createElement('span');
+          editArrow.style.cssText = 'flex-shrink:0;font-size:10px;color:var(--text3);opacity:0.5;';
+          editArrow.textContent = '\u203A';
+          row.appendChild(editArrow);
+          row.addEventListener('mouseenter', () => { row.style.borderColor = 'var(--border2)'; editArrow.style.opacity = '1'; });
+          row.addEventListener('mouseleave', () => { row.style.borderColor = 'var(--border)'; editArrow.style.opacity = '0.5'; });
+          row.addEventListener('click', () => selectArrow(a.id));
+          connList.appendChild(row);
+        });
+      }
+      connBody.appendChild(connList);
       const connBtn = document.createElement('button');
       connBtn.className = 'prop-btn accent';
       connBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;width:100%;';
       connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="2.5" cy="6" r="1.5" fill="currentColor"/><circle cx="9.5" cy="6" r="1.5" fill="currentColor"/><line x1="4" y1="6" x2="8" y2="6" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2 1.2"/></svg> New connection…';
       connBtn.addEventListener('click', () => openConnectModal(n.id));
-      body.appendChild(connBtn);
+      connBody.appendChild(connBtn);
+      connSection.appendChild(connBody);
+      body.appendChild(connSection);
     }
+
+    const actionDivider = document.createElement('div');
+    actionDivider.className = 'prop-divider';
+    body.appendChild(actionDivider);
+
+    // Duplicate
+    const dupBtn = document.createElement('button');
+    dupBtn.className = 'prop-btn accent';
+    dupBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;width:100%;';
+    dupBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="4" y="4" width="7" height="7" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M1 8V2a1 1 0 0 1 1-1h6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg> Duplicate node';
+    dupBtn.title = 'Duplicate this node (Ctrl+C then Ctrl+V)';
+    dupBtn.addEventListener('click', () => {
+      copySelectedNode();
+      pasteNode();
+    });
+    body.appendChild(dupBtn);
 
     // Delete
     const delBtn = document.createElement('button');
@@ -3968,12 +4487,13 @@ function startDrag(e, id) {
 }
 
 // Resize
-function startResize(e, id) {
+function startResize(e, id, edge = 'se') {
+  e.preventDefault();
   e.stopPropagation();
   pushUndo(); // snapshot before resize
   const n = state.nodes.find(x=>x.id===id);
   resizingNode = id;
-  resizeStart = { mx: e.clientX, my: e.clientY, w: n.w, h: n.h };
+  resizeStart = { mx: e.clientX, my: e.clientY, x: n.x, y: n.y, w: n.w, h: n.h, edge };
 }
 
 // ── Connect mode ──
@@ -4043,7 +4563,7 @@ function startConnect(nodeId, pos, e) {
   wireTempPath.setAttribute('marker-end', 'url(#wire-preview-marker)');
 
   document.body.classList.add('connecting');
-  document.getElementById('sb-mode').textContent = '→ Drag to target node — release to connect';
+  setStatusModeMessage('\u2192 Drag to target node \u2014 release to connect');
 }
 
 function updateWirePreview(mouseX, mouseY) {
@@ -4112,7 +4632,7 @@ function cancelWire() {
   document.querySelectorAll('.conn-point.snap-target').forEach(cp => cp.classList.remove('snap-target'));
   document.querySelectorAll('.node.connect-target').forEach(n => n.classList.remove('connect-target'));
   const sbMode = document.getElementById('sb-mode');
-  if (sbMode) sbMode.textContent = '';
+  if (sbMode) setStatusModeMessage('');
 }
 
 function completeWire() {
@@ -4187,7 +4707,7 @@ function startEndpointDrag(arrowId, nodeId, pos, e) {
   }
 
   document.body.classList.add('connecting');
-  document.getElementById('sb-mode').textContent = '↔ Drag to reposition arrow endpoint';
+  setStatusModeMessage('\u2194 Drag to reposition arrow endpoint');
 }
 
 function completeEndpointDrag() {
@@ -4327,7 +4847,7 @@ function addMode(type) {
   const cy = (-panY + canvasWrap.clientHeight/2) / scale - 50;
   state.nodes.push({
     id, type, tag: _nextNodeTag(type),
-    title: type==='boundary'?'Boundary label':type==='external'?'External Entity':'New System',
+    title: type==='boundary'?'Boundary Box':type==='external'?'External Entity':'New System',
     subtitle: '',
     x: cx, y: cy, w: type==='boundary'?300:180, h: type==='boundary'?200:100,
     color:'', textColor:'', functions:[]
@@ -4346,7 +4866,7 @@ function addModeAt(type, canvasX, canvasY) {
   const y = Math.round((canvasY - h/2) / 10) * 10;
   state.nodes.push({
     id, type, tag: _nextNodeTag(type),
-    title: type==='boundary'?'Boundary label':type==='external'?'External Entity':'New System',
+    title: type==='boundary'?'Boundary Box':type==='external'?'External Entity':'New System',
     subtitle: '',
     x, y, w, h, color:'', textColor:'', functions:[]
   });
@@ -4402,15 +4922,35 @@ function fitDiagram() {
 // KEYBOARD
 // ══════════════════════════════════════════════
 document.addEventListener('keydown', e => {
-  if (e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
-  if ((e.key==='Delete'||e.key==='Backspace') && (selectedNode||selectedArrow)) deleteSelected();
-  if (e.key==='Escape') {
+  const inTextField = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'
+    || e.target.isContentEditable;
+
+  // Delete / Backspace — only when NOT in a text field
+  if (!inTextField && (e.key==='Delete'||e.key==='Backspace') && (selectedNode||selectedArrow)) deleteSelected();
+
+  // Escape — only when NOT in a text field (text fields handle their own Escape)
+  if (!inTextField && e.key==='Escape') {
     if (wireActive) cancelWire();
     if (_brushActive) { cancelStyleBrush(); return; }
     closeAppearancePanel();
     deselect();
   }
-  if ((e.ctrlKey||e.metaKey) && e.key==='z') undo();
+
+  // Ctrl/Cmd+Z — undo (skip when in a text field so browser undo still works there)
+  if (!inTextField && (e.ctrlKey||e.metaKey) && e.key==='z') { e.preventDefault(); undo(); }
+
+  // Ctrl/Cmd+C — copy selected node (skip when in a text field so normal text copy works)
+  if (!inTextField && (e.ctrlKey||e.metaKey) && e.key==='c' && selectedNode) {
+    // Don't prevent default — we don't put anything on the system clipboard,
+    // so normal browser copy behaviour on selected text is unaffected.
+    copySelectedNode();
+  }
+
+  // Ctrl/Cmd+V — paste node (skip when in a text field so normal text paste works)
+  if (!inTextField && (e.ctrlKey||e.metaKey) && e.key==='v' && _clipboardNode) {
+    e.preventDefault();
+    pasteNode();
+  }
 });
 
 function deleteSelected() {
@@ -4425,6 +4965,39 @@ function deleteSelected() {
     selectedArrow = null;
   }
   render();
+}
+
+function copySelectedNode() {
+  if (!selectedNode) return;
+  const n = state.nodes.find(x => x.id === selectedNode);
+  if (!n) return;
+  // Deep-clone the node so clipboard is isolated from future edits
+  _clipboardNode = JSON.parse(JSON.stringify(n));
+  // Brief visual feedback via status bar
+  setStatusModeMessage('\u2398 Copied \u2014 Ctrl+V to paste', { fade: true, autoClearMs: 1800 });
+}
+
+function pasteNode() {
+  if (!_clipboardNode) return;
+  pushUndo();
+  const src = _clipboardNode;
+  const id = 'n' + (nodeIdCounter++);
+  const OFFSET = 30; // pixels to nudge so paste is visibly distinct
+  const copy = {
+    ...JSON.parse(JSON.stringify(src)), // full deep-clone of all fields
+    id,
+    x: src.x + OFFSET,
+    y: src.y + OFFSET,
+  };
+  // Give copy a fresh tag only if original had a tag (keeps boundary nodes tag-free)
+  if (copy.tag && copy.type !== 'boundary') {
+    copy.tag = _nextNodeTag(copy.type);
+  }
+  state.nodes.push(copy);
+  render();
+  selectNode(id);
+  // Update clipboard position so repeated pastes cascade rather than stack
+  _clipboardNode = JSON.parse(JSON.stringify(copy));
 }
 
 // ══════════════════════════════════════════════
@@ -4476,10 +5049,35 @@ window.addEventListener('mousemove', e => {
   }
   if (resizingNode) {
     const n = state.nodes.find(x=>x.id===resizingNode);
-    n.w = Math.max(100, resizeStart.w + (e.clientX - resizeStart.mx)/scale);
-    n.h = Math.max(60, resizeStart.h + (e.clientY - resizeStart.my)/scale);
+    const dx = (e.clientX - resizeStart.mx) / scale;
+    const dy = (e.clientY - resizeStart.my) / scale;
+    const MIN_W = 100;
+    const MIN_H = 60;
+    const edge = resizeStart.edge || 'se';
+
+    if (edge.includes('e')) {
+      n.w = Math.max(MIN_W, resizeStart.w + dx);
+    }
+    if (edge.includes('s')) {
+      n.h = Math.max(MIN_H, resizeStart.h + dy);
+    }
+    if (edge === 'w') {
+      const nextW = Math.max(MIN_W, resizeStart.w - dx);
+      n.x = resizeStart.x + (resizeStart.w - nextW);
+      n.w = nextW;
+    }
+    if (edge === 'n') {
+      const nextH = Math.max(MIN_H, resizeStart.h - dy);
+      n.y = resizeStart.y + (resizeStart.h - nextH);
+      n.h = nextH;
+    }
     const el = document.getElementById(`node-${n.id}`);
-    if (el) { el.style.width=n.w+'px'; el.style.minHeight=n.h+'px'; }
+    if (el) {
+      el.style.left = n.x + 'px';
+      el.style.top = n.y + 'px';
+      el.style.width = n.w + 'px';
+      el.style.minHeight = n.h + 'px';
+    }
     renderArrows();
     return;
   }
@@ -4601,6 +5199,9 @@ function toggleSidebar() {
   const sb = document.getElementById('sidebar');
   sb.classList.toggle('collapsed');
   if (sb.classList.contains('collapsed')) closeAppearancePanel();
+  updateDocumentPanelPosition();
+  requestAnimationFrame(() => updateDocumentPanelPosition());
+  setTimeout(updateDocumentPanelPosition, 220);
 }
 function toggleSection(header) {
   header.classList.toggle('open');
@@ -4656,6 +5257,426 @@ function updateStatusBar() {
   document.getElementById('sb-io').textContent = `⇅ ${totalIO} I/O`;
 }
 
+function setStatusModeMessage(text = '', { fade = false, autoClearMs = 0 } = {}) {
+  const sb = document.getElementById('sb-mode');
+  if (!sb) return;
+
+  clearTimeout(sb._modeTimer);
+  clearTimeout(sb._modeClearTimer);
+
+  if (!text) {
+    sb.style.opacity = '0';
+    sb._modeClearTimer = setTimeout(() => {
+      if (sb.style.opacity === '0') sb.textContent = '';
+    }, 500);
+    return;
+  }
+
+  sb.textContent = text;
+
+  if (fade) {
+    sb.style.opacity = '0';
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (sb.textContent === text) sb.style.opacity = '1';
+      });
+    });
+  } else {
+    sb.style.opacity = '1';
+  }
+
+  if (autoClearMs > 0) {
+    sb._modeTimer = setTimeout(() => {
+      if (sb.textContent !== text) return;
+      sb.style.opacity = '0';
+      sb._modeClearTimer = setTimeout(() => {
+        if (sb.textContent === text) sb.textContent = '';
+      }, 500);
+    }, autoClearMs);
+  }
+}
+
+function setIOPillLabel(el, prefix, text) {
+  if (!el) return;
+  el.textContent = '';
+  const prefixSpan = document.createElement('span');
+  prefixSpan.className = 'io-pill-prefix';
+  prefixSpan.textContent = prefix;
+  el.appendChild(prefixSpan);
+  el.appendChild(document.createTextNode(text));
+}
+
+function autosizeDocumentField(el) {
+  if (!el || el.tagName !== 'TEXTAREA') return;
+  const styles = getComputedStyle(el);
+  const maxH = parseFloat(styles.maxHeight) || Infinity;
+  el.style.height = '0px';
+  const nextH = Math.min(el.scrollHeight, maxH);
+  el.style.height = nextH + 'px';
+  el.style.overflowY = el.scrollHeight > maxH ? 'auto' : 'hidden';
+}
+
+function updateDocumentPanelFromInputs() {
+  const titleInput = document.getElementById('diagram-title-input');
+  const subtitleInput = document.getElementById('diagram-subtitle-input');
+  const docTitle = document.getElementById('doc-title-input');
+  const docSubtitle = document.getElementById('doc-subtitle-input');
+  const previewTitle = document.getElementById('document-panel-preview-title');
+  const previewSubtitle = document.getElementById('document-panel-preview-subtitle');
+  const title = titleInput?.value || 'Untitled document';
+  const subtitleRaw = subtitleInput?.value || '';
+  const subtitle = subtitleRaw || 'Add a short description or scope';
+  if (docTitle && docTitle.value !== title) docTitle.value = title;
+  if (docSubtitle && docSubtitle.value !== subtitleRaw) docSubtitle.value = subtitleRaw;
+  if (previewTitle) previewTitle.textContent = title;
+  if (previewSubtitle) previewSubtitle.textContent = subtitle;
+  autosizeDocumentField(docTitle);
+  autosizeDocumentField(docSubtitle);
+}
+
+function updateDocumentPanelPosition() {
+  const panel = document.getElementById('document-panel');
+  const sb = document.getElementById('sidebar');
+  if (!panel || !sb) return;
+  const sidebarWidth = sb.getBoundingClientRect().width;
+  const left = sb.classList.contains('collapsed') ? 14 : (Math.round(sidebarWidth) + 14);
+  panel.style.left = left + 'px';
+}
+
+function toggleDocumentPanel(forceOpen) {
+  const panel = document.getElementById('document-panel');
+  if (!panel) return;
+  const nextOpen = typeof forceOpen === 'boolean' ? forceOpen : !panel.classList.contains('open');
+  panel.classList.toggle('open', nextOpen);
+  const toggle = document.getElementById('document-panel-toggle');
+  if (toggle) toggle.title = nextOpen ? 'Collapse document details' : 'Expand document details';
+  if (nextOpen) {
+    updateDocumentPanelFromInputs();
+    requestAnimationFrame(() => {
+      const el = document.getElementById('doc-title-input');
+      if (el) el.focus();
+    });
+  }
+}
+
+function openBasicModal({ title = '', body = '', buttons = [] } = {}) {
+  const overlay = document.getElementById('modal-overlay');
+  const titleEl = document.getElementById('modal-title');
+  const bodyEl = document.getElementById('modal-body');
+  const btnsEl = document.getElementById('modal-btns');
+  if (!overlay || !titleEl || !bodyEl || !btnsEl) return;
+
+  titleEl.textContent = title;
+  bodyEl.innerHTML = body;
+  btnsEl.innerHTML = '';
+
+  buttons.forEach(btn => {
+    const b = document.createElement('button');
+    b.className = btn.className || 'tb-btn';
+    b.textContent = btn.label || 'OK';
+    b.onclick = () => {
+      if (btn.closeFirst !== false) closeBasicModal();
+      if (typeof btn.onClick === 'function') btn.onClick();
+    };
+    btnsEl.appendChild(b);
+  });
+
+  overlay.classList.add('open');
+}
+
+function closeBasicModal() {
+  const overlay = document.getElementById('modal-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('open');
+}
+
+function clearCanvas() {
+  pushUndo();
+  cancelWire();
+  closeBasicModal();
+  closeConnectModal();
+  closeFnModal();
+  closeNodeModal();
+  if (typeof closeAppearancePanel === 'function') closeAppearancePanel();
+  selectedNode = null;
+  selectedArrow = null;
+  state.nodes = [];
+  state.arrows = [];
+  nodeIdCounter = 1;
+  arrowIdCounter = 1;
+  render();
+  saveToLocalStorage();
+  setStatusModeMessage('Canvas cleared', { fade: true, autoClearMs: 1800 });
+}
+
+function confirmClearCanvas() {
+  if (!state.nodes.length && !state.arrows.length) return;
+  openBasicModal({
+    title: 'Clear canvas',
+    body: '<div style="font-size:12px;color:var(--text2);line-height:1.6;">Remove all nodes, boundary boxes, and connections from the canvas? Your diagram title, subtitle, and theme will be kept. You can still undo this.</div>',
+    buttons: [
+      { label: 'Cancel', className: 'tb-btn' },
+      { label: 'Clear canvas', className: 'tb-btn danger', onClick: clearCanvas }
+    ]
+  });
+}
+
+function escapeDraftText(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatDraftTime(iso) {
+  if (!iso) return 'Unknown';
+  const dt = new Date(iso);
+  if (Number.isNaN(dt.getTime())) return 'Unknown';
+  return dt.toLocaleString([], {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function getDraftSummary(meta) {
+  const payload = getDraftPayload(meta.id) || {};
+  const nodeCount = Array.isArray(payload.state?.nodes) ? payload.state.nodes.length : 0;
+  const arrowCount = Array.isArray(payload.state?.arrows) ? payload.state.arrows.length : 0;
+  return { payload, nodeCount, arrowCount };
+}
+
+function suggestDraftName(baseName = '') {
+  const clean = draftDisplayName(baseName || document.getElementById('diagram-title-input')?.value || 'Untitled draft');
+  const names = new Set(getDraftIndex().drafts.map(d => draftDisplayName(d.name)));
+  if (!names.has(clean)) return clean;
+  let i = 2;
+  while (names.has(`${clean} (${i})`)) i++;
+  return `${clean} (${i})`;
+}
+
+function isQuotaExceededError(err) {
+  if (!err) return false;
+  return err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED' || err.code === 22 || err.code === 1014;
+}
+
+function warnDraftStorageFull() {
+  setStatusModeMessage('Draft save failed — local storage is full', { fade: true, autoClearMs: 2600 });
+  if (_quotaWarningShown) return;
+  _quotaWarningShown = true;
+  openBasicModal({
+    title: 'Draft storage full',
+    body: '<div class="draft-modal-note">This browser storage is full, so the latest draft changes could not be saved locally. Delete older drafts or export JSON to keep a safe copy.</div>',
+    buttons: [
+      { label: 'Open drafts', className: 'tb-btn primary', onClick: openDraftManager },
+      { label: 'Close', className: 'tb-btn' }
+    ]
+  });
+}
+
+function renderDraftManagerBody() {
+  const host = document.getElementById('draft-manager-body');
+  if (!host) return;
+  const index = getDraftIndex();
+  if (!index.drafts.length) {
+    host.innerHTML = '<div class="draft-empty-note">No drafts saved yet.</div>';
+    return;
+  }
+  const softCapNote = index.drafts.length > 12
+    ? `<div class="draft-warning-note">You have ${index.drafts.length} local drafts. Consider deleting older ones to avoid storage pressure.</div>`
+    : '';
+  host.innerHTML = `${softCapNote}<div class="draft-list">${
+    index.drafts.map(meta => {
+      const summary = getDraftSummary(meta);
+      return `<div class="draft-row${meta.id === currentDraftId ? ' active' : ''}">
+        <div class="draft-row-main">
+          <div class="draft-row-title">
+            <span class="draft-row-title-text">${escapeDraftText(draftDisplayName(meta.name))}</span>
+            ${meta.id === currentDraftId ? '<span class="draft-active-badge">Active</span>' : ''}
+          </div>
+          <div class="draft-row-meta">
+            Updated ${escapeDraftText(formatDraftTime(meta.updatedAt))}<br>
+            ${summary.nodeCount} items · ${summary.arrowCount} connections
+          </div>
+        </div>
+        <div class="draft-row-actions">
+          ${meta.id === currentDraftId ? '' : '<button class="tb-btn" onclick="switchToDraft(\'' + meta.id + '\')">Open</button>'}
+          <button class="tb-btn" onclick="renameDraftById('${meta.id}')">Rename</button>
+          <button class="tb-btn" onclick="duplicateDraftById('${meta.id}')">Duplicate</button>
+          <button class="tb-btn danger" onclick="deleteDraftById('${meta.id}')">Delete</button>
+        </div>
+      </div>`;
+    }).join('')
+  }</div>`;
+}
+
+function openDraftManager() {
+  openBasicModal({
+    title: 'Drafts',
+    body: '<div class="draft-modal-note">Switch between locally saved diagrams, or manage a few in-progress drafts in parallel.</div><div id="draft-manager-body"></div>',
+    buttons: [
+      { label: 'New draft', className: 'tb-btn primary', onClick: () => { createNewDraft(); }, closeFirst: false },
+      { label: 'Close', className: 'tb-btn' }
+    ]
+  });
+  renderDraftManagerBody();
+}
+
+function openDraftNameModal({ title, initialValue = '', confirmLabel, onConfirm }) {
+  openBasicModal({
+    title,
+    body: `<div class="draft-modal-note">Choose a draft name.</div><input id="draft-name-input" class="draft-name-input" type="text" value="${escapeDraftText(initialValue)}" placeholder="Draft name">`,
+    buttons: [
+      { label: 'Cancel', className: 'tb-btn' },
+      {
+        label: confirmLabel,
+        className: 'tb-btn primary',
+        onClick: () => {
+          const input = document.getElementById('draft-name-input');
+          const value = draftDisplayName(input?.value || initialValue);
+          onConfirm(value);
+        }
+      }
+    ]
+  });
+  requestAnimationFrame(() => {
+    const input = document.getElementById('draft-name-input');
+    if (input) {
+      input.focus();
+      input.select();
+      input.onkeydown = e => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          const btn = document.querySelector('#modal-btns .tb-btn.primary');
+          if (btn) btn.click();
+        }
+      };
+    }
+  });
+}
+
+function createDraftFromPayload(payload, name, { activate = true } = {}) {
+  const meta = ensureDraftRecord({
+    name: draftDisplayName(name),
+    payload,
+    activate
+  });
+  if (activate) {
+    applyDiagramPayload(getDraftPayload(meta.id));
+    undoStack = [];
+    updateUndoBtn();
+    render();
+  }
+  return meta;
+}
+
+function createNewDraft() {
+  openDraftNameModal({
+    title: 'New draft',
+    initialValue: suggestDraftName('Untitled draft'),
+    confirmLabel: 'Create draft',
+    onConfirm: value => {
+      createDraftFromPayload(createBlankDiagramPayload(), value, { activate: true });
+      setStatusModeMessage('New draft created', { fade: true, autoClearMs: 1600 });
+      saveToLocalStorage();
+      renderDraftManagerBody();
+    }
+  });
+}
+
+function switchToDraft(id) {
+  closeBasicModal();
+  if (loadDraftIntoCanvas(id)) {
+    setStatusModeMessage(`Opened ${draftDisplayName(currentDraftName)}`, { fade: true, autoClearMs: 1600 });
+  }
+}
+
+function renameDraftById(id) {
+  const payload = getDraftPayload(id);
+  const meta = getDraftIndex().drafts.find(d => d.id === id);
+  if (!meta) return;
+  openDraftNameModal({
+    title: 'Rename draft',
+    initialValue: draftDisplayName(meta.name),
+    confirmLabel: 'Save name',
+    onConfirm: value => {
+      const nextName = draftDisplayName(value);
+      touchDraftMeta(id, { name: nextName });
+      if (payload) {
+        payload.name = nextName;
+        saveDraftPayload(id, payload);
+      }
+      if (id === currentDraftId) {
+        currentDraftName = nextName;
+        updateDraftUI();
+      }
+      openDraftManager();
+    }
+  });
+}
+
+function renameCurrentDraft() {
+  if (!currentDraftId) return;
+  renameDraftById(currentDraftId);
+}
+
+function duplicateDraftById(id) {
+  const payload = getDraftPayload(id);
+  const meta = getDraftIndex().drafts.find(d => d.id === id);
+  if (!payload || !meta) return;
+  const clone = JSON.parse(JSON.stringify(payload));
+  clone.name = suggestDraftName(meta.name);
+  createDraftFromPayload(clone, clone.name, { activate: true });
+  renderDraftManagerBody();
+  setStatusModeMessage('Draft duplicated', { fade: true, autoClearMs: 1600 });
+}
+
+function duplicateCurrentDraft() {
+  if (!currentDraftId) return;
+  duplicateDraftById(currentDraftId);
+}
+
+function deleteDraftById(id) {
+  const index = getDraftIndex();
+  const meta = index.drafts.find(d => d.id === id);
+  if (!meta) return;
+  openBasicModal({
+    title: 'Delete draft',
+    body: `<div class="draft-modal-note">Delete <b>${escapeDraftText(draftDisplayName(meta.name))}</b> from local drafts? This removes only the local draft copy.</div>`,
+    buttons: [
+      { label: 'Cancel', className: 'tb-btn' },
+      {
+        label: 'Delete draft',
+        className: 'tb-btn danger',
+        onClick: () => {
+          const nextIndex = getDraftIndex();
+          nextIndex.drafts = nextIndex.drafts.filter(d => d.id !== id);
+          saveDraftIndex(sortDrafts(nextIndex));
+          localStorage.removeItem(getDraftStorageKey(id));
+          if (id === currentDraftId) {
+            if (nextIndex.drafts.length) {
+              loadDraftIntoCanvas(nextIndex.drafts[0].id);
+            } else {
+              createDraftFromPayload(createBlankDiagramPayload(), 'Untitled draft', { activate: true });
+            }
+          } else {
+            updateDraftUI();
+          }
+          setStatusModeMessage('Draft deleted', { fade: true, autoClearMs: 1600 });
+        }
+      }
+    ]
+  });
+}
+
+function deleteCurrentDraft() {
+  if (!currentDraftId) return;
+  deleteDraftById(currentDraftId);
+}
 // ══════════════════════════════════════════════
 // EXPORT / IMPORT
 // ══════════════════════════════════════════════
@@ -4680,7 +5701,28 @@ function importFile() {
 // Save title/subtitle changes to localStorage
 ['diagram-title-input', 'diagram-subtitle-input'].forEach(id => {
   const el = document.getElementById(id);
-  if (el) el.addEventListener('input', saveToLocalStorage);
+  if (el) el.addEventListener('input', () => {
+    updateDocumentPanelFromInputs();
+    saveToLocalStorage();
+  });
+});
+
+['doc-title-input', 'doc-subtitle-input'].forEach(id => {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.addEventListener('input', () => {
+    const hiddenTitle = document.getElementById('diagram-title-input');
+    const hiddenSubtitle = document.getElementById('diagram-subtitle-input');
+    if (id === 'doc-title-input' && hiddenTitle) hiddenTitle.value = el.value;
+    if (id === 'doc-subtitle-input' && hiddenSubtitle) hiddenSubtitle.value = el.value;
+    updateDocumentPanelFromInputs();
+    saveToLocalStorage();
+  });
+  el.addEventListener('focus', () => requestAnimationFrame(() => autosizeDocumentField(el)));
+});
+window.addEventListener('resize', updateDocumentPanelPosition);
+document.getElementById('sidebar')?.addEventListener('transitionend', e => {
+  if (e.propertyName === 'width') updateDocumentPanelPosition();
 });
 
 document.getElementById('file-input').addEventListener('change', e => {
@@ -4691,14 +5733,14 @@ document.getElementById('file-input').addEventListener('change', e => {
     try {
       const data = JSON.parse(ev.target.result);
       if (data.state) {
-        state = data.state;
-        if (data.title) document.getElementById('diagram-title-input').value = data.title;
-        if (data.subtitle) document.getElementById('diagram-subtitle-input').value = data.subtitle;
-        // fix counters
-        nodeIdCounter = Math.max(...state.nodes.map(n=>parseInt(n.id.replace(/\D/g,''))||0), 0)+1;
-        arrowIdCounter = Math.max(...state.arrows.map(a=>parseInt(a.id.replace(/\D/g,''))||0), 0)+1;
-        selectedNode=null; selectedArrow=null;
-        render();
+        const nameFromFile = (file.name || '').replace(/\.[^.]+$/, '') || data.title || 'Imported draft';
+        createDraftFromPayload({
+          version: 1,
+          title: data.title || '',
+          subtitle: data.subtitle || '',
+          state: data.state
+        }, suggestDraftName(nameFromFile), { activate: true });
+        saveToLocalStorage();
       }
     } catch(err) { alert('Invalid file: '+err.message); }
   };
@@ -4718,8 +5760,8 @@ function buildExportHTML(opts) {
     '--border','--border2',
     '--accent','--accent2','--accent3',
     '--text','--text2','--text3',
-    '--node-internal','--node-internal-border',
-    '--node-external','--node-external-border',
+    '--node-internal','--node-internal-border','--node-internal-edge',
+    '--node-external','--node-external-border','--node-external-edge',
     '--arrow-color','--label-bg',
     '--io-input-bg','--io-input-border','--io-input-text',
     '--io-output-bg','--io-output-border','--io-output-text',
@@ -4814,11 +5856,12 @@ function buildExportHTML(opts) {
   function makeExportMarker(id, color, forStart) {
     return `<marker id="${id}" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="${forStart?'auto-start-reverse':'auto'}"><path d="M0,0 L0,6 L8,3 z" fill="${color}"/></marker>`;
   }
+  const exportArrowColor = cs.getPropertyValue('--arrow-color').trim() || '#ff8c42';
 
   arrows.forEach(a => {
     const fn = nodes.find(x=>x.id===a.from), tn = nodes.find(x=>x.id===a.to);
     if(!fn||!tn) return;
-    const color=a.color||'#4d7ef5';
+    const color = a.color || exportArrowColor;
     eDefsHtml += makeExportMarker('emf-'+a.id, color, false);
     eDefsHtml += makeExportMarker('emb-'+a.id, color, true);
   });
@@ -4830,7 +5873,7 @@ function buildExportHTML(opts) {
     const p1=staggeredPortXYE(fn,a.fromPos||'e',a.id), p2=staggeredPortXYE(tn,a.toPos||'w',a.id);
     const {d:d2, lx:_elx, ly:_ely, cx1, cy1, cx2, cy2} =
       buildArrowPath(p1, p2, a.fromPos||'e', a.toPos||'w', a.bend||0, a.lineStyle||'curved', minX, minY, a.orthoY||0);
-    const color=a.color||'#4d7ef5';
+    const color = a.color || exportArrowColor;
     let mEnd='', mStart='';
     if(a.direction==='directed'){mEnd=`marker-end="url(#emf-${a.id})"`;}
     else if(a.direction==='bidirectional'){mEnd=`marker-end="url(#emf-${a.id})"`;mStart=`marker-start="url(#emb-${a.id})"`;}
@@ -4914,8 +5957,8 @@ function buildExportHTML(opts) {
           const ins  = (Array.isArray(f.inputs)  ? f.inputs  : (f.inputs  ? [f.inputs]  : [])).filter((_,i) => !hidIn.includes(i));
           const outs = (Array.isArray(f.outputs) ? f.outputs : (f.outputs ? [f.outputs] : [])).filter((_,i) => !hidOut.includes(i));
           let ioHtml = '';
-          if (ins.length)  ioHtml += `<div class="node-io-wrap">${ins.map(v=>`<span class="node-io-pill input" ${inSt?`style="${inSt}"`:''}>↓ ${v}</span>`).join('')}</div>`;
-          if (outs.length) ioHtml += `<div class="node-io-wrap">${outs.map(v=>`<span class="node-io-pill output" ${outSt?`style="${outSt}"`:''}>↑ ${v}</span>`).join('')}</div>`;
+          if (ins.length)  ioHtml += `<div class="node-io-wrap">${ins.map(v=>`<span class="node-io-pill input" ${inSt?`style="${inSt}"`:''}><span class="io-pill-prefix">IN</span>${v}</span>`).join('')}</div>`;
+          if (outs.length) ioHtml += `<div class="node-io-wrap">${outs.map(v=>`<span class="node-io-pill output" ${outSt?`style="${outSt}"`:''}><span class="io-pill-prefix">OUT</span>${v}</span>`).join('')}</div>`;
           return `<div class="node-fn-item" style="${n.fnTextColor ? 'color:'+n.fnTextColor+';' : tc}">${name}</div>${ioHtml}`;
         }).join('');
         return `<div class="node-functions"><div class="node-functions-label" style="${n.fnLabelColor ? 'color:'+n.fnLabelColor+';' : tc}">Functions</div>${items}</div>`;
@@ -4957,8 +6000,8 @@ body{background:var(--bg);font-family:'Inter',sans-serif;display:flex;flex-direc
 .grid-bg{position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:40px 40px;opacity:0.22;pointer-events:none;z-index:0;}
 /* ── Nodes — exact replica of builder CSS ── */
 .node{position:absolute;border-radius:var(--radius);cursor:default;min-width:120px;z-index:3;}
-.node.internal{background:var(--node-internal);border:1px solid #e8e0c8;border-left:3px solid var(--node-internal-border);box-shadow:var(--shadow);}
-.node.external{background:var(--node-external);border:1px solid #c8d8e8;border-left:3px dashed var(--node-external-border);box-shadow:var(--shadow);}
+.node.internal{background:var(--node-internal);border:1px solid var(--node-internal-edge);border-left:3px solid var(--node-internal-border);box-shadow:var(--shadow);}
+.node.external{background:var(--node-external);border:1px solid var(--node-external-edge);border-left:3px dashed var(--node-external-border);box-shadow:var(--shadow);}
 .node.boundary{background:transparent;border:1px dashed #cccccc;box-shadow:none;z-index:1;}
 .node-inner{padding:12px 14px;}
 .node.boundary .node-inner{padding:10px 14px;}
@@ -4974,6 +6017,7 @@ body{background:var(--bg);font-family:'Inter',sans-serif;display:flex;flex-direc
 .node.external .node-fn-item::before{background:var(--accent2);}
 .node-io-wrap{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px;margin-bottom:1px;}
 .node-io-pill{padding:1px 6px;border-radius:10px;font-size:8.5px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.02em;}
+.io-pill-prefix{font-family:'IBM Plex Mono',monospace;font-size:0.95em;font-weight:600;letter-spacing:0.08em;margin-right:0.45em;}
 .node-io-pill.input{background:var(--io-input-bg);border:1px solid var(--io-input-border);color:var(--io-input-text);}
 .node-io-pill.output{background:var(--io-output-bg);border:1px solid var(--io-output-border);color:var(--io-output-text);}
 /* ── Detail trigger button ── */
@@ -5068,7 +6112,7 @@ ${opts.showGrid ? '<div class="grid-bg"></div>' : ''}
     <div class="legend-item"><div class="legend-line" style="background:var(--accent);border-radius:1px;"></div>Connection</div>
     <div class="legend-item"><svg width="28" height="4" style="flex-shrink:0"><line x1="0" y1="2" x2="28" y2="2" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="4 3"/></svg>Dashed connection</div>
   </div>` : ''}
-  <footer style="position:fixed;bottom:4px;right:16px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#2a2f3e;z-index:5;">Conduit v1.0 · ${new Date().toLocaleDateString()}</footer>
+<footer style="position:fixed;bottom:4px;right:16px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#2a2f3e;z-index:5;">Conduit v1.2 · ${new Date().toLocaleDateString()}</footer>
 </div>
 <scr\u0069pt>
 const _nodeData = ${nodeDetailJson};
@@ -5106,14 +6150,14 @@ function openDetail(id) {
         const row = document.createElement('div'); row.className = 'dp-io-row';
         const lbr = document.createElement('div'); lbr.className = 'dp-io-label'; lbr.textContent = 'Inputs';
         const pills = document.createElement('div'); pills.className = 'dp-pills';
-        f.inputs.forEach(v => { const s = document.createElement('span'); s.className='dp-pill-in'; s.textContent='↓ '+v; pills.appendChild(s); });
+f.inputs.forEach(v => { const s = document.createElement('span'); s.className='dp-pill-in'; s.innerHTML='<span class="io-pill-prefix">IN</span>'+escapeHtml(v); pills.appendChild(s); });
         row.appendChild(lbr); row.appendChild(pills); bdy.appendChild(row);
       }
       if (f.outputs && f.outputs.length) {
         const row = document.createElement('div'); row.className = 'dp-io-row';
         const lbr = document.createElement('div'); lbr.className = 'dp-io-label'; lbr.textContent = 'Outputs';
         const pills = document.createElement('div'); pills.className = 'dp-pills';
-        f.outputs.forEach(v => { const s = document.createElement('span'); s.className='dp-pill-out'; s.textContent='↑ '+v; pills.appendChild(s); });
+f.outputs.forEach(v => { const s = document.createElement('span'); s.className='dp-pill-out'; s.innerHTML='<span class="io-pill-prefix">OUT</span>'+escapeHtml(v); pills.appendChild(s); });
         row.appendChild(lbr); row.appendChild(pills); bdy.appendChild(row);
       }
       const metaItems = [f.owner&&('Owner: '+f.owner), f.trigger&&('Trigger: '+f.trigger), f.system&&('System: '+f.system)].filter(Boolean);
@@ -5289,6 +6333,22 @@ function openNodeModal(nodeId) {
   nmTitleInput.value    = n.title    || '';
   nmSubtitleInput.value = n.subtitle || '';
 
+  function autosizeNMHeaderField(el) {
+    if (!el || el.tagName !== 'TEXTAREA') return;
+    const styles = getComputedStyle(el);
+    const maxH = parseFloat(styles.maxHeight) || Infinity;
+    el.style.height = '0px';
+    const nextH = Math.min(el.scrollHeight, maxH);
+    el.style.height = nextH + 'px';
+    el.style.overflowY = el.scrollHeight > maxH ? 'auto' : 'hidden';
+  }
+  autosizeNMHeaderField(nmTitleInput);
+  autosizeNMHeaderField(nmSubtitleInput);
+  requestAnimationFrame(() => {
+    autosizeNMHeaderField(nmTitleInput);
+    autosizeNMHeaderField(nmSubtitleInput);
+  });
+
   // Wire inputs directly — read from the live DOM elements that the user types into
   function nmFieldSave() {
     const tagEl   = document.getElementById('nm-tag-input');
@@ -5299,6 +6359,8 @@ function openNodeModal(nodeId) {
     n.title    = (titleEl ? titleEl.value                       : n.title);
     n.subtitle = (subEl   ? subEl.value                         : n.subtitle);
     if (tagEl) tagEl.value = n.tag; // reflect uppercase normalisation
+    autosizeNMHeaderField(titleEl);
+    autosizeNMHeaderField(subEl);
     renderNodes();
     renderArrows();
     renderSidebar();
@@ -5306,12 +6368,19 @@ function openNodeModal(nodeId) {
     saveToLocalStorage();
   }
   // Assign oninput directly — overwrites any previous handler from a prior open()
-  nmTagInput.oninput      = nmFieldSave;
-  nmTitleInput.oninput    = nmFieldSave;
-  nmSubtitleInput.oninput = nmFieldSave;
-  // Prevent Enter losing focus on single-line fields
-  nmTagInput.onkeydown      = e => { if (e.key === 'Enter') e.preventDefault(); };
-  nmSubtitleInput.onkeydown = e => { if (e.key === 'Enter') e.preventDefault(); };
+  nmTagInput.oninput = nmFieldSave;
+  nmTitleInput.oninput = () => {
+    nmFieldSave();
+    requestAnimationFrame(() => autosizeNMHeaderField(nmTitleInput));
+  };
+  nmSubtitleInput.oninput = () => {
+    nmFieldSave();
+    requestAnimationFrame(() => autosizeNMHeaderField(nmSubtitleInput));
+  };
+  nmTitleInput.onfocus = () => requestAnimationFrame(() => autosizeNMHeaderField(nmTitleInput));
+  nmSubtitleInput.onfocus = () => requestAnimationFrame(() => autosizeNMHeaderField(nmSubtitleInput));
+  // Prevent Enter on the single-line tag field
+  nmTagInput.onkeydown = e => { if (e.key === 'Enter') e.preventDefault(); };
 
   // Notes
   const notesArea = document.getElementById('nm-notes-area');
@@ -5608,7 +6677,7 @@ function buildNMFunctions(n, panel) {
               arr.forEach(v => {
                 const p = document.createElement('span');
                 p.className = 'nm-fn-pill ' + (key === 'inputs' ? 'in' : 'out');
-                p.textContent = v;
+                setIOPillLabel(p, key === 'inputs' ? 'IN' : 'OUT', v);
                 pillWrap.appendChild(p);
               });
               col.appendChild(pillWrap);
@@ -5963,7 +7032,7 @@ function showFnDetail(fn, idx) {
           const tag = document.createElement('div');
           tag.className = 'io-tag ' + (key === 'inputs' ? 'input-tag' : 'output-tag') + (isHidden ? ' io-tag-hidden' : '');
           const span = document.createElement('span');
-          span.textContent = val;
+          setIOPillLabel(span, key === 'inputs' ? 'IN' : 'OUT', val);
           // Visibility toggle
           const vis = document.createElement('button');
           vis.className = 'io-tag-vis';
@@ -6948,6 +8017,23 @@ document.addEventListener('keydown', e => {
     closeExportModal();
   }
 });
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal-overlay')) closeBasicModal();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('modal-overlay')?.classList.contains('open')) {
+    closeBasicModal();
+  }
+  if (e.key === 'Escape' && document.getElementById('document-panel')?.classList.contains('open')) {
+    toggleDocumentPanel(false);
+  }
+});
+document.addEventListener('mousedown', e => {
+  const panel = document.getElementById('document-panel');
+  if (!panel || !panel.classList.contains('open')) return;
+  if (panel.contains(e.target)) return;
+  toggleDocumentPanel(false);
+});
 
 
 // ── Arrow tooltip ──
@@ -6998,53 +8084,245 @@ function hideArrowTooltip() {
 // ══════════════════════════════════════════════
 // AUTO-SAVE TO LOCALSTORAGE
 // ══════════════════════════════════════════════
-const LS_KEY = 'simbuilder_autosave';
+const LEGACY_LS_KEY = 'simbuilder_autosave';
+const DRAFT_INDEX_KEY = 'conduit_drafts_index';
+const ACTIVE_DRAFT_KEY = 'conduit_active_draft';
+const DRAFT_PREFIX = 'conduit_draft_';
+
+function getDraftStorageKey(id) {
+  return DRAFT_PREFIX + id;
+}
+
+function readStoredJSON(key, fallback = null) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch (e) {
+    return fallback;
+  }
+}
+
+function getDraftIndex() {
+  const data = readStoredJSON(DRAFT_INDEX_KEY, null);
+  if (!data || !Array.isArray(data.drafts)) return { version: 1, drafts: [] };
+  return data;
+}
+
+function saveDraftIndex(index) {
+  localStorage.setItem(DRAFT_INDEX_KEY, JSON.stringify(index));
+}
+
+function getCurrentDiagramPayload() {
+  return {
+    version: 1,
+    title: document.getElementById('diagram-title-input')?.value || '',
+    subtitle: document.getElementById('diagram-subtitle-input')?.value || '',
+    state: JSON.parse(JSON.stringify(state))
+  };
+}
+
+function createBlankDiagramPayload() {
+  return {
+    version: 1,
+    title: 'SYSTEM INTERFACE MAP',
+    subtitle: 'Manufacturing Execution · L3 / L4',
+    state: { nodes: [], arrows: [] }
+  };
+}
+
+function refreshCountersFromState() {
+  nodeIdCounter = Math.max(...(state.nodes || []).map(n => parseInt((n.id || '').replace(/\D/g,'')) || 0), 0) + 1;
+  arrowIdCounter = Math.max(...(state.arrows || []).map(a => parseInt((a.id || '').replace(/\D/g,'')) || 0), 0) + 1;
+}
+
+function applyDiagramPayload(data) {
+  state = data?.state ? JSON.parse(JSON.stringify(data.state)) : { nodes: [], arrows: [] };
+  if (!Array.isArray(state.nodes)) state.nodes = [];
+  if (!Array.isArray(state.arrows)) state.arrows = [];
+  const ti = document.getElementById('diagram-title-input');
+  const si = document.getElementById('diagram-subtitle-input');
+  if (ti) ti.value = data?.title || '';
+  if (si) si.value = data?.subtitle || '';
+  selectedNode = null;
+  selectedArrow = null;
+  refreshCountersFromState();
+  updateDocumentPanelFromInputs();
+}
+
+function draftDisplayName(name) {
+  return (name || '').trim() || 'Untitled draft';
+}
+
+function makeDraftId() {
+  return 'draft_' + Date.now() + '_' + Math.random().toString(36).slice(2, 7);
+}
+
+function getDraftPayload(id) {
+  return readStoredJSON(getDraftStorageKey(id), null);
+}
+
+function saveDraftPayload(id, payload) {
+  localStorage.setItem(getDraftStorageKey(id), JSON.stringify(payload));
+}
+
+function sortDrafts(index) {
+  index.drafts.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
+  return index;
+}
+
+function updateDraftUI() {
+  const draftName = draftDisplayName(currentDraftName);
+  const label = document.getElementById('file-draft-label');
+  if (label) {
+    label.textContent = `Draft · ${draftName}`;
+    label.title = draftName;
+  }
+  const chip = document.getElementById('active-draft-chip');
+  if (chip) {
+    chip.textContent = `Draft · ${draftName}`;
+    chip.title = draftName;
+  }
+}
+
+function setActiveDraft(id) {
+  currentDraftId = id;
+  localStorage.setItem(ACTIVE_DRAFT_KEY, JSON.stringify({ id }));
+  const meta = getDraftIndex().drafts.find(d => d.id === id);
+  currentDraftName = meta ? draftDisplayName(meta.name) : draftDisplayName(currentDraftName);
+  updateDraftUI();
+}
+
+function touchDraftMeta(id, patch = {}) {
+  const index = getDraftIndex();
+  const meta = index.drafts.find(d => d.id === id);
+  if (!meta) return null;
+  Object.assign(meta, patch, { updatedAt: patch.updatedAt || new Date().toISOString() });
+  saveDraftIndex(sortDrafts(index));
+  return meta;
+}
+
+function ensureDraftRecord({ id = makeDraftId(), name = '', payload = null, activate = false } = {}) {
+  const index = getDraftIndex();
+  const now = new Date().toISOString();
+  let meta = index.drafts.find(d => d.id === id);
+  if (!meta) {
+    meta = {
+      id,
+      name: draftDisplayName(name),
+      createdAt: now,
+      updatedAt: now
+    };
+    index.drafts.push(meta);
+  } else {
+    meta.name = draftDisplayName(name || meta.name);
+    meta.updatedAt = now;
+  }
+  saveDraftIndex(sortDrafts(index));
+  if (payload) {
+    saveDraftPayload(id, {
+      version: 1,
+      ...payload,
+      id,
+      name: draftDisplayName(meta.name)
+    });
+  }
+  if (activate) setActiveDraft(id);
+  return meta;
+}
+
+function flashSavedIndicator() {
+  const ind = document.getElementById('sb-autosave');
+  if (ind) {
+    ind.style.opacity = '1';
+    clearTimeout(ind._fadeTimer);
+    ind._fadeTimer = setTimeout(() => { ind.style.opacity = '0'; }, 1800);
+  }
+}
 
 function saveToLocalStorage() {
   try {
-    const payload = JSON.stringify({
-      version: 1,
-      title: document.getElementById('diagram-title-input')?.value || '',
-      subtitle: document.getElementById('diagram-subtitle-input')?.value || '',
-      state
-    });
-    localStorage.setItem(LS_KEY, payload);
-    // Flash the saved indicator
-    const ind = document.getElementById('sb-autosave');
-    if (ind) {
-      ind.style.opacity = '1';
-      clearTimeout(ind._fadeTimer);
-      ind._fadeTimer = setTimeout(() => { ind.style.opacity = '0'; }, 1800);
+    if (!currentDraftId) {
+      ensureDraftRecord({
+        name: currentDraftName || 'Untitled draft',
+        payload: getCurrentDiagramPayload(),
+        activate: true
+      });
     }
+    const payload = getCurrentDiagramPayload();
+    saveDraftPayload(currentDraftId, {
+      version: 1,
+      id: currentDraftId,
+      name: draftDisplayName(currentDraftName),
+      ...payload
+    });
+    const meta = touchDraftMeta(currentDraftId, { name: draftDisplayName(currentDraftName) });
+    currentDraftName = meta ? draftDisplayName(meta.name) : draftDisplayName(currentDraftName);
+    updateDraftUI();
+    flashSavedIndicator();
   } catch(e) {
-    // localStorage may be unavailable (private browsing, storage full)
     console.warn('Auto-save failed:', e);
+    if (isQuotaExceededError(e)) warnDraftStorageFull();
   }
+}
+
+function loadDraftIntoCanvas(id) {
+  const payload = getDraftPayload(id);
+  if (!payload || !payload.state || !Array.isArray(payload.state.nodes)) return false;
+  setActiveDraft(id);
+  applyDiagramPayload(payload);
+  undoStack = [];
+  updateUndoBtn();
+  render();
+  return true;
+}
+
+function migrateLegacyAutosave() {
+  const legacy = readStoredJSON(LEGACY_LS_KEY, null);
+  if (!legacy || !legacy.state || !Array.isArray(legacy.state.nodes)) return;
+  const index = getDraftIndex();
+  if (index.drafts.length) return;
+  ensureDraftRecord({
+    name: (legacy.title || '').trim() || 'Recovered draft',
+    payload: {
+      version: 1,
+      title: legacy.title || '',
+      subtitle: legacy.subtitle || '',
+      state: legacy.state
+    },
+    activate: true
+  });
+  try { localStorage.removeItem(LEGACY_LS_KEY); } catch (e) {}
 }
 
 function loadFromLocalStorage() {
   try {
-    const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return false;
-    const data = JSON.parse(raw);
-    if (!data.state || !data.state.nodes) return false;
-    state = data.state;
-    // Restore title/subtitle inputs after DOM is ready
-    requestAnimationFrame(() => {
-      const ti = document.getElementById('diagram-title-input');
-      const si = document.getElementById('diagram-subtitle-input');
-      if (ti && data.title) ti.value = data.title;
-      if (si && data.subtitle) si.value = data.subtitle;
-    });
-    return true;
+    migrateLegacyAutosave();
+    const active = readStoredJSON(ACTIVE_DRAFT_KEY, null)?.id;
+    const index = getDraftIndex();
+    if (!index.drafts.length) {
+      const meta = ensureDraftRecord({
+        name: 'Untitled draft',
+        payload: createBlankDiagramPayload(),
+        activate: true
+      });
+      return loadDraftIntoCanvas(meta.id);
+    }
+    const targetId = active && index.drafts.some(d => d.id === active) ? active : index.drafts[0].id;
+    return loadDraftIntoCanvas(targetId);
   } catch(e) {
-    console.warn('Auto-save restore failed:', e);
+    console.warn('Draft restore failed:', e);
     return false;
   }
 }
 
 function clearAutoSave() {
-  try { localStorage.removeItem(LS_KEY); } catch(e) {}
+  try {
+    const index = getDraftIndex();
+    index.drafts.forEach(d => localStorage.removeItem(getDraftStorageKey(d.id)));
+    localStorage.removeItem(DRAFT_INDEX_KEY);
+    localStorage.removeItem(ACTIVE_DRAFT_KEY);
+    localStorage.removeItem(LEGACY_LS_KEY);
+  } catch(e) {}
 }
 
 
@@ -7074,7 +8352,7 @@ function _movePaletteDrag(e) {
   paletteDragMoved = true;
 
   // Show ghost
-  const labels = { internal: 'Internal System', external: 'External Entity', boundary: 'Boundary Label' };
+  const labels = { internal: 'Internal System', external: 'External Entity', boundary: 'Boundary Box' };
   _ghost.textContent  = labels[paletteDragType] || paletteDragType;
   _ghost.className    = paletteDragType;
   _ghost.style.display = 'block';
@@ -7200,18 +8478,18 @@ function bootApp() {
   applyTransform();
   loadTheme();
   try {
-    // Attempt to restore last session; fall back to sample diagram
+    // Attempt to restore last draft; fall back to a fresh blank draft
     if (loadFromLocalStorage()) {
-      nodeIdCounter = Math.max(nodeIdCounter, ...state.nodes.map(n => parseInt(n.id.replace(/\D/g,''))||0)) + 1;
-      arrowIdCounter = Math.max(arrowIdCounter, ...state.arrows.map(a => parseInt(a.id.replace(/\D/g,''))||0)) + 1;
-      render();
     } else {
       init();
+      saveToLocalStorage();
     }
   } catch(e) {
     console.error('Conduit boot error:', e);
-    try { init(); } catch(e2) {}
+    try { init(); saveToLocalStorage(); } catch(e2) {}
   }
+  updateDocumentPanelFromInputs();
+  updateDocumentPanelPosition();
   restoreSectionState();
   updatePaletteHighlight();
   // Re-run empty state check after DOM settles
@@ -7226,3 +8504,5 @@ if (document.readyState === 'loading') {
 </script>
 </body>
 </html>
+
+
