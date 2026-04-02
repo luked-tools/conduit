@@ -684,6 +684,13 @@
   .conn-point[data-pos="s"] { top: 100%; left: 50%; }
   .conn-point[data-pos="e"] { top: 50%; left: 100%; }
   .conn-point[data-pos="w"] { top: 50%; left: 0; }
+  .node[data-hide-ports~="n"] .conn-point[data-pos="n"],
+  .node[data-hide-ports~="s"] .conn-point[data-pos="s"],
+  .node[data-hide-ports~="e"] .conn-point[data-pos="e"],
+  .node[data-hide-ports~="w"] .conn-point[data-pos="w"] {
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
   /* target node highlight during drag-connect */
   .node.connect-target { box-shadow: 0 0 0 2px var(--accent3), 0 0 8px var(--accent3-ring) !important; }
   .node.arrow-endpoint { box-shadow: 0 0 0 1.5px var(--accent2), 0 0 0 4px var(--accent2-ring) !important; }
@@ -699,7 +706,7 @@
   .conn-point.arrow-endpoint-port {
     opacity: 1 !important;
     background: var(--accent2) !important;
-    box-shadow: 0 0 0 3px #7c5cfc60 !important;
+    box-shadow: 0 0 0 3px var(--accent2-ring) !important;
     transform: translate(-50%, -50%) scale(1.2) !important;
     cursor: grab !important;
     z-index: 30;
@@ -707,6 +714,30 @@
   .conn-point.arrow-endpoint-port:hover {
     transform: translate(-50%, -50%) scale(1.4) !important;
     cursor: grab !important;
+  }
+  .arrow-endpoint-handle {
+    cursor: grab;
+    pointer-events: all;
+  }
+  .arrow-endpoint-handle .hit {
+    fill: #fff;
+    opacity: 0.001;
+    pointer-events: all;
+  }
+  .arrow-endpoint-handle .dot {
+    fill: var(--surface);
+    stroke: var(--accent3);
+    stroke-width: 1.5;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.18));
+    pointer-events: all;
+  }
+  .arrow-endpoint-handle:hover .dot {
+    fill: color-mix(in srgb, var(--accent-soft) 72%, var(--surface) 28%);
+    stroke-width: 2;
+  }
+  .arrow-endpoint-handle:active,
+  .arrow-endpoint-handle.dragging {
+    cursor: grabbing;
   }
   /* dragging-wire cursor override */
   body.connecting * { cursor: crosshair !important; }
@@ -3205,24 +3236,58 @@ function createNodeEl(n) {
 }
 
 // ── ARROWS ──
-function getPortXY(node, pos) {
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+function normalizeSideOffset(value) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return 0.5;
+  return clamp(value, 0, 1);
+}
+
+function getArrowEndOffset(arr, end) {
+  const key = end === 'from' ? 'fromOffset' : 'toOffset';
+  return typeof arr?.[key] === 'number' && Number.isFinite(arr[key]) ? clamp(arr[key], 0, 1) : null;
+}
+
+function getPortXY(node, pos, offset, heightOverride) {
   const x = node.x, y = node.y, w = node.w;
-  // Always use actual rendered height — node.h is only min-height,
+  // Always use actual rendered height ? node.h is only min-height,
   // content (functions list etc.) routinely makes nodes taller.
-  const h = getNodeActualH(node);
+  const h = heightOverride !== undefined ? heightOverride : getNodeActualH(node);
+  const t = normalizeSideOffset(offset);
   switch(pos) {
-    case 'n': return {x: x + w/2, y: y};
-    case 's': return {x: x + w/2, y: y + h};
-    case 'e': return {x: x + w,   y: y + h/2};
-    case 'w': return {x: x,       y: y + h/2};
-    default:  return {x: x + w/2, y: y + h/2};
+    case 'n': return {x: x + w * t, y: y};
+    case 's': return {x: x + w * t, y: y + h};
+    case 'e': return {x: x + w,     y: y + h * t};
+    case 'w': return {x: x,         y: y + h * t};
+    default:  return {x: x + w/2,   y: y + h/2};
   }
 }
 
+function getEdgeOffsetFromPoint(node, pos, mx, my, heightOverride) {
+  const h = heightOverride !== undefined ? heightOverride : getNodeActualH(node);
+  const sideLen = (pos === 'n' || pos === 's') ? node.w : h;
+  const inset = Math.min(24, Math.max(10, sideLen * 0.08));
+  const minT = sideLen > 0 ? inset / sideLen : 0;
+  const maxT = sideLen > 0 ? 1 - minT : 1;
+  const raw = (pos === 'n' || pos === 's')
+    ? (mx - node.x) / Math.max(node.w, 1)
+    : (my - node.y) / Math.max(h, 1);
+  return clamp(raw, minT, maxT);
+}
 
-// ── Arrow path builder — curved, straight, orthogonal ──
-// Returns { d, lx, ly } where lx/ly is the label midpoint.
-// ox/oy are optional offsets applied to all coords (used by export to subtract minX/minY).
+function getNodeEdgeAttachment(node, mx, my, heightOverride) {
+  const h = heightOverride !== undefined ? heightOverride : getNodeActualH(node);
+  const edges = [
+    { pos: 'n', dist: Math.abs(my - node.y) },
+    { pos: 's', dist: Math.abs(my - (node.y + h)) },
+    { pos: 'e', dist: Math.abs(mx - (node.x + node.w)) },
+    { pos: 'w', dist: Math.abs(mx - node.x) }
+  ];
+  edges.sort((a, b) => a.dist - b.dist);
+  const pos = edges[0].pos;
+  return { pos, offset: getEdgeOffsetFromPoint(node, pos, mx, my, h) };
+}
+
 function buildArrowPath(p1, p2, fromPos, toPos, bend, lineStyle, ox, oy, orthoOffset) {
   ox = ox || 0; oy = oy || 0;
   const x1 = p1.x - ox, y1 = p1.y - oy;
@@ -3336,27 +3401,29 @@ function renderArrows() {
   // ── Port stagger: arrows sharing the same port get a perpendicular offset
   // so they fan out instead of sitting directly on top of each other.
   // Group arrows by (nodeId, portPos) for both ends, then assign a stagger index.
-  const portGroups = {}; // key: 'nodeId:pos' → [arrowId, ...]
+  const portGroups = {}; // key: 'nodeId:pos' ? ['arrowId:end', ...]
   state.arrows.forEach(a => {
     const fk = a.from + ':' + (a.fromPos || 'e');
     const tk = a.to   + ':' + (a.toPos   || 'w');
     if (!portGroups[fk]) portGroups[fk] = [];
     if (!portGroups[tk]) portGroups[tk] = [];
-    portGroups[fk].push(a.id);
-    portGroups[tk].push(a.id);
+    if (getArrowEndOffset(a, 'from') === null) portGroups[fk].push(a.id + ':from');
+    if (getArrowEndOffset(a, 'to') === null) portGroups[tk].push(a.id + ':to');
   });
 
-  // Perpendicular offset per port direction (rotate 90°)
+  // Perpendicular offset per port direction (rotate 90?)
   const portPerp = { n:{x:1,y:0}, s:{x:1,y:0}, e:{x:0,y:1}, w:{x:0,y:1} };
   const STAGGER = 8; // px between co-located arrows at the same port
 
-  function staggeredPortXY(node, pos, arrowId) {
+  function staggeredPortXY(node, pos, arrowId, end, manualOffset) {
+    if (manualOffset !== null) return getPortXY(node, pos, manualOffset);
     const base = getPortXY(node, pos);
     const key  = node.id + ':' + pos;
+    const token = arrowId + ':' + end;
     const group = portGroups[key] || [];
-    if (group.length <= 1) return base; // only arrow here — no stagger needed
-    const idx  = group.indexOf(arrowId);
-    // Centre the fan: offset goes -n/2 … +n/2 around the port centre
+    if (group.length <= 1) return base; // only arrow here ? no stagger needed
+    const idx  = group.indexOf(token);
+    if (idx === -1) return base;
     const total = group.length;
     const offset = (idx - (total - 1) / 2) * STAGGER;
     const perp = portPerp[pos] || {x:1, y:0};
@@ -3368,8 +3435,8 @@ function renderArrows() {
     const toNode   = state.nodes.find(n => n.id === a.to);
     if (!fromNode || !toNode) return;
 
-    const p1 = staggeredPortXY(fromNode, a.fromPos || 'e', a.id);
-    const p2 = staggeredPortXY(toNode,   a.toPos   || 'w', a.id);
+    const p1 = staggeredPortXY(fromNode, a.fromPos || 'e', a.id, 'from', getArrowEndOffset(a, 'from'));
+    const p2 = staggeredPortXY(toNode,   a.toPos   || 'w', a.id, 'to', getArrowEndOffset(a, 'to'));
 
     const isSelected = selectedArrow === a.id;
     const stroke = isSelected ? (getComputedStyle(document.documentElement).getPropertyValue('--accent3').trim()||'#e85e00') : (a.color || (getComputedStyle(document.documentElement).getPropertyValue('--arrow-color').trim()||'#ff8c42'));
@@ -3435,6 +3502,26 @@ function renderArrows() {
     }
     arrowSVG.appendChild(path);
 
+    if (isSelected) {
+      [
+        { end: 'from', point: p1, nodeId: a.from, pos: a.fromPos || 'e' },
+        { end: 'to',   point: p2, nodeId: a.to,   pos: a.toPos   || 'w' }
+      ].forEach(handle => {
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.setAttribute('class', 'arrow-endpoint-handle' + (epDragActive && epDragArrowId === a.id && epDragEnd === handle.end ? ' dragging' : ''));
+        g.setAttribute('transform', `translate(${handle.point.x},${handle.point.y})`);
+        const hit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        hit.setAttribute('class', 'hit');
+        hit.setAttribute('r', '16');
+        g.appendChild(hit);
+        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        c.setAttribute('class', 'dot');
+        c.setAttribute('r', '5.5');
+        g.appendChild(c);
+        g.addEventListener('mousedown', e => startEndpointDrag(a.id, handle.nodeId, handle.pos, e, handle.end));
+        arrowSVG.appendChild(g);
+      });
+    }
 
     // Label
     if (a.label) {
@@ -3599,7 +3686,11 @@ function renderArrows() {
           if (slB) { slB.value = Math.round(a.orthoY || 0); updateSliderPct(slB); }
         });
         window.addEventListener('mouseup', () => {
-          if (dragging) { dragging = false; saveToLocalStorage(); }
+          if (dragging) {
+            dragging = false;
+            saveToLocalStorage();
+            if (selectedArrow === a.id) renderSidebar();
+          }
         });
       });
     }
@@ -4225,8 +4316,8 @@ function renderPropsPanel() {
     });
 
     // From/To port
-    addPropRow(body, 'From port (source)', () => makePortSelect(a, 'fromPos', () => renderArrows()));
-    addPropRow(body, 'To port (target)', () => makePortSelect(a, 'toPos', () => renderArrows()));
+    addPropRow(body, 'From port (source)', () => makePortSelect(a, 'fromPos', () => { renderArrows(); renderSidebar(); }));
+    addPropRow(body, 'To port (target)', () => makePortSelect(a, 'toPos', () => { renderArrows(); renderSidebar(); }));
 
     // Bend
     const _isOrth = a.lineStyle === 'orthogonal';
@@ -4245,30 +4336,59 @@ function renderPropsPanel() {
       bendRow.appendChild(bendInp);
       body.appendChild(bendRow);
     }
+    const hasManualEndpointOffsets = getArrowEndOffset(a, 'from') !== null || getArrowEndOffset(a, 'to') !== null;
+    const resetControlsRow = document.createElement('div');
+    resetControlsRow.style.cssText = 'display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px;';
+    function setMiniResetDisabled(btn, disabled) {
+      btn.disabled = disabled;
+      btn.style.opacity = disabled ? '0.45' : '1';
+      btn.style.cursor = disabled ? 'default' : 'pointer';
+    }
     if (_isOrth) {
-      // Two sliders — one per axis. Labels depend on from-port direction.
-      const fromP = a.fromPos || 'e';
-      const isHorizExit = (fromP === 'e' || fromP === 'w');
-      const labelA = isHorizExit ? 'Column X position' : 'Crossbar Y position';
-      const labelB = isHorizExit ? 'Crossbar Y position' : 'Column X position';
-
-      // Reset routing button
-      const resetRouteRow = document.createElement('div');
-      resetRouteRow.style.cssText = 'display:flex;justify-content:flex-end;margin-bottom:6px;';
+      const hasManualRouting = () => Math.round(a.bend || 0) !== 0 || Math.round(a.orthoY || 0) !== 0;
       const resetRouteBtn = document.createElement('button');
-      resetRouteBtn.textContent = '↺ Reset routing';
+      resetRouteBtn.textContent = '\u21ba Reset routing';
       resetRouteBtn.title = 'Reset connection path to default';
       resetRouteBtn.style.cssText = 'padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:10px;';
+      setMiniResetDisabled(resetRouteBtn, !hasManualRouting());
       resetRouteBtn.addEventListener('click', () => {
+        if (!hasManualRouting()) return;
         pushUndo(); a.bend = 0; a.orthoY = 0;
         const slA = document.getElementById('ortho-slider-bend');
         const slB = document.getElementById('ortho-slider-orthoY');
         if (slA) { slA.value = 0; updateSliderPct(slA); }
         if (slB) { slB.value = 0; updateSliderPct(slB); }
-        renderArrows(); saveToLocalStorage();
+        setMiniResetDisabled(resetRouteBtn, true);
+        renderArrows(); saveToLocalStorage(); renderSidebar();
       });
-      resetRouteRow.appendChild(resetRouteBtn);
-      body.appendChild(resetRouteRow);
+      resetControlsRow.appendChild(resetRouteBtn);
+    }
+    const resetEndpointsBtn = document.createElement('button');
+    resetEndpointsBtn.textContent = '\u21ba Reset end-points';
+    resetEndpointsBtn.title = 'Reset manual endpoint positions to the default side midpoint';
+    resetEndpointsBtn.style.cssText = 'padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:10px;';
+    if (!hasManualEndpointOffsets) {
+      resetEndpointsBtn.disabled = true;
+      resetEndpointsBtn.style.opacity = '0.45';
+      resetEndpointsBtn.style.cursor = 'default';
+    }
+    resetEndpointsBtn.addEventListener('click', () => {
+      if (!hasManualEndpointOffsets) return;
+      pushUndo();
+      a.fromOffset = null;
+      a.toOffset = null;
+      saveToLocalStorage();
+      selectArrow(a.id);
+    });
+    resetControlsRow.appendChild(resetEndpointsBtn);
+    body.appendChild(resetControlsRow);
+
+    if (_isOrth) {
+      // Two sliders ? one per axis. Labels depend on from-port direction.
+      const fromP = a.fromPos || 'e';
+      const isHorizExit = (fromP === 'e' || fromP === 'w');
+      const labelA = isHorizExit ? 'Column X position' : 'Crossbar Y position';
+      const labelB = isHorizExit ? 'Crossbar Y position' : 'Column X position';
 
       [[labelA, 'bend', 'ortho-slider-bend'], [labelB, 'orthoY', 'ortho-slider-orthoY']].forEach(([lbl, prop, sid]) => {
         const row = document.createElement('div');
@@ -4278,7 +4398,17 @@ function renderPropsPanel() {
         const sl = document.createElement('input'); sl.type = 'range'; sl.className = 'prop-input';
         sl.id = sid; sl.min = -300; sl.max = 300; sl.value = Math.round(a[prop] || 0);
         updateSliderPct(sl);
-        sl.addEventListener('input', () => { updateSliderPct(sl); pushUndoDebounced(); a[prop] = parseInt(sl.value); renderArrows(); saveToLocalStorage(); });
+        sl.addEventListener('input', () => {
+          updateSliderPct(sl);
+          pushUndoDebounced();
+          a[prop] = parseInt(sl.value);
+          const routeResetBtn = resetControlsRow.querySelector('button');
+          if (routeResetBtn && routeResetBtn.textContent.includes('Reset routing')) {
+            setMiniResetDisabled(routeResetBtn, Math.round(a.bend || 0) === 0 && Math.round(a.orthoY || 0) === 0);
+          }
+          renderArrows();
+          saveToLocalStorage();
+        });
         row.appendChild(sl);
         body.appendChild(row);
       });
@@ -4413,7 +4543,14 @@ function makePortSelect(obj, key, onChange) {
     if (obj[key]===o.v) opt.selected=true;
     sel.appendChild(opt);
   });
-  sel.addEventListener('change', () => { obj[key]=sel.value; onChange(); });
+  sel.addEventListener('change', () => {
+    pushUndo();
+    obj[key]=sel.value;
+    if (key === 'fromPos') obj.fromOffset = null;
+    if (key === 'toPos') obj.toOffset = null;
+    onChange();
+    saveToLocalStorage();
+  });
   return sel;
 }
 
@@ -4424,7 +4561,12 @@ function selectNode(id) {
   selectedNode = id;
   selectedArrow = null;
   arrowSVG.style.zIndex = '2';
-  document.querySelectorAll('.node').forEach(e => e.classList.remove('selected'));
+  document.querySelectorAll('.node').forEach(e => {
+    e.classList.remove('selected');
+    e.classList.remove('arrow-endpoint');
+    e.removeAttribute('data-hide-ports');
+  });
+  document.querySelectorAll('.conn-point.arrow-endpoint-port').forEach(cp => cp.classList.remove('arrow-endpoint-port'));
   const el = document.getElementById(`node-${id}`);
   if (el) el.classList.add('selected');
   // If appearance panel is open, update it for the new node (close for boundary)
@@ -4433,6 +4575,7 @@ function selectNode(id) {
     if (selN && selN.type === 'boundary') closeAppearancePanel();
     else if (_apNodeId !== id) openAppearancePanel(id);
   }
+  renderArrows();
   renderSidebar();
 }
 
@@ -4440,7 +4583,11 @@ function selectArrow(id) {
   selectedArrow = id;
   selectedNode = null;
   closeAppearancePanel();
-  document.querySelectorAll('.node').forEach(e => { e.classList.remove('selected'); e.classList.remove('arrow-endpoint'); });
+  document.querySelectorAll('.node').forEach(e => {
+    e.classList.remove('selected');
+    e.classList.remove('arrow-endpoint');
+    e.removeAttribute('data-hide-ports');
+  });
   document.querySelectorAll('.conn-point.arrow-endpoint-port').forEach(cp => cp.classList.remove('arrow-endpoint-port'));
   const arr = state.arrows.find(a => a.id === id);
   if (arr) {
@@ -4448,14 +4595,15 @@ function selectArrow(id) {
     const toEl   = document.getElementById('node-' + arr.to);
     if (fromEl) {
       fromEl.classList.add('arrow-endpoint');
-      // Mark the specific port dot for this arrow end as draggable
-      const fromCp = fromEl.querySelector(`.conn-point[data-pos="${arr.fromPos || 'e'}"]`);
-      if (fromCp) fromCp.classList.add('arrow-endpoint-port');
+      const ports = new Set((fromEl.dataset.hidePorts || '').split(' ').filter(Boolean));
+      ports.add(arr.fromPos || 'e');
+      fromEl.dataset.hidePorts = [...ports].join(' ');
     }
     if (toEl) {
       toEl.classList.add('arrow-endpoint');
-      const toCp = toEl.querySelector(`.conn-point[data-pos="${arr.toPos || 'w'}"]`);
-      if (toCp) toCp.classList.add('arrow-endpoint-port');
+      const ports = new Set((toEl.dataset.hidePorts || '').split(' ').filter(Boolean));
+      ports.add(arr.toPos || 'w');
+      toEl.dataset.hidePorts = [...ports].join(' ');
     }
   }
   arrowSVG.style.zIndex = '4'; // float above nodes while arrow is selected
@@ -4468,7 +4616,11 @@ function deselect(e) {
   selectedNode = null;
   selectedArrow = null;
   closeAppearancePanel();
-  document.querySelectorAll('.node').forEach(e => { e.classList.remove('selected'); e.classList.remove('arrow-endpoint'); });
+  document.querySelectorAll('.node').forEach(e => {
+    e.classList.remove('selected');
+    e.classList.remove('arrow-endpoint');
+    e.removeAttribute('data-hide-ports');
+  });
   document.querySelectorAll('.conn-point.arrow-endpoint-port').forEach(cp => cp.classList.remove('arrow-endpoint-port'));
   arrowSVG.style.zIndex = '2'; // restore below nodes
   renderArrows();
@@ -4512,6 +4664,7 @@ let wireTargetPos = null;    // best port on hovered target
 let epDragActive = false;    // true when dragging an arrow endpoint
 let epDragArrowId = null;    // which arrow
 let epDragEnd = null;        // 'from' or 'to'
+let wireTargetOffset = null; // normalized offset along the snapped target edge
 
 // Called from conn-point mousedown
 function startConnect(nodeId, pos, e) {
@@ -4523,6 +4676,7 @@ function startConnect(nodeId, pos, e) {
   wireSrcPos = pos;
   wireTargetId = null;
   wireTargetPos = null;
+  wireTargetOffset = null;
 
   // Visual: mark source port
   const srcEl = document.getElementById('node-' + nodeId);
@@ -4570,10 +4724,19 @@ function updateWirePreview(mouseX, mouseY) {
   if (!wireActive || !wireTempPath) return;
   const srcNode = state.nodes.find(x => x.id === wireSrcId);
   if (!srcNode) return;
-  const p1 = getPortXY(srcNode, wireSrcPos);
 
-  // If hovering a target node, use the specific snapped port (pass-1)
-  // or compute the best port algorithmically (pass-2 / node-level snap)
+  let p1 = getPortXY(srcNode, wireSrcPos);
+  if (epDragActive && epDragArrowId) {
+    const arr = state.arrows.find(x => x.id === epDragArrowId);
+    if (arr) {
+      const otherEnd = epDragEnd === 'from' ? 'to' : 'from';
+      const otherNode = state.nodes.find(x => x.id === (otherEnd === 'from' ? arr.from : arr.to));
+      const otherPos = otherEnd === 'from' ? (arr.fromPos || 'e') : (arr.toPos || 'w');
+      const otherOffset = getArrowEndOffset(arr, otherEnd);
+      if (otherNode) p1 = getPortXY(otherNode, otherPos, otherOffset);
+    }
+  }
+
   let p2x = mouseX, p2y = mouseY;
   let snapPos = null;
   if (wireTargetId) {
@@ -4585,19 +4748,12 @@ function updateWirePreview(mouseX, mouseY) {
         snapPos = getBestTargetPort(srcNode, wireSrcPos, tgt, mouseX, mouseY);
         wireTargetPos = snapPos;
       }
-      // Use actual rendered height so preview snaps to the real port position
-      const tgtEl = document.getElementById('node-' + tgt.id);
-      const tgtH = tgtEl ? tgtEl.offsetHeight : tgt.h;
-      switch(snapPos) {
-        case 'n': p2x = tgt.x + tgt.w/2; p2y = tgt.y; break;
-        case 's': p2x = tgt.x + tgt.w/2; p2y = tgt.y + tgtH; break;
-        case 'e': p2x = tgt.x + tgt.w;   p2y = tgt.y + tgtH/2; break;
-        case 'w': p2x = tgt.x;            p2y = tgt.y + tgtH/2; break;
-      }
+      const snapped = getPortXY(tgt, snapPos, wireTargetOffset);
+      p2x = snapped.x;
+      p2y = snapped.y;
     }
   }
 
-  // Bezier curve matching the real arrow style
   const offsets = {n:{x:0,y:-1}, s:{x:0,y:1}, e:{x:1,y:0}, w:{x:-1,y:0}};
   const fo = offsets[wireSrcPos] || {x:1, y:0};
   const dx = p2x - p1.x, dy = p2y - p1.y;
@@ -4623,7 +4779,7 @@ function updateWirePreview(mouseX, mouseY) {
 function cancelWire() {
   wireActive = false;
   wireSrcId = null; wireSrcPos = null;
-  wireTargetId = null; wireTargetPos = null;
+  wireTargetId = null; wireTargetPos = null; wireTargetOffset = null;
   epDragActive = false; epDragArrowId = null; epDragEnd = null;
 
   if (wireTempPath) { wireTempPath.remove(); wireTempPath = null; }
@@ -4661,14 +4817,18 @@ function completeWire() {
 }
 
 // ── ENDPOINT DRAG — move an existing arrow's from/to port ──
-function startEndpointDrag(arrowId, nodeId, pos, e) {
+function startEndpointDrag(arrowId, nodeId, pos, e, forcedEnd) {
   e.preventDefault();
+  e.stopPropagation();
   const arr = state.arrows.find(a => a.id === arrowId);
   if (!arr) return;
 
-  // Determine which end is being dragged
-  const isFrom = arr.from === nodeId && (arr.fromPos || 'e') === pos;
-  const isTo   = arr.to   === nodeId && (arr.toPos   || 'w') === pos;
+  let isFrom = forcedEnd === 'from';
+  let isTo = forcedEnd === 'to';
+  if (!forcedEnd) {
+    isFrom = arr.from === nodeId && (arr.fromPos || 'e') === pos;
+    isTo   = arr.to   === nodeId && (arr.toPos   || 'w') === pos;
+  }
   if (!isFrom && !isTo) return;
 
   pushUndo();
@@ -4677,19 +4837,16 @@ function startEndpointDrag(arrowId, nodeId, pos, e) {
   epDragArrowId = arrowId;
   epDragEnd     = isFrom ? 'from' : 'to';
 
-  // Reuse the wire preview system: treat the OTHER end as the "source"
-  // so the snap logic naturally shows where the dragged end can go
   const otherNodeId  = isFrom ? arr.to   : arr.from;
   const otherNodePos = isFrom ? (arr.toPos || 'w') : (arr.fromPos || 'e');
 
-  // Start a wire-like drag from the OTHER end
   wireActive   = true;
   wireSrcId    = otherNodeId;
   wireSrcPos   = otherNodePos;
   wireTargetId = null;
   wireTargetPos = null;
+  wireTargetOffset = null;
 
-  // Preview path
   wireTempPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   wireTempPath.setAttribute('fill', 'none');
   wireTempPath.setAttribute('stroke', 'var(--accent2)');
@@ -4699,9 +4856,8 @@ function startEndpointDrag(arrowId, nodeId, pos, e) {
   wireTempPath.setAttribute('opacity', '0.9');
   arrowSVG.appendChild(wireTempPath);
 
-  // Mark the dragged port as active
   const srcEl = document.getElementById('node-' + nodeId);
-  if (srcEl) {
+  if (srcEl && getArrowEndOffset(arr, epDragEnd) === null) {
     const cp = srcEl.querySelector(`.conn-point[data-pos="${pos}"]`);
     if (cp) cp.classList.add('drag-active');
   }
@@ -4714,33 +4870,21 @@ function completeEndpointDrag() {
   if (!epDragActive) return;
 
   const arr = state.arrows.find(a => a.id === epDragArrowId);
-  if (arr && wireTargetId && wireTargetId !== (epDragEnd === 'from' ? arr.to : arr.from)) {
-    // Valid new target — update the arrow
-    const newPos = wireTargetPos || getBestTargetPort(
-      state.nodes.find(x => x.id === wireSrcId), wireSrcPos,
-      state.nodes.find(x => x.id === wireTargetId), 0, 0
-    );
-    if (epDragEnd === 'from') {
-      arr.from    = wireTargetId;
-      arr.fromPos = newPos;
-    } else {
-      arr.to    = wireTargetId;
-      arr.toPos = newPos;
-    }
-    saveToLocalStorage();
-  } else if (arr && wireTargetId === (epDragEnd === 'from' ? arr.to : arr.from)) {
-    // Dropped back on same node — just update the port if a specific one was snapped
-    if (wireTargetPos) {
-      if (epDragEnd === 'from') arr.fromPos = wireTargetPos;
-      else                       arr.toPos   = wireTargetPos;
-      saveToLocalStorage();
-    }
+  if (!arr) {
+    cancelWire();
+    return;
   }
-  // Allow same-node port change (wireTargetId === current node)
-  else if (arr && wireTargetId) {
-    const newPos = wireTargetPos || 'e';
-    if (epDragEnd === 'from') { arr.from = wireTargetId; arr.fromPos = newPos; }
-    else                       { arr.to   = wireTargetId; arr.toPos   = newPos; }
+
+  if (wireTargetId) {
+    if (epDragEnd === 'from') {
+      arr.from = wireTargetId;
+      arr.fromPos = wireTargetPos || 'e';
+      arr.fromOffset = wireTargetOffset;
+    } else {
+      arr.to = wireTargetId;
+      arr.toPos = wireTargetPos || 'w';
+      arr.toOffset = wireTargetOffset;
+    }
     saveToLocalStorage();
   }
 
@@ -4748,10 +4892,9 @@ function completeEndpointDrag() {
   epDragArrowId = null;
   epDragEnd     = null;
 
-  cancelWire(); // clears wireActive, temp path, visual state
+  cancelWire();
   const arrowId = selectedArrow;
   render();
-  // Re-select the arrow so endpoint dots reappear
   if (arrowId) {
     selectedArrow = arrowId;
     selectArrow(arrowId);
@@ -4764,15 +4907,8 @@ function getNodeActualH(n) {
   return el ? el.offsetHeight : n.h;
 }
 
-function getPortXYActual(n, pos) {
-  const h = getNodeActualH(n);
-  switch(pos) {
-    case 'n': return {x: n.x + n.w/2, y: n.y};
-    case 's': return {x: n.x + n.w/2, y: n.y + h};
-    case 'e': return {x: n.x + n.w,   y: n.y + h/2};
-    case 'w': return {x: n.x,         y: n.y + h/2};
-    default:  return {x: n.x + n.w/2, y: n.y + h/2};
-  }
+function getPortXYActual(n, pos, offset) {
+  return getPortXY(n, pos, offset, getNodeActualH(n));
 }
 
 function getBestTargetPort(srcNode, srcPos, tgtNode, mx, my) {
@@ -5087,43 +5223,45 @@ window.addEventListener('mousemove', e => {
     const my = (e.clientY - rect.top - panY) / scale;
 
     // Two-pass snap:
-    // Pass 1 — snap to a specific port dot if cursor is within PORT_SNAP px of it.
-    // Pass 2 — if not near any port, snap to whichever node the cursor is inside.
-    const PORT_SNAP = 28;   // px in canvas space — radius around each port dot
+    // Pass 1 ? snap to a specific port dot if cursor is within PORT_SNAP px of it.
+    // Pass 2 ? if not near any port, snap to the nearest edge point on a hovered node.
+    const PORT_SNAP = 28;   // px in canvas space ? radius around each port dot
     const NODE_MARGIN = 12; // extra margin beyond node edge for node-level hover
 
     let snapNodeId = null;
     let snapPortPos = null;
+    let snapOffset = null;
     let bestPortDist = Infinity;
 
-    // Helper: get actual rendered port position using DOM offsetHeight for accuracy.
-    // n.h is min-height only — content can make nodes taller, shifting the S port.
     function getActualPortXY(n, pos) {
-      const el = document.getElementById('node-' + n.id);
-      const actualH = el ? el.offsetHeight : n.h;
-      switch(pos) {
-        case 'n': return { x: n.x + n.w / 2, y: n.y };
-        case 's': return { x: n.x + n.w / 2, y: n.y + actualH };
-        case 'e': return { x: n.x + n.w,     y: n.y + actualH / 2 };
-        case 'w': return { x: n.x,            y: n.y + actualH / 2 };
-        default:  return { x: n.x + n.w / 2, y: n.y + actualH / 2 };
-      }
+      return getPortXYActual(n, pos);
     }
 
     state.nodes.forEach(n => {
       if (n.id === wireSrcId) return;
       ['n','s','e','w'].forEach(pos => {
+        if (epDragActive && n.type === 'boundary') {
+          const el = document.getElementById('node-' + n.id);
+          const actualH = el ? el.offsetHeight : n.h;
+          const EDGE_ONLY_MARGIN = 20;
+          const nearBoundaryEdge =
+            Math.abs(mx - n.x) <= EDGE_ONLY_MARGIN ||
+            Math.abs(mx - (n.x + n.w)) <= EDGE_ONLY_MARGIN ||
+            Math.abs(my - n.y) <= EDGE_ONLY_MARGIN ||
+            Math.abs(my - (n.y + actualH)) <= EDGE_ONLY_MARGIN;
+          if (!nearBoundaryEdge) return;
+        }
         const p = getActualPortXY(n, pos);
         const d = Math.sqrt((mx - p.x)**2 + (my - p.y)**2);
         if (d < PORT_SNAP && d < bestPortDist) {
           bestPortDist = d;
           snapNodeId = n.id;
           snapPortPos = pos;
+          snapOffset = null;
         }
       });
     });
 
-    // Pass 2 — no port snapped, check node bounding box using actual height
     if (!snapNodeId) {
       let bestBoxDist = Infinity;
       state.nodes.forEach(n => {
@@ -5133,28 +5271,52 @@ window.addEventListener('mousemove', e => {
         const inBox = mx >= n.x - NODE_MARGIN && mx <= n.x + n.w + NODE_MARGIN &&
                       my >= n.y - NODE_MARGIN && my <= n.y + actualH + NODE_MARGIN;
         if (!inBox) return;
-        const cx = n.x + n.w / 2, cy = n.y + actualH / 2;
-        const d = Math.sqrt((mx-cx)**2 + (my-cy)**2);
-        if (d < bestBoxDist) { bestBoxDist = d; snapNodeId = n.id; }
+        if (epDragActive) {
+          if (n.type === 'boundary') {
+            const EDGE_ONLY_MARGIN = 20;
+            const nearBoundaryEdge =
+              Math.abs(mx - n.x) <= EDGE_ONLY_MARGIN ||
+              Math.abs(mx - (n.x + n.w)) <= EDGE_ONLY_MARGIN ||
+              Math.abs(my - n.y) <= EDGE_ONLY_MARGIN ||
+              Math.abs(my - (n.y + actualH)) <= EDGE_ONLY_MARGIN;
+            if (!nearBoundaryEdge) return;
+          }
+          const attachment = getNodeEdgeAttachment(n, mx, my, actualH);
+          const p = getPortXY(n, attachment.pos, attachment.offset, actualH);
+          const d = Math.sqrt((mx - p.x)**2 + (my - p.y)**2);
+          if (d < bestBoxDist) {
+            bestBoxDist = d;
+            snapNodeId = n.id;
+            snapPortPos = attachment.pos;
+            snapOffset = attachment.offset;
+          }
+        } else {
+          const cx = n.x + n.w / 2, cy = n.y + actualH / 2;
+          const d = Math.sqrt((mx-cx)**2 + (my-cy)**2);
+          if (d < bestBoxDist) {
+            bestBoxDist = d;
+            snapNodeId = n.id;
+            snapPortPos = null;
+            snapOffset = null;
+          }
+        }
       });
     }
 
-    // Commit snap — wireTargetPos is the specific port if pass-1 found one
-    if (snapNodeId !== wireTargetId || snapPortPos !== wireTargetPos) {
+    if (snapNodeId !== wireTargetId || snapPortPos !== wireTargetPos || snapOffset !== wireTargetOffset) {
       document.querySelectorAll('.node.connect-target').forEach(el => el.classList.remove('connect-target'));
-      // Clear port highlight on old target
       if (wireTargetId) {
         const oldEl = document.getElementById('node-' + wireTargetId);
         if (oldEl) oldEl.querySelectorAll('.conn-point').forEach(cp => cp.classList.remove('snap-target'));
       }
       wireTargetId = snapNodeId;
-      wireTargetPos = snapPortPos; // null means "pick best on drop"
+      wireTargetPos = snapPortPos;
+      wireTargetOffset = snapOffset;
       if (wireTargetId) {
         const el = document.getElementById('node-' + wireTargetId);
         if (el) {
           el.classList.add('connect-target');
-          // Highlight the specific port if we snapped to one
-          if (wireTargetPos) {
+          if (wireTargetPos && wireTargetOffset === null) {
             el.querySelectorAll('.conn-point').forEach(cp => {
               cp.classList.toggle('snap-target', cp.dataset.pos === wireTargetPos);
             });
@@ -5815,15 +5977,11 @@ function buildExportHTML(opts) {
 
   // Build SVG
   function bezierPtE(p0,p1,p2,p3,t){const mt=1-t;return mt*mt*mt*p0+3*mt*mt*t*p1+3*mt*t*t*p2+t*t*t*p3;}
-  function getPortXYE(n, pos) {
+  function getPortXYE(n, pos, offset) {
     const h = estimatedHeights[n.id] || n.h;
-    switch(pos){
-      case 'n':return{x:n.x+n.w/2,y:n.y};
-      case 's':return{x:n.x+n.w/2,y:n.y+h};
-      case 'e':return{x:n.x+n.w,  y:n.y+h/2};
-      case 'w':return{x:n.x,      y:n.y+h/2};
-      default: return{x:n.x+n.w/2,y:n.y+h/2};}
+    return getPortXY(n, pos, offset, h);
   }
+
 
   let svgArrows = `<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;overflow:visible;pointer-events:none;z-index:2;" width="${W}" height="${H}"><defs id="edefs"></defs>`;
 
@@ -5834,17 +5992,20 @@ function buildExportHTML(opts) {
     const tk = a.to   + ':' + (a.toPos  ||'w');
     if (!ePortGroups[fk]) ePortGroups[fk] = [];
     if (!ePortGroups[tk]) ePortGroups[tk] = [];
-    ePortGroups[fk].push(a.id);
-    ePortGroups[tk].push(a.id);
+    if (getArrowEndOffset(a, 'from') === null) ePortGroups[fk].push(a.id + ':from');
+    if (getArrowEndOffset(a, 'to') === null) ePortGroups[tk].push(a.id + ':to');
   });
   const ePortPerp = { n:{x:1,y:0}, s:{x:1,y:0}, e:{x:0,y:1}, w:{x:0,y:1} };
   const E_STAGGER = 8;
-  function staggeredPortXYE(node, pos, arrowId) {
+  function staggeredPortXYE(node, pos, arrowId, end, manualOffset) {
+    if (manualOffset !== null) return getPortXYE(node, pos, manualOffset);
     const base = getPortXYE(node, pos);
     const key  = node.id + ':' + pos;
+    const token = arrowId + ':' + end;
     const group = ePortGroups[key] || [];
     if (group.length <= 1) return base;
-    const idx    = group.indexOf(arrowId);
+    const idx    = group.indexOf(token);
+    if (idx === -1) return base;
     const total  = group.length;
     const offset = (idx - (total - 1) / 2) * E_STAGGER;
     const perp   = ePortPerp[pos] || {x:1,y:0};
@@ -5870,7 +6031,8 @@ function buildExportHTML(opts) {
   arrows.forEach(a => {
     const fn = nodes.find(x=>x.id===a.from), tn = nodes.find(x=>x.id===a.to);
     if(!fn||!tn) return;
-    const p1=staggeredPortXYE(fn,a.fromPos||'e',a.id), p2=staggeredPortXYE(tn,a.toPos||'w',a.id);
+    const p1=staggeredPortXYE(fn,a.fromPos||'e',a.id,'from',getArrowEndOffset(a, 'from')),
+          p2=staggeredPortXYE(tn,a.toPos||'w',a.id,'to',getArrowEndOffset(a, 'to'));
     const {d:d2, lx:_elx, ly:_ely, cx1, cy1, cx2, cy2} =
       buildArrowPath(p1, p2, a.fromPos||'e', a.toPos||'w', a.bend||0, a.lineStyle||'curved', minX, minY, a.orthoY||0);
     const color = a.color || exportArrowColor;
