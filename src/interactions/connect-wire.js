@@ -147,9 +147,7 @@ function completeWire() {
   });
   cancelWire();
   render();
-  selectedArrow = id;
-  renderArrows();
-  renderSidebar();
+  selectArrow(id);
 }
 
 function startEndpointDrag(arrowId, nodeId, pos, e, forcedEnd) {

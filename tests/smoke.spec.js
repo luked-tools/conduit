@@ -124,6 +124,42 @@ test.describe('Conduit smoke', () => {
     await expect.poll(async () => page.evaluate(() => state.arrows[0].to)).toBe(toId);
   });
 
+  test('newly created connection can be adjusted immediately without reselecting', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 760, 620);
+    await addNode(page, 'external', 1080, 620);
+    await addNode(page, 'internal', 1360, 620);
+    const [fromId, firstTargetId, secondTargetId] = await getNodeIds(page);
+
+    await dragBetween(
+      page,
+      `#node-${fromId} .conn-point[data-pos="e"]`,
+      `#node-${firstTargetId} .conn-point[data-pos="w"]`
+    );
+
+    await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(1);
+    await expect.poll(async () => page.evaluate(() => selectedArrow)).toBe(
+      await page.evaluate(() => state.arrows[0].id)
+    );
+    await expect(page.locator('.arrow-endpoint-handle')).toHaveCount(2);
+
+    const handles = page.locator('.arrow-endpoint-handle .hit');
+    const handleBox = await handles.nth(1).boundingBox();
+    const targetBox = await page.locator(`#node-${secondTargetId} .conn-point[data-pos="w"]`).boundingBox();
+
+    if (!handleBox || !targetBox) {
+      throw new Error('Could not resolve immediate endpoint drag elements');
+    }
+
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 12 });
+    await page.mouse.up();
+
+    await expect.poll(async () => page.evaluate(() => state.arrows[0].to)).toBe(secondTargetId);
+  });
+
   test('can move an arrow endpoint to a different node', async ({ page }) => {
     await bootFresh(page);
 
