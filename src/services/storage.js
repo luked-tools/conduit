@@ -44,11 +44,6 @@ function createBlankDiagramPayload() {
   };
 }
 
-function refreshCountersFromState() {
-  nodeIdCounter = Math.max(...(state.nodes || []).map(n => parseInt((n.id || '').replace(/\D/g,'')) || 0), 0) + 1;
-  arrowIdCounter = Math.max(...(state.arrows || []).map(a => parseInt((a.id || '').replace(/\D/g,'')) || 0), 0) + 1;
-}
-
 function applyDiagramPayload(data) {
   state = data?.state ? JSON.parse(JSON.stringify(data.state)) : { nodes: [], arrows: [] };
   if (!Array.isArray(state.nodes)) state.nodes = [];
