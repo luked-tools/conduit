@@ -409,27 +409,14 @@ function renderArrows() {
       });
       arrowSVG.appendChild(txt);
 
-      // Drag label
-      let dragging = false, ldx, ldy;
       bg.style.cursor = txt.style.cursor = 'move';
       bg.style.pointerEvents = txt.style.pointerEvents = 'all';
       const onDown = e2 => {
         if (e2.detail === 2) return; // dblclick handled separately
-        e2.stopPropagation(); dragging = true;
-        ldx = e2.clientX; ldy = e2.clientY;
-        pushUndo();
-        selectArrow(a.id);
+        startArrowLabelDrag(a.id, e2);
       };
       bg.addEventListener('mousedown', onDown);
       txt.addEventListener('mousedown', onDown);
-      window.addEventListener('mousemove', e2 => {
-        if (!dragging) return;
-        a.labelOffsetX = (a.labelOffsetX||0) + (e2.clientX - ldx) / scale;
-        a.labelOffsetY = (a.labelOffsetY||0) + (e2.clientY - ldy) / scale;
-        ldx = e2.clientX; ldy = e2.clientY;
-        renderArrows();
-      });
-      window.addEventListener('mouseup', () => { if (dragging) { dragging = false; saveToLocalStorage(); } });
 
       // Double-click label to inline edit
       const onDbl = e2 => {
@@ -491,47 +478,8 @@ function renderArrows() {
         arrowSVG.appendChild(pill);
         arrowSVG.appendChild(grip);
 
-        // Drag — raw pixels, 1:1 with mouse movement
-        let dragging = false, startPos = 0, startVal = 0;
         pill.addEventListener('mousedown', e2 => {
-          e2.stopPropagation();
-          dragging = true;
-          startPos = isXDrag ? e2.clientX : e2.clientY;
-          startVal = a[prop] || 0;
-          pushUndo();
-          selectArrow(a.id);
-        });
-        const SNAP_THRESHOLD = 12; // canvas px within which we snap
-        window.addEventListener('mousemove', e2 => {
-          if (!dragging) return;
-          const delta = (isXDrag ? (e2.clientX - startPos) : (e2.clientY - startPos)) / scale;
-          let val = startVal + delta;
-
-          // Snap to port alignment targets if snap targets are defined on this handle
-          if (info.snapTargets && info.snapBase !== undefined) {
-            for (const target of info.snapTargets) {
-              const offset = target - info.snapBase; // what a[prop] would need to be
-              if (Math.abs(val - offset) < SNAP_THRESHOLD) {
-                val = offset;
-                break;
-              }
-            }
-          }
-
-          a[prop] = val;
-          renderArrows();
-          // Sync sidebar sliders
-          const slA = document.getElementById('ortho-slider-bend');
-          const slB = document.getElementById('ortho-slider-orthoY');
-          if (slA) { slA.value = Math.round(a.bend || 0); updateSliderPct(slA); }
-          if (slB) { slB.value = Math.round(a.orthoY || 0); updateSliderPct(slB); }
-        });
-        window.addEventListener('mouseup', () => {
-          if (dragging) {
-            dragging = false;
-            saveToLocalStorage();
-            if (selectedArrow === a.id) renderSidebar();
-          }
+          startOrthogonalHandleDrag(a.id, prop, info, isXDrag, e2);
         });
       });
     }

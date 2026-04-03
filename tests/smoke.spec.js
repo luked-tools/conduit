@@ -36,6 +36,24 @@ async function dragBetween(page, fromSelector, toSelector) {
   await page.mouse.up();
 }
 
+async function dragBy(page, selector, deltaX, deltaY = 0) {
+  const locator = page.locator(selector);
+  return dragLocatorBy(page, locator, deltaX, deltaY);
+}
+
+async function dragLocatorBy(page, locator, deltaX, deltaY = 0) {
+  const box = await locator.boundingBox();
+  if (!box) {
+    throw new Error('Could not resolve drag source');
+  }
+  const startX = box.x + box.width / 2;
+  const startY = box.y + box.height / 2;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down();
+  await page.mouse.move(startX + deltaX, startY + deltaY, { steps: 10 });
+  await page.mouse.up();
+}
+
 test.describe('Conduit smoke', () => {
   test('loads without runtime errors', async ({ page }) => {
     const pageErrors = [];
@@ -416,5 +434,179 @@ test.describe('Conduit smoke', () => {
 
     await page.locator('body').press('Control+z');
     await expect(page.locator('.node')).toHaveCount(2);
+  });
+
+  test('imported hostile text renders literally in app surfaces', async ({ page }, testInfo) => {
+    await bootFresh(page);
+
+    const payload = {
+      version: 1,
+      title: '<script>alert("title")</script>',
+      subtitle: '<img src=x onerror=alert("sub")>',
+      state: {
+        nodes: [
+          {
+            id: 'node_<script>',
+            type: 'internal',
+            tag: '<b>TAG</b>',
+            title: '<img src=x onerror=alert("node")>',
+            subtitle: '<svg onload=alert("subtitle")>',
+            notes: '<script>alert("notes")</script>',
+            x: 860, y: 620, w: 200, h: 110,
+            functions: [{ name: '<b>Fn</b>', inputs: ['<i>IN</i>'], outputs: ['<i>OUT</i>'], description: '<script>x</script>' }]
+          },
+          { id: 'node_b', type: 'external', tag: 'EXT', title: 'Other node', subtitle: '', x: 1180, y: 620, w: 200, h: 110, functions: [] }
+        ],
+        arrows: [
+          { id: 'a1', from: 'node_<script>', to: 'node_b', fromPos: 'e', toPos: 'w', direction: 'directed', label: '<img src=x onerror=alert("label")>', labelOffsetX: 0, labelOffsetY: 0, color: '', dash: false, bend: 0 }
+        ]
+      }
+    };
+
+    const importPath = testInfo.outputPath('hostile-import.json');
+    fs.writeFileSync(importPath, JSON.stringify(payload, null, 2), 'utf8');
+
+    await page.locator('#file-input').setInputFiles(importPath);
+
+    await expect(page.locator('.node')).toHaveCount(2);
+    await expect(page.locator('#diagram-title-input')).toHaveValue(payload.title);
+    await expect(page.locator('#diagram-subtitle-input')).toHaveValue(payload.subtitle);
+    await expect(page.locator('.node.internal .node-title').first()).toHaveText(payload.state.nodes[0].title);
+    await expect(page.locator('#arrow-svg text')).toHaveText(payload.state.arrows[0].label);
+    await expect(page.locator('#canvas-wrap script')).toHaveCount(0);
+    await expect(page.locator('#canvas-wrap img')).toHaveCount(0);
+
+    await page.locator('.node.internal').first().dblclick();
+    await expect(page.locator('#nm-title-input')).toHaveValue(payload.state.nodes[0].title);
+    await expect(page.locator('#nm-notes-area')).toHaveValue(payload.state.nodes[0].notes);
+
+    await page.locator('#nm-close').click();
+    await page.locator('#connect-mode-btn').click();
+    await page.locator('#conn-from-display').click();
+    await expect(page.locator('#conn-from-list .conn-node-option').first()).toContainText(payload.state.nodes[0].title);
+  });
+
+  test('exported HTML escapes hostile text literally', async ({ page }, testInfo) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      state = {
+        nodes: [
+          { id: 'n1', type: 'internal', tag: '<b>tag</b>', title: '<script>alert("x")</script>', subtitle: '<img src=x onerror=alert(1)>', x: 860, y: 620, w: 200, h: 110, functions: [{ name: '<b>Fn</b>', inputs: ['<i>IN</i>'], outputs: ['<i>OUT</i>'], hidden: false }] },
+          { id: 'n2', type: 'external', tag: 'EXT', title: 'Target', subtitle: '', x: 1180, y: 620, w: 200, h: 110, functions: [] }
+        ],
+        arrows: [
+          { id: 'a1', from: 'n1', to: 'n2', fromPos: 'e', toPos: 'w', direction: 'directed', label: '<svg onload=alert(1)>', labelOffsetX: 0, labelOffsetY: 0, color: '', dash: false, bend: 0 }
+        ]
+      };
+      render();
+    });
+
+    await page.evaluate(() => exportHTML());
+    const [download] = await Promise.all([
+      page.waitForEvent('download'),
+      page.locator('.export-download-btn').click(),
+    ]);
+    const downloadPath = await download.path();
+    if (!downloadPath) throw new Error('No exported HTML download path');
+    const htmlPath = testInfo.outputPath('escaped-export.html');
+    fs.copyFileSync(downloadPath, htmlPath);
+    const html = fs.readFileSync(htmlPath, 'utf8');
+
+    expect(html).toContain('&lt;script&gt;alert(&quot;x&quot;)&lt;/script&gt;');
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+    expect(html).toContain('&lt;svg onload=alert(1)&gt;');
+    expect(html).not.toContain('<script>alert("x")</script>');
+  });
+
+  test('label drag remains stable across repeated rerenders', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 1180, 620);
+    await dragBetween(
+      page,
+      '.node.internal .conn-point[data-pos="e"]',
+      '.node.external .conn-point[data-pos="w"]'
+    );
+    await page.evaluate(() => {
+      state.arrows[0].label = 'Drag label';
+      renderArrows();
+    });
+
+    await dragBy(page, '#arrow-svg text', 30, 0);
+    const firstOffset = await page.evaluate(() => state.arrows[0].labelOffsetX || 0);
+
+    await page.evaluate(() => {
+      for (let i = 0; i < 5; i++) {
+        renderArrows();
+      }
+    });
+
+    await dragBy(page, '#arrow-svg text', 30, 0);
+    const secondOffset = await page.evaluate(() => state.arrows[0].labelOffsetX || 0);
+    const delta = secondOffset - firstOffset;
+
+    expect(delta).toBeGreaterThan(15);
+    expect(delta).toBeLessThan(60);
+  });
+
+  test('orthogonal handle drag remains stable across repeated rerenders', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 1180, 620);
+    await dragBetween(
+      page,
+      '.node.internal .conn-point[data-pos="e"]',
+      '.node.external .conn-point[data-pos="w"]'
+    );
+    await page.evaluate(() => {
+      state.arrows[0].lineStyle = 'orthogonal';
+      state.arrows[0].bend = 0;
+      state.arrows[0].orthoY = 0;
+      selectArrow(state.arrows[0].id);
+    });
+
+    await page.evaluate(() => {
+      const arrow = state.arrows[0];
+      const from = state.nodes.find(n => n.id === arrow.from);
+      const to = state.nodes.find(n => n.id === arrow.to);
+      const p1 = getPortXY(from, arrow.fromPos || 'e');
+      const p2 = getPortXY(to, arrow.toPos || 'w');
+      const info = buildArrowPath(p1, p2, arrow.fromPos || 'e', arrow.toPos || 'w', arrow.bend || 0, arrow.lineStyle || 'curved', 0, 0, arrow.orthoY || 0).hX;
+      startOrthogonalHandleDrag(arrow.id, 'bend', info, true, { stopPropagation() {}, clientX: 0, clientY: 0 });
+    });
+    await page.evaluate(() => {
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 24, clientY: 0 }));
+      window.dispatchEvent(new MouseEvent('mouseup', { clientX: 24, clientY: 0 }));
+    });
+    const firstBend = await page.evaluate(() => state.arrows[0].bend || 0);
+
+    await page.evaluate(() => {
+      for (let i = 0; i < 5; i++) {
+        renderArrows();
+      }
+      selectArrow(state.arrows[0].id);
+    });
+
+    await page.evaluate(() => {
+      const arrow = state.arrows[0];
+      const from = state.nodes.find(n => n.id === arrow.from);
+      const to = state.nodes.find(n => n.id === arrow.to);
+      const p1 = getPortXY(from, arrow.fromPos || 'e');
+      const p2 = getPortXY(to, arrow.toPos || 'w');
+      const info = buildArrowPath(p1, p2, arrow.fromPos || 'e', arrow.toPos || 'w', arrow.bend || 0, arrow.lineStyle || 'curved', 0, 0, arrow.orthoY || 0).hX;
+      startOrthogonalHandleDrag(arrow.id, 'bend', info, true, { stopPropagation() {}, clientX: 0, clientY: 0 });
+    });
+    await page.evaluate(() => {
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 24, clientY: 0 }));
+      window.dispatchEvent(new MouseEvent('mouseup', { clientX: 24, clientY: 0 }));
+    });
+    const secondBend = await page.evaluate(() => state.arrows[0].bend || 0);
+    const delta = secondBend - firstBend;
+
+    expect(delta).toBeGreaterThan(10);
+    expect(delta).toBeLessThan(50);
   });
 });

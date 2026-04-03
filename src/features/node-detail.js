@@ -2,6 +2,10 @@
 let activeNodeModalId = null;
 let nmSaveTimer = null;
 
+function getNodeDetailType(type) {
+  return type === 'external' || type === 'boundary' ? type : 'internal';
+}
+
 function openNodeModal(nodeId) {
   const n = state.nodes.find(x => x.id === nodeId);
   if (!n) return;
@@ -138,6 +142,7 @@ function buildNMOverview(n, panel) {
 
   const grid = document.createElement('div');
   grid.className = 'nm-overview-grid';
+  const safeType = getNodeDetailType(n.type);
   grid.innerHTML = `
     <div class="nm-stat-card">
       <div class="nm-stat-label">CONNECTIONS</div>
@@ -152,13 +157,13 @@ function buildNMOverview(n, panel) {
     <div class="nm-stat-card">
       <div class="nm-stat-label">NODE TYPE</div>
       <div class="nm-stat-value" style="font-size:14px;margin-top:4px;">
-        <span class="nm-badge ${n.type}">${n.type.charAt(0).toUpperCase()+n.type.slice(1)}</span>
+        <span class="nm-badge ${safeType}">${escapeHtml(safeType.charAt(0).toUpperCase()+safeType.slice(1))}</span>
       </div>
-      <div class="nm-stat-sub">${n.tag || 'no tag'}</div>
+      <div class="nm-stat-sub">${escapeHtml(n.tag || 'no tag')}</div>
     </div>
     <div class="nm-stat-card">
       <div class="nm-stat-label">NOTES</div>
-      <div class="nm-stat-value" style="font-size:13px;font-weight:400;color:var(--text2);margin-top:4px;">${(n.notes||'').length ? (n.notes||'').slice(0,60)+'…' : '—'}</div>
+      <div class="nm-stat-value" style="font-size:13px;font-weight:400;color:var(--text2);margin-top:4px;">${escapeHtml((n.notes||'').length ? (n.notes||'').slice(0,60)+'…' : '—')}</div>
     </div>
   `;
   panel.appendChild(grid);
@@ -192,10 +197,11 @@ function buildNMOverview(n, panel) {
       const item = document.createElement('div');
       item.className = 'nm-quick-conn-item';
       const dirEmoji = dir === 'out' ? '→' : dir === 'in' ? '←' : '↔';
+      const otherType = getNodeDetailType(other.type);
       item.innerHTML = `<span style="color:var(--text3);font-family:'IBM Plex Mono',monospace;">${dirEmoji}</span>
-        <span class="nm-badge ${other.type}">${other.tag || other.type.toUpperCase()}</span>
-        <span>${other.title.replace(/\n/g,' ')}</span>
-        ${arrow.label ? `<span style="color:var(--text3);font-size:10px;font-family:'IBM Plex Mono',monospace;">· ${arrow.label}</span>` : ''}`;
+        <span class="nm-badge ${otherType}">${escapeHtml(other.tag || otherType.toUpperCase())}</span>
+        <span>${escapeHtml(other.title.replace(/\n/g,' '))}</span>
+        ${arrow.label ? `<span style="color:var(--text3);font-size:10px;font-family:'IBM Plex Mono',monospace;">· ${escapeHtml(arrow.label)}</span>` : ''}`;
       panel.appendChild(item);
     });
   }
@@ -228,8 +234,8 @@ function buildNMConnections(n, panel) {
       arrow.style.color = dirClass === 'out' ? 'var(--accent)' : dirClass === 'in' ? 'var(--accent2)' : 'var(--accent3)';
       const info = document.createElement('div');
       info.className = 'nm-conn-info';
-      info.innerHTML = `<div class="nm-conn-node">${other.title.replace(/\n/g,' ')} ${other.tag ? '<span style="color:var(--text3);font-size:10px;">(' + other.tag + ')</span>' : ''}</div>
-        ${a.label ? '<div class="nm-conn-label">' + a.label + '</div>' : ''}`;
+      info.innerHTML = `<div class="nm-conn-node">${escapeHtml(other.title.replace(/\n/g,' '))} ${other.tag ? '<span style="color:var(--text3);font-size:10px;">(' + escapeHtml(other.tag) + ')</span>' : ''}</div>
+        ${a.label ? '<div class="nm-conn-label">' + escapeHtml(a.label) + '</div>' : ''}`;
       const badge = document.createElement('span');
       badge.className = 'nm-conn-dir-badge ' + dirClass;
       badge.textContent = dirText;
@@ -398,7 +404,7 @@ function buildNMFunctions(n, panel) {
             if (!val) return;
             const chip = document.createElement('div');
             chip.className = 'nm-fn-meta-chip';
-            chip.innerHTML = label + ': <b>' + val + '</b>';
+            chip.innerHTML = escapeHtml(label) + ': <b>' + escapeHtml(val) + '</b>';
             metaRow.appendChild(chip);
           });
           if (metaRow.childNodes.length) body.appendChild(metaRow);
