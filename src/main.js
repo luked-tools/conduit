@@ -554,26 +554,6 @@ function bezierPt(p0,p1,p2,p3,t) {
 // INTERACTIONS
 // ══════════════════════════════════════════════
 
-// Drag nodes
-function startDrag(e, id) {
-  e.preventDefault();
-  pushUndo(); // snapshot before move
-  const n = state.nodes.find(x=>x.id===id);
-  draggingNode = id;
-  const rect = canvasWrap.getBoundingClientRect();
-  dragOffset.x = (e.clientX - rect.left)/scale - panX/scale - n.x;
-  dragOffset.y = (e.clientY - rect.top)/scale - panY/scale - n.y;
-}
-
-// Resize
-function startResize(e, id, edge = 'se') {
-  e.preventDefault();
-  e.stopPropagation();
-  pushUndo(); // snapshot before resize
-  const n = state.nodes.find(x=>x.id===id);
-  resizingNode = id;
-  resizeStart = { mx: e.clientX, my: e.clientY, x: n.x, y: n.y, w: n.w, h: n.h, edge };
-}
 
 // ── Connect mode ──
 // ══════════════════════════════════════════════
