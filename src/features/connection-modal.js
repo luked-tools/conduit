@@ -243,6 +243,7 @@ function createConnection() {
     fromPos: fromPort,
     toPos:   toPort,
     direction: connState.dir,
+    lineStyle: nextArrowLineStyle,
     label: document.getElementById('conn-label-input').value.trim(),
     labelOffsetX: 0, labelOffsetY: 0,
     color: '', dash: false, bend: 0

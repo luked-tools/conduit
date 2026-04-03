@@ -83,7 +83,7 @@ function updateWirePreview(mouseX, mouseY) {
     }
   }
 
-  const previewLineStyle = previewArrow ? (previewArrow.lineStyle || 'curved') : 'curved';
+  const previewLineStyle = previewArrow ? (previewArrow.lineStyle || 'curved') : (nextArrowLineStyle || 'curved');
   const previewBend = previewArrow ? (previewArrow.bend || 0) : 0;
   const previewOrthoY = previewArrow ? (previewArrow.orthoY || 0) : 0;
   const previewToPos = snapPos || (
@@ -143,6 +143,7 @@ function completeWire() {
     from: wireSrcId, to: wireTargetId,
     fromPos: wireSrcPos, toPos,
     direction: nextArrowType,
+    lineStyle: nextArrowLineStyle,
     label: '', labelOffsetX: 0, labelOffsetY: 0,
     color: '', dash: false, bend: 0
   });

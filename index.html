@@ -340,6 +340,7 @@
     background: transparent; border: 1px solid var(--border);
     color: var(--text2); font-family: 'IBM Plex Mono', monospace;
     font-size: 10px; cursor: pointer; text-align: center;
+    white-space: nowrap;
     transition: all 0.12s;
   }
   .arrow-type-btn:hover, .arrow-type-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
@@ -2537,6 +2538,12 @@
             <button class="arrow-type-btn active" id="atype-directed" onclick="setArrowType('directed')">→ Directed</button>
             <button class="arrow-type-btn" id="atype-bidirectional" onclick="setArrowType('bidirectional')">↔ Both</button>
             <button class="arrow-type-btn" id="atype-undirected" onclick="setArrowType('undirected')">── None</button>
+          </div>
+          <div class="prop-label">Default connection type</div>
+          <div class="arrow-type-row">
+            <button class="arrow-type-btn active" id="next-line-style-curved" onclick="setNextArrowLineStyle('curved')">∿ Curved</button>
+            <button class="arrow-type-btn" id="next-line-style-straight" onclick="setNextArrowLineStyle('straight')">╱ Straight</button>
+            <button class="arrow-type-btn" id="next-line-style-orthogonal" onclick="setNextArrowLineStyle('orthogonal')">⌐ Ortho</button>
           </div>
         </div>
       </div>

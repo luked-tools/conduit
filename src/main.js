@@ -13,6 +13,7 @@ let selectedArrow = null;
 let connectMode = false;
 let connectFrom = null; // {nodeId, pos}
 let nextArrowType = 'directed';
+let nextArrowLineStyle = 'curved';
 let _propSectionState = { functions: true, connections: true };
 let draggingNode = null;
 let dragOffset = {x:0, y:0};
@@ -578,6 +579,14 @@ function setArrowType(t) {
   ['directed','bidirectional','undirected'].forEach(x => {
     const el = document.getElementById('atype-'+x);
     if (el) el.classList.toggle('active', x===t);
+  });
+}
+
+function setNextArrowLineStyle(style) {
+  nextArrowLineStyle = style;
+  ['curved', 'straight', 'orthogonal'].forEach(x => {
+    const el = document.getElementById('next-line-style-' + x);
+    if (el) el.classList.toggle('active', x === style);
   });
 }
 

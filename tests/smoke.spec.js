@@ -124,6 +124,49 @@ test.describe('Conduit smoke', () => {
     await expect.poll(async () => page.evaluate(() => state.arrows[0].to)).toBe(toId);
   });
 
+  test('palette default connection type applies to new connections', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.locator('#next-line-style-orthogonal').click();
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 1180, 620);
+    const [fromId, toId] = await getNodeIds(page);
+
+    await dragBetween(
+      page,
+      `#node-${fromId} .conn-point[data-pos="e"]`,
+      `#node-${toId} .conn-point[data-pos="w"]`
+    );
+
+    await expect.poll(async () => page.evaluate(() => state.arrows[0].lineStyle || 'curved')).toBe('orthogonal');
+  });
+
+  test('new connection preview follows the selected default connection type', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.locator('#next-line-style-orthogonal').click();
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 1180, 620);
+    const [fromId, toId] = await getNodeIds(page);
+
+    const fromBox = await page.locator(`#node-${fromId} .conn-point[data-pos="e"]`).boundingBox();
+    const toBox = await page.locator(`#node-${toId} .conn-point[data-pos="w"]`).boundingBox();
+
+    if (!fromBox || !toBox) {
+      throw new Error('Could not resolve new connection preview elements');
+    }
+
+    await page.mouse.move(fromBox.x + fromBox.width / 2, fromBox.y + fromBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(toBox.x + toBox.width / 2, toBox.y + toBox.height / 2, { steps: 8 });
+
+    const previewPath = await page.evaluate(() => wireTempPath?.getAttribute('d') || '');
+    expect(previewPath).toContain(' L');
+    expect(previewPath.includes(' C')).toBe(false);
+
+    await page.mouse.up();
+  });
+
   test('newly created connection can be adjusted immediately without reselecting', async ({ page }) => {
     await bootFresh(page);
 
