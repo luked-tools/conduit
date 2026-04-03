@@ -103,8 +103,10 @@
   .tb-btn.primary { background: var(--accent); color: #fff; border-color: transparent; }
   .tb-btn.primary:hover { background: #e07830; }
   .tb-btn.danger { color: var(--danger); }
-  #undo-btn:not([disabled]) { opacity: 1; }
-  #undo-btn[disabled] { opacity: 0.3; cursor: default; }
+  #undo-btn:not([disabled]),
+  #redo-btn:not([disabled]) { opacity: 1; }
+  #undo-btn[disabled],
+  #redo-btn[disabled] { opacity: 0.3; cursor: default; }
   .tb-btn.danger:hover { background: #fdf0f0; border-color: var(--danger); }
   .tb-btn svg { flex-shrink: 0; }
   #active-draft-chip {
@@ -2395,6 +2397,10 @@
   <button class="tb-btn" id="undo-btn" onclick="undo()" title="Undo (Ctrl+Z)" disabled>
     <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 6.5A4.5 4.5 0 1 1 6.5 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><polyline points="2,3.5 2,6.5 5,6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
     Undo
+  </button>
+  <button class="tb-btn" id="redo-btn" onclick="redo()" title="Redo (Ctrl+Shift+Z / Ctrl+Y)" disabled>
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 6.5A4.5 4.5 0 1 0 6.5 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><polyline points="11,3.5 11,6.5 8,6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Redo
   </button>
   <button class="tb-btn" id="connect-mode-btn" onclick="openConnectModal(null)" title="Create a new connection between nodes">
     <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="2.5" cy="7" r="1.5" fill="currentColor"/><circle cx="11.5" cy="7" r="1.5" fill="currentColor"/><line x1="4" y1="7" x2="10" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 1.5"/></svg>
@@ -5072,8 +5078,16 @@ document.addEventListener('keydown', e => {
     deselect();
   }
 
-  // Ctrl/Cmd+Z — undo (skip when in a text field so browser undo still works there)
-  if (!inTextField && (e.ctrlKey||e.metaKey) && e.key==='z') { e.preventDefault(); undo(); }
+  // Ctrl/Cmd+Z — undo. Ctrl/Cmd+Shift+Z — redo. Ctrl/Cmd+Y — redo.
+  if (!inTextField && (e.ctrlKey||e.metaKey) && e.key==='z') {
+    e.preventDefault();
+    if (e.shiftKey) redo();
+    else undo();
+  }
+  if (!inTextField && (e.ctrlKey||e.metaKey) && !e.shiftKey && e.key==='y') {
+    e.preventDefault();
+    redo();
+  }
 
   // Ctrl/Cmd+C — copy selected node (skip when in a text field so normal text copy works)
   if (!inTextField && (e.ctrlKey||e.metaKey) && e.key==='c' && selectedNode) {
@@ -5729,8 +5743,7 @@ function createDraftFromPayload(payload, name, { activate = true } = {}) {
   });
   if (activate) {
     applyDiagramPayload(getDraftPayload(meta.id));
-    undoStack = [];
-    updateUndoBtn();
+    clearHistoryStacks();
     render();
   }
   return meta;
@@ -6418,25 +6431,40 @@ function exportHTML() {
 
 // Undo (basic - tracks node/arrow state)
 let undoStack = [];
+let redoStack = [];
 let _undoDebounceTimer = null;
+
+function clearRedoStack() {
+  redoStack = [];
+}
+
+function clearHistoryStacks() {
+  undoStack = [];
+  redoStack = [];
+  if (_undoDebounceTimer) { clearTimeout(_undoDebounceTimer); _undoDebounceTimer = null; }
+  updateHistoryBtns();
+}
 
 function pushUndo() {
   // Flush any pending debounced push first so we don't lose it
   if (_undoDebounceTimer) { clearTimeout(_undoDebounceTimer); _undoDebounceTimer = null; }
+  clearRedoStack();
   undoStack.push(JSON.stringify(state));
   if (undoStack.length > 60) undoStack.shift();
-  updateUndoBtn();
+  updateHistoryBtns();
 }
 
 // Debounced variant for high-frequency edits (typing, sliders, colour pickers)
 // Waits 800ms after last call before committing to the stack
 function pushUndoDebounced() {
   if (_undoDebounceTimer) clearTimeout(_undoDebounceTimer);
+  clearRedoStack();
+  updateHistoryBtns();
   _undoDebounceTimer = setTimeout(() => {
     _undoDebounceTimer = null;
     undoStack.push(JSON.stringify(state));
     if (undoStack.length > 60) undoStack.shift();
-    updateUndoBtn();
+    updateHistoryBtns();
   }, 800);
 }
 
@@ -6444,15 +6472,30 @@ function undo() {
   // Cancel any pending debounced push — we're reverting, not committing
   if (_undoDebounceTimer) { clearTimeout(_undoDebounceTimer); _undoDebounceTimer = null; }
   if (undoStack.length === 0) return;
+  redoStack.push(JSON.stringify(state));
+  if (redoStack.length > 60) redoStack.shift();
   state = JSON.parse(undoStack.pop());
   selectedNode = null; selectedArrow = null;
-  updateUndoBtn();
+  updateHistoryBtns();
   render();
 }
 
-function updateUndoBtn() {
+function redo() {
+  if (_undoDebounceTimer) { clearTimeout(_undoDebounceTimer); _undoDebounceTimer = null; }
+  if (redoStack.length === 0) return;
+  undoStack.push(JSON.stringify(state));
+  if (undoStack.length > 60) undoStack.shift();
+  state = JSON.parse(redoStack.pop());
+  selectedNode = null; selectedArrow = null;
+  updateHistoryBtns();
+  render();
+}
+
+function updateHistoryBtns() {
   const btn = document.getElementById('undo-btn');
   if (btn) btn.disabled = undoStack.length === 0;
+  const redoBtn = document.getElementById('redo-btn');
+  if (redoBtn) redoBtn.disabled = redoStack.length === 0;
 }
 
 // Undo for drag/resize is pushed in startDrag/startResize (before the action).
@@ -8432,8 +8475,7 @@ function loadDraftIntoCanvas(id) {
   if (!payload || !payload.state || !Array.isArray(payload.state.nodes)) return false;
   setActiveDraft(id);
   applyDiagramPayload(payload);
-  undoStack = [];
-  updateUndoBtn();
+  clearHistoryStacks();
   render();
   return true;
 }
