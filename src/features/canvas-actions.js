@@ -40,7 +40,7 @@ function addModeAt(type, canvasX, canvasY) {
   selectNode(id);
 }
 
-function setStatusModeMessage(text = '', { fade = false, autoClearMs = 0 } = {}) {
+function setStatusModeMessage(text = '', { fade = false, autoClearMs = 0, color = '' } = {}) {
   const sb = document.getElementById('sb-mode');
   if (!sb) return;
 
@@ -48,6 +48,7 @@ function setStatusModeMessage(text = '', { fade = false, autoClearMs = 0 } = {})
   clearTimeout(sb._modeClearTimer);
 
   sb.textContent = text;
+  sb.style.color = color || '';
 
   if (fade) {
     sb.style.opacity = '0';
@@ -69,6 +70,37 @@ function setStatusModeMessage(text = '', { fade = false, autoClearMs = 0 } = {})
       }, 500);
     }, autoClearMs);
   }
+}
+
+let _canvasNoticeTimer = null;
+
+function showCanvasNotice(text = '', { tone = 'accent', autoHideMs = 0 } = {}) {
+  const banner = document.getElementById('canvas-notice-banner');
+  const label = document.getElementById('canvas-notice-text');
+  if (!banner || !label) return;
+  if (_canvasNoticeTimer) {
+    clearTimeout(_canvasNoticeTimer);
+    _canvasNoticeTimer = null;
+  }
+  label.textContent = text;
+  banner.classList.remove('danger');
+  if (tone === 'danger') banner.classList.add('danger');
+  banner.classList.add('active');
+  if (autoHideMs > 0) {
+    _canvasNoticeTimer = setTimeout(() => {
+      hideCanvasNotice();
+    }, autoHideMs);
+  }
+}
+
+function hideCanvasNotice() {
+  const banner = document.getElementById('canvas-notice-banner');
+  if (!banner) return;
+  if (_canvasNoticeTimer) {
+    clearTimeout(_canvasNoticeTimer);
+    _canvasNoticeTimer = null;
+  }
+  banner.classList.remove('active', 'danger');
 }
 
 function setIOPillLabel(el, prefix, text) {

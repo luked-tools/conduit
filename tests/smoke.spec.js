@@ -486,6 +486,32 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator('#conn-from-list .conn-node-option').first()).toContainText(payload.state.nodes[0].title);
   });
 
+  test('invalid JSON import shows the canvas danger banner', async ({ page }, testInfo) => {
+    await bootFresh(page);
+
+    const importPath = testInfo.outputPath('invalid-import.json');
+    fs.writeFileSync(importPath, '{"version":1,"state":', 'utf8');
+
+    const dangerColor = await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--danger').trim()
+    );
+
+    await page.locator('#file-input').setInputFiles(importPath);
+
+    await expect(page.locator('#canvas-notice-banner')).toHaveClass(/active/);
+    await expect(page.locator('#canvas-notice-banner')).toContainText('Import failed');
+    await expect.poll(async () => page.locator('#canvas-notice-banner').evaluate(el => getComputedStyle(el).backgroundColor)).toBe(
+      await page.evaluate(color => {
+        const probe = document.createElement('div');
+        probe.style.backgroundColor = color;
+        document.body.appendChild(probe);
+        const resolved = getComputedStyle(probe).backgroundColor;
+        probe.remove();
+        return resolved;
+      }, dangerColor)
+    );
+  });
+
   test('exported HTML escapes hostile text literally', async ({ page }, testInfo) => {
     await bootFresh(page);
 
