@@ -25,8 +25,6 @@ let tempLine = null; // SVG line for preview
 const canvas = document.getElementById('canvas');
 const canvasWrap = document.getElementById('canvas-wrap');
 const arrowSVG = document.getElementById('arrow-svg');
-let nodeIdCounter = 1;
-let arrowIdCounter = 1;
 let _clipboardNode = null; // copy/paste clipboard (internal, not system clipboard)
 let currentDraftId = null;
 let currentDraftName = '';
@@ -62,7 +60,7 @@ function loadSample() {
     {id:'a8', from:'n3', to:'n6', fromPos:'s', toPos:'n', direction:'directed', label:'Inspection trigger', labelOffsetX:10, labelOffsetY:0, color:'', dash:false, bend:0, lineStyle:'straight'},
     {id:'a9', from:'n6', to:'n4', fromPos:'w', toPos:'e', direction:'bidirectional', label:'Release status', labelOffsetX:0, labelOffsetY:-12, color:'#9b5f9a', dash:false, bend:0, lineStyle:'orthogonal', orthoY:-30},
   ];
-  nodeIdCounter = 10; arrowIdCounter = 20;
+  setDiagramCounters(10, 20);
 }
 
 function loadSampleIntoCurrentDraft() {
@@ -1853,7 +1851,7 @@ function completeWire() {
     state.nodes.find(x=>x.id===wireSrcId), wireSrcPos,
     state.nodes.find(x=>x.id===wireTargetId), 0, 0
   );
-  const id = 'a' + (arrowIdCounter++);
+  const id = nextArrowId();
   state.arrows.push({
     id,
     from: wireSrcId, to: wireTargetId,
@@ -2018,24 +2016,15 @@ function updatePaletteHighlight() {
 }
 
 
-// Generate a sequential display tag for new nodes.
-// Counts all existing non-boundary nodes so internal and external
-// share the same sequence, starting from 01.
-function _nextNodeTag(type) {
-  if (type === 'boundary') return '';
-  const seq = state.nodes.filter(n => n.type !== 'boundary').length + 1;
-  const num = String(seq).padStart(2, '0');
-  return type === 'external' ? 'EXT-' + num : 'SYS-' + num;
-}
 function addMode(type) {
   pushUndo();
   lastNodeType = type;
   updatePaletteHighlight();
-  const id = 'n'+(nodeIdCounter++);
+  const id = nextNodeId();
   const cx = (-panX + canvasWrap.clientWidth/2) / scale - 100;
   const cy = (-panY + canvasWrap.clientHeight/2) / scale - 50;
   state.nodes.push({
-    id, type, tag: _nextNodeTag(type),
+    id, type, tag: nextNodeTag(type),
     title: type==='boundary'?'Boundary Box':type==='external'?'External Entity':'New System',
     subtitle: '',
     x: cx, y: cy, w: type==='boundary'?300:180, h: type==='boundary'?200:100,
@@ -2049,12 +2038,12 @@ function addModeAt(type, canvasX, canvasY) {
   pushUndo();
   lastNodeType = type;
   updatePaletteHighlight();
-  const id = 'n'+(nodeIdCounter++);
+  const id = nextNodeId();
   const w = type==='boundary'?300:180, h = type==='boundary'?200:100;
   const x = Math.round((canvasX - w/2) / 10) * 10;
   const y = Math.round((canvasY - h/2) / 10) * 10;
   state.nodes.push({
-    id, type, tag: _nextNodeTag(type),
+    id, type, tag: nextNodeTag(type),
     title: type==='boundary'?'Boundary Box':type==='external'?'External Entity':'New System',
     subtitle: '',
     x, y, w, h, color:'', textColor:'', functions:[]
@@ -2178,7 +2167,7 @@ function pasteNode() {
   if (!_clipboardNode) return;
   pushUndo();
   const src = _clipboardNode;
-  const id = 'n' + (nodeIdCounter++);
+  const id = nextNodeId();
   const OFFSET = 30; // pixels to nudge so paste is visibly distinct
   const copy = {
     ...JSON.parse(JSON.stringify(src)), // full deep-clone of all fields
@@ -2188,7 +2177,7 @@ function pasteNode() {
   };
   // Give copy a fresh tag only if original had a tag (keeps boundary nodes tag-free)
   if (copy.tag && copy.type !== 'boundary') {
-    copy.tag = _nextNodeTag(copy.type);
+    copy.tag = nextNodeTag(copy.type);
   }
   state.nodes.push(copy);
   render();
@@ -2625,8 +2614,7 @@ function clearCanvas() {
   selectedArrow = null;
   state.nodes = [];
   state.arrows = [];
-  nodeIdCounter = 1;
-  arrowIdCounter = 1;
+  resetDiagramCounters();
   render();
   saveToLocalStorage();
   setStatusModeMessage('Canvas cleared', { fade: true, autoClearMs: 1800 });
@@ -4672,7 +4660,7 @@ function createConnection() {
   const fromPort = connState.fromPort === 'auto' ? best.fromPos : connState.fromPort;
   const toPort   = connState.toPort   === 'auto' ? best.toPos   : connState.toPort;
 
-  const id = 'a' + (arrowIdCounter++);
+  const id = nextArrowId();
   state.arrows.push({
     id,
     from: connState.fromId,
