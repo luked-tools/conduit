@@ -1,0 +1,13 @@
+{
+  "name": "conduit-smoke-tests",
+  "private": true,
+  "scripts": {
+    "test:smoke": "playwright test",
+    "test:smoke:headed": "playwright test --headed",
+    "test:smoke:ui": "playwright test --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.54.2",
+    "http-server": "^14.1.1"
+  }
+}
