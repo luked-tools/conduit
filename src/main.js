@@ -77,7 +77,6 @@ function loadSampleIntoCurrentDraft() {
 // RENDER
 // ══════════════════════════════════════════════
 
-// ── ARROWS ──
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
 
 function normalizeSideOffset(value) {
@@ -544,6 +543,7 @@ function renderArrows() {
 function bezierPt(p0,p1,p2,p3,t) {
   const mt = 1-t;
   return mt*mt*mt*p0 + 3*mt*mt*t*p1 + 3*mt*t*t*p2 + t*t*t*p3;
+// ── ARROWS ──
 }
 
 // ── SIDEBAR ──
