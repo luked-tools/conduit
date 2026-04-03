@@ -648,6 +648,45 @@ test.describe('Conduit smoke', () => {
     expect(delta).toBeLessThan(60);
   });
 
+  test('orthogonal endpoint drag preview matches orthogonal line style', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 760, 620);
+    await addNode(page, 'external', 1080, 620);
+    await addNode(page, 'internal', 1360, 620);
+    const [fromId, firstTargetId, secondTargetId] = await getNodeIds(page);
+
+    await dragBetween(
+      page,
+      `#node-${fromId} .conn-point[data-pos="e"]`,
+      `#node-${firstTargetId} .conn-point[data-pos="w"]`
+    );
+
+    await page.evaluate(() => {
+      state.arrows[0].lineStyle = 'orthogonal';
+      state.arrows[0].bend = 0;
+      state.arrows[0].orthoY = 40;
+      selectArrow(state.arrows[0].id);
+    });
+
+    const handleBox = await page.locator('.arrow-endpoint-handle .hit').nth(1).boundingBox();
+    const targetBox = await page.locator(`#node-${secondTargetId} .conn-point[data-pos="w"]`).boundingBox();
+
+    if (!handleBox || !targetBox) {
+      throw new Error('Could not resolve orthogonal endpoint drag preview elements');
+    }
+
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 8 });
+
+    const previewPath = await page.evaluate(() => wireTempPath?.getAttribute('d') || '');
+    expect(previewPath).toContain(' L');
+    expect(previewPath.includes(' C')).toBe(false);
+
+    await page.mouse.up();
+  });
+
   test('orthogonal handle drag remains stable across repeated rerenders', async ({ page }) => {
     await bootFresh(page);
 
