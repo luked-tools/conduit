@@ -197,6 +197,41 @@ test.describe('Conduit smoke', () => {
     await expect.poll(async () => page.evaluate(() => state.arrows[0].to)).toBe(secondTargetId);
   });
 
+  test('boundary only snaps new connections near its edge', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 560, 620);
+    await addNode(page, 'boundary', 820, 520);
+    await addNode(page, 'external', 1240, 620);
+    const [fromId, boundaryId] = await getNodeIds(page);
+
+    const fromBox = await page.locator(`#node-${fromId} .conn-point[data-pos="e"]`).boundingBox();
+    const boundaryBox = await page.locator(`#node-${boundaryId}`).boundingBox();
+
+    if (!fromBox || !boundaryBox) {
+      throw new Error('Could not resolve connection source or boundary target');
+    }
+
+    const startX = fromBox.x + fromBox.width / 2;
+    const startY = fromBox.y + fromBox.height / 2;
+    const centerX = boundaryBox.x + boundaryBox.width / 2;
+    const centerY = boundaryBox.y + boundaryBox.height / 2;
+    const nearLeftEdgeX = boundaryBox.x + 10;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(centerX, centerY, { steps: 14 });
+
+    await expect.poll(async () => page.evaluate(() => wireTargetId)).toBe(null);
+
+    await page.mouse.move(nearLeftEdgeX, centerY, { steps: 8 });
+
+    await expect.poll(async () => page.evaluate(() => wireTargetId)).toBe(boundaryId);
+    await expect(page.locator(`#node-${boundaryId}`)).toHaveClass(/connect-target/);
+
+    await page.mouse.up();
+  });
+
   test('can open the node detail modal from a node', async ({ page }) => {
     await bootFresh(page);
 
