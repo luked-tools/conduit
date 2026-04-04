@@ -9,6 +9,21 @@ function buildExportHTML(opts) {
     return type === 'external' || type === 'boundary' ? type : 'internal';
   }
 
+  function getExportArrowStrokeStyle(arr) {
+    if (typeof arr?.strokeStyle === 'string' && arr.strokeStyle) return arr.strokeStyle;
+    return arr?.dash ? 'dashed' : 'solid';
+  }
+
+  function getExportArrowDasharray(arr) {
+    switch (getExportArrowStrokeStyle(arr)) {
+      case 'dashed': return '6 3';
+      case 'dotted': return '1.5 4';
+      case 'dashdot': return '8 3 1.5 3';
+      case 'longdash': return '12 4';
+      default: return '';
+    }
+  }
+
   // Capture live CSS variable values so the export is pixel-perfect
   const cs = getComputedStyle(document.documentElement);
   const cssVars = [
@@ -133,7 +148,8 @@ function buildExportHTML(opts) {
     let mEnd='', mStart='';
     if(a.direction==='directed'){mEnd=`marker-end="url(#emf-${a.id})"`;}
     else if(a.direction==='bidirectional'){mEnd=`marker-end="url(#emf-${a.id})"`;mStart=`marker-start="url(#emb-${a.id})"`;}
-    const dash=a.dash?'stroke-dasharray="6 3"':'';
+    const dashArray = getExportArrowDasharray(a);
+    const dash = dashArray ? `stroke-dasharray="${dashArray}"` : '';
     svgArrows+=`<path d="${d2}" fill="none" stroke="${color}" stroke-width="1.5" ${mEnd} ${mStart} ${dash}/>`;
     if(a.label){
       const lx=_elx+(a.labelOffsetX||0);

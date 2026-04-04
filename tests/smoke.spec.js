@@ -167,6 +167,31 @@ test.describe('Conduit smoke', () => {
     await page.mouse.up();
   });
 
+  test('quick edit affordance is suppressed while dragging a connection', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 1180, 620);
+    const [fromId, toId] = await getNodeIds(page);
+
+    const fromBox = await page.locator(`#node-${fromId} .conn-point[data-pos="e"]`).boundingBox();
+    const targetNode = page.locator(`#node-${toId}`);
+    const targetBox = await targetNode.boundingBox();
+
+    if (!fromBox || !targetBox) {
+      throw new Error('Could not resolve connection drag nodes');
+    }
+
+    await page.mouse.move(fromBox.x + fromBox.width / 2, fromBox.y + fromBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 8 });
+
+    await expect.poll(async () => page.evaluate(() => document.body.classList.contains('connecting'))).toBe(true);
+    await expect.poll(async () => targetNode.locator('.node-quick-edit-btn').evaluate(el => getComputedStyle(el).opacity)).toBe('0');
+
+    await page.mouse.up();
+  });
+
   test('newly created connection can be adjusted immediately without reselecting', async ({ page }) => {
     await bootFresh(page);
 
@@ -240,6 +265,52 @@ test.describe('Conduit smoke', () => {
     await expect.poll(async () => page.evaluate(() => state.arrows[0].to)).toBe(secondTargetId);
   });
 
+  test('arrow stroke pattern presets update the rendered connector', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 1180, 620);
+    await dragBetween(
+      page,
+      '.node.internal .conn-point[data-pos="e"]',
+      '.node.external .conn-point[data-pos="w"]'
+    );
+
+    await page.evaluate(() => selectArrow(state.arrows[0].id));
+    await page.getByRole('button', { name: 'Dot', exact: true }).click();
+
+    await expect.poll(async () => page.evaluate(() => state.arrows[0].strokeStyle)).toBe('dotted');
+    await expect.poll(async () => page.evaluate(() => {
+      return [...document.querySelectorAll('#arrow-svg path')]
+        .map(p => p.getAttribute('stroke-dasharray'))
+        .find(Boolean) || null;
+    })).toBe('1.5 4');
+  });
+
+  test('selected arrow keeps its connector color visible while editing', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 1180, 620);
+    await dragBetween(
+      page,
+      '.node.internal .conn-point[data-pos="e"]',
+      '.node.external .conn-point[data-pos="w"]'
+    );
+
+    await page.evaluate(() => {
+      selectArrow(state.arrows[0].id);
+      state.arrows[0].color = '#0088cc';
+      renderArrows();
+    });
+
+    await expect.poll(async () => page.evaluate(() => {
+      return [...document.querySelectorAll('#arrow-svg path')]
+        .map(p => p.getAttribute('stroke'))
+        .filter(Boolean);
+    })).toContain('#0088cc');
+  });
+
   test('boundary only snaps new connections near its edge', async ({ page }) => {
     await bootFresh(page);
 
@@ -286,6 +357,43 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator('#node-modal-overlay')).toHaveClass(/open/);
     await expect(page.locator('#nm-title-input')).toBeVisible();
     await expect(page.locator('#nm-panel-overview')).toHaveClass(/active/);
+  });
+
+  test('can quick edit node title and subtitle directly on the canvas', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 900, 640);
+    const [nodeId] = await getNodeIds(page);
+
+    await page.locator(`#node-${nodeId}`).click();
+    await page.locator(`#node-${nodeId} .node-quick-edit-btn`).click();
+
+    await expect(page.locator('.node-quick-edit-panel')).toBeVisible();
+    await page.locator('.node-quick-edit-field.title').fill('Order Hub');
+    await page.locator('.node-quick-edit-field.subtitle').fill('Planning and orchestration');
+    await page.locator('.node-quick-edit-field.subtitle').press('Enter');
+
+    await expect(page.locator('.node-quick-edit-panel')).toHaveCount(0);
+    await expect(page.locator(`#node-${nodeId} .node-title`)).toHaveText('Order Hub');
+    await expect(page.locator(`#node-${nodeId} .node-subtitle`)).toHaveText('Planning and orchestration');
+  });
+
+  test('quick edit closes on escape and outside click', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 900, 640);
+    const [nodeId] = await getNodeIds(page);
+
+    await page.locator(`#node-${nodeId}`).click();
+    await page.locator(`#node-${nodeId} .node-quick-edit-btn`).click();
+    await expect(page.locator('.node-quick-edit-panel')).toBeVisible();
+    await page.locator('.node-quick-edit-field.title').press('Escape');
+    await expect(page.locator('.node-quick-edit-panel')).toHaveCount(0);
+
+    await page.locator(`#node-${nodeId} .node-quick-edit-btn`).click();
+    await expect(page.locator('.node-quick-edit-panel')).toBeVisible();
+    await page.locator('#topbar').click({ position: { x: 20, y: 20 } });
+    await expect(page.locator('.node-quick-edit-panel')).toHaveCount(0);
   });
 
   test('can create a connection from the connection modal', async ({ page }) => {

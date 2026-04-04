@@ -90,6 +90,21 @@ function getArrowEndOffset(arr, end) {
   return typeof arr?.[key] === 'number' && Number.isFinite(arr[key]) ? clamp(arr[key], 0, 1) : null;
 }
 
+function getArrowStrokeStyle(arr) {
+  if (typeof arr?.strokeStyle === 'string' && arr.strokeStyle) return arr.strokeStyle;
+  return arr?.dash ? 'dashed' : 'solid';
+}
+
+function getArrowStrokeDasharray(arr) {
+  switch (getArrowStrokeStyle(arr)) {
+    case 'dashed': return '6 3';
+    case 'dotted': return '1.5 4';
+    case 'dashdot': return '8 3 1.5 3';
+    case 'longdash': return '12 4';
+    default: return '';
+  }
+}
+
 function getPortXY(node, pos, offset, heightOverride) {
   const x = node.x, y = node.y, w = node.w;
   // Always use actual rendered height ? node.h is only min-height,
@@ -281,7 +296,8 @@ function renderArrows() {
     const p2 = staggeredPortXY(toNode,   a.toPos   || 'w', a.id, 'to', getArrowEndOffset(a, 'to'));
 
     const isSelected = selectedArrow === a.id;
-    const stroke = isSelected ? (getComputedStyle(document.documentElement).getPropertyValue('--accent3').trim()||'#e85e00') : (a.color || (getComputedStyle(document.documentElement).getPropertyValue('--arrow-color').trim()||'#ff8c42'));
+    const accentStroke = getComputedStyle(document.documentElement).getPropertyValue('--accent3').trim()||'#e85e00';
+    const stroke = a.color || (getComputedStyle(document.documentElement).getPropertyValue('--arrow-color').trim()||'#ff8c42');
 
     // Per-arrow markers so colour is baked in.
     // Triangle: M0,0 L0,6 L8,3 z  — base at x=0, tip at x=8, centre at y=3
@@ -328,6 +344,19 @@ function renderArrows() {
     hit.addEventListener('mouseleave', () => { hideArrowTooltip(); });
     arrowSVG.appendChild(hit);
 
+    if (isSelected) {
+      const selectionPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      selectionPath.setAttribute('d', d);
+      selectionPath.setAttribute('fill', 'none');
+      selectionPath.setAttribute('stroke', accentStroke);
+      selectionPath.setAttribute('stroke-width', '5');
+      selectionPath.setAttribute('opacity', '0.28');
+      selectionPath.style.pointerEvents = 'none';
+      const selectionDasharray = getArrowStrokeDasharray(a);
+      if (selectionDasharray) selectionPath.setAttribute('stroke-dasharray', selectionDasharray);
+      arrowSVG.appendChild(selectionPath);
+    }
+
     // Visible path with markers
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', d);
@@ -335,7 +364,8 @@ function renderArrows() {
     path.setAttribute('stroke', stroke);
     path.setAttribute('stroke-width', isSelected ? '2' : '1.5');
     path.style.pointerEvents = 'none';
-    if (a.dash) path.setAttribute('stroke-dasharray', '6 3');
+    const dasharray = getArrowStrokeDasharray(a);
+    if (dasharray) path.setAttribute('stroke-dasharray', dasharray);
     if (a.direction === 'directed') {
       path.setAttribute('marker-end', `url(#mf-${uid})`);
     } else if (a.direction === 'bidirectional') {

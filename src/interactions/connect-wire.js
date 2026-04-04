@@ -144,6 +144,7 @@ function completeWire() {
     fromPos: wireSrcPos, toPos,
     direction: nextArrowType,
     lineStyle: nextArrowLineStyle,
+    strokeStyle: 'solid',
     label: '', labelOffsetX: 0, labelOffsetY: 0,
     color: '', dash: false, bend: 0
   });
