@@ -636,6 +636,42 @@ test.describe('Conduit smoke', () => {
     )).toBe('#123456');
   });
 
+  test('custom theme preset can be reselected after switching to another preset', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.locator('#theme-toggle-btn').click();
+
+    const customBtn = page.locator('.theme-preset-btn', { hasText: 'Custom' });
+    await expect(customBtn).toBeDisabled();
+
+    const bgHexInput = page.locator('.theme-hex[data-var="--bg"]');
+    await bgHexInput.fill('#123456');
+    await bgHexInput.blur();
+
+    await expect(customBtn).toBeEnabled();
+    await expect(customBtn).toHaveClass(/active/);
+
+    const customBg = await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
+    );
+    expect(customBg).toBe('#123456');
+
+    await page.locator('.theme-preset-btn', { hasText: 'Midnight' }).click();
+    await expect(customBtn).not.toHaveClass(/active/);
+
+    const midnightBg = await page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
+    );
+    expect(midnightBg).not.toBe(customBg);
+
+    await customBtn.click();
+    await expect(customBtn).toHaveClass(/active/);
+
+    await expect.poll(async () => page.evaluate(() =>
+      getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
+    )).toBe(customBg);
+  });
+
   test('exported HTML renders core exported content', async ({ page }, testInfo) => {
     await bootFresh(page);
 

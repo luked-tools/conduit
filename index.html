@@ -2110,6 +2110,15 @@
   }
   .theme-preset-btn:hover { border-color: var(--border2); color: var(--text); }
   .theme-preset-btn.active { border-color: var(--accent); color: var(--accent3); background: var(--accent-soft); }
+  .theme-preset-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+    color: var(--text3);
+  }
+  .theme-preset-btn:disabled:hover {
+    border-color: var(--border);
+    color: var(--text3);
+  }
   .theme-preset-swatch {
     display: flex; gap: 2px;
   }
