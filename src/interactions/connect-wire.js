@@ -142,6 +142,7 @@ function completeWire() {
     id,
     from: wireSrcId, to: wireTargetId,
     fromPos: wireSrcPos, toPos,
+    toOffset: wireTargetOffset,
     direction: nextArrowType,
     lineStyle: nextArrowLineStyle,
     strokeStyle: 'solid',

@@ -1,13 +1,41 @@
 // Theme helpers extracted from main.js
 
 const THEME_LS_KEY = 'conduit_theme';
+let customThemeVars = null;
+
+function captureThemeVars() {
+  const vars = {};
+  Object.keys(THEME_DEFAULTS).forEach(k => {
+    vars[k] = getComputedStyle(document.documentElement).getPropertyValue(k).trim() || THEME_DEFAULTS[k];
+  });
+  return vars;
+}
+
+function cloneThemeVars(vars) {
+  if (!vars) return null;
+  return Object.fromEntries(Object.keys(THEME_DEFAULTS).map(k => [k, vars[k] || THEME_DEFAULTS[k]]));
+}
+
+function hasCustomTheme() {
+  return !!customThemeVars;
+}
+
+function getThemePreviewSwatches(vars) {
+  const source = vars || THEME_DEFAULTS;
+  return [
+    source['--bg'] || THEME_DEFAULTS['--bg'],
+    source['--accent'] || THEME_DEFAULTS['--accent'],
+    source['--accent2'] || THEME_DEFAULTS['--accent2'],
+  ];
+}
+
 function saveTheme() {
   try {
-    const vars = {};
-    Object.keys(THEME_DEFAULTS).forEach(k => {
-      vars[k] = getComputedStyle(document.documentElement).getPropertyValue(k).trim();
-    });
-    localStorage.setItem(THEME_LS_KEY, JSON.stringify({ presetId: activePresetId, vars }));
+    localStorage.setItem(THEME_LS_KEY, JSON.stringify({
+      presetId: activePresetId,
+      vars: captureThemeVars(),
+      customVars: cloneThemeVars(customThemeVars),
+    }));
   } catch(e) {}
 }
 
@@ -15,10 +43,12 @@ function loadTheme() {
   try {
     const raw = localStorage.getItem(THEME_LS_KEY);
     if (!raw) return;
-    const { presetId, vars } = JSON.parse(raw);
-    Object.entries(vars).forEach(([k, v]) => {
+    const { presetId, vars, customVars } = JSON.parse(raw);
+    const currentVars = cloneThemeVars(vars) || cloneThemeVars(THEME_DEFAULTS);
+    Object.entries(currentVars).forEach(([k, v]) => {
       document.documentElement.style.setProperty(k, v);
     });
+    customThemeVars = cloneThemeVars(customVars) || (presetId === 'custom' ? cloneThemeVars(currentVars) : null);
     activePresetId = presetId || 'default';
   } catch(e) {}
 }
@@ -167,9 +197,19 @@ function setThemeVar(varName, value) {
   const hex = document.querySelector(`.theme-hex[data-var="${varName}"]`);
   if (hex) hex.value = value;
   activePresetId = 'custom';
+  customThemeVars = captureThemeVars();
   document.querySelectorAll('.theme-preset-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.preset === 'custom');
   });
+  const customBtn = document.querySelector('.theme-preset-btn[data-preset="custom"]');
+  if (customBtn) {
+    customBtn.disabled = false;
+    customBtn.title = 'Reapply your saved custom theme';
+    const swatches = customBtn.querySelectorAll('.theme-preset-swatch span');
+    getThemePreviewSwatches(customThemeVars).forEach((color, index) => {
+      if (swatches[index]) swatches[index].style.background = color;
+    });
+  }
   saveTheme();
 }
 
@@ -190,7 +230,15 @@ function buildThemePanel() {
   const customBtn = document.createElement('button');
   customBtn.className = 'theme-preset-btn' + (activePresetId === 'custom' ? ' active' : '');
   customBtn.dataset.preset = 'custom';
-  customBtn.innerHTML = `<div class="theme-preset-swatch"><span style="background:linear-gradient(135deg,#f97316,#6366f1,#22c55e)"></span></div>Custom`;
+  const customSwatchHtml = getThemePreviewSwatches(customThemeVars).map(c => `<span style="background:${c}"></span>`).join('');
+  customBtn.innerHTML = `<div class="theme-preset-swatch">${customSwatchHtml}</div>Custom`;
+  customBtn.disabled = !hasCustomTheme();
+  customBtn.title = hasCustomTheme()
+    ? 'Reapply your saved custom theme'
+    : 'Make a theme change to create a custom preset';
+  if (hasCustomTheme()) {
+    customBtn.addEventListener('click', () => applyPreset({ id: 'custom', vars: customThemeVars }));
+  }
   presetsEl.appendChild(customBtn);
 
   // Rows
