@@ -150,6 +150,7 @@ function completeWire() {
     label: '', labelOffsetX: 0, labelOffsetY: 0,
     color: '', dash: false, bend: 0
   });
+  normalizeArrowLayers();
   cancelWire();
   render();
   selectArrow(id);

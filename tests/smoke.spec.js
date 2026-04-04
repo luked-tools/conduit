@@ -347,6 +347,46 @@ test.describe('Conduit smoke', () => {
     await expect.poll(async () => page.evaluate(() => state.arrows[0].to)).toBe(toId);
   });
 
+  test('connection layer controls reorder connectors and persist after reload', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 760, 520);
+    await addNode(page, 'external', 1160, 520);
+    await addNode(page, 'internal', 760, 820);
+    await addNode(page, 'external', 1160, 820);
+    const [topLeftId, topRightId, bottomLeftId, bottomRightId] = await getNodeIds(page);
+
+    await dragBetween(
+      page,
+      `#node-${topLeftId} .conn-point[data-pos="e"]`,
+      `#node-${bottomRightId} .conn-point[data-pos="w"]`
+    );
+    await dragBetween(
+      page,
+      `#node-${bottomLeftId} .conn-point[data-pos="e"]`,
+      `#node-${topRightId} .conn-point[data-pos="w"]`
+    );
+
+    const [firstArrowId, secondArrowId] = await page.evaluate(() => state.arrows.map(arrow => arrow.id));
+
+    await expect.poll(async () => page.evaluate(ids => {
+      return ids.map(id => state.arrows.find(arrow => arrow.id === id)?.z ?? null);
+    }, [firstArrowId, secondArrowId])).toEqual([1, 2]);
+
+    await page.evaluate(id => selectArrow(id), firstArrowId);
+    await page.getByRole('button', { name: 'To front' }).click();
+
+    await expect.poll(async () => page.evaluate(ids => {
+      return ids.map(id => state.arrows.find(arrow => arrow.id === id)?.z ?? null);
+    }, [firstArrowId, secondArrowId])).toEqual([2, 1]);
+
+    await page.reload();
+
+    await expect.poll(async () => page.evaluate(ids => {
+      return ids.map(id => state.arrows.find(arrow => arrow.id === id)?.z ?? null);
+    }, [firstArrowId, secondArrowId])).toEqual([2, 1]);
+  });
+
   test('new connection drag shows the target node tooltip', async ({ page }) => {
     await bootFresh(page);
 

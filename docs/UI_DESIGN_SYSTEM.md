@@ -70,6 +70,25 @@ Users should always understand:
 
 Mode ambiguity is a design bug.
 
+### 3.6 Layering Must Stay Predictable
+
+Conduit is a structured mapping tool, not a freeform illustration canvas. Layering should therefore optimize readability first.
+
+Rules:
+
+- Nodes and boundary boxes sit above connectors in normal viewing.
+- Connectors can be ordered relative to other connectors.
+- Nodes can be ordered relative to other nodes and boundaries.
+- Connectors do not inherit the layer of either endpoint node.
+- A selected connector may temporarily rise above other content when needed for editing handles, routing, or endpoint adjustment.
+
+Rationale:
+
+- Node content must remain readable in dense diagrams.
+- Boundaries should continue to frame systems rather than be visually cut through by lines.
+- Users should not have to reason about which endpoint "wins" a connector's layer when two connected nodes sit on different layers.
+- Temporary editing elevation is acceptable when it improves manipulation clarity, but it should not redefine the normal reading order of the diagram.
+
 ## 4. Interface Anatomy
 
 The current product has seven primary UI layers. New work should fit into this structure unless there is a strong reason to change the architecture.
@@ -89,6 +108,10 @@ Rule:
 - Canvas-object styling belongs near the object or in a focused companion panel.
 - Short metadata belongs in floating panels.
 - Complex structured editing belongs in modals.
+
+Additional layering rule:
+
+- Canvas objects are arranged in two predictable families: node-family objects and connector-family objects. Ordering within a family is adjustable; the node family remains visually above the connector family except during temporary connector editing states.
 
 ## 5. Visual Foundations
 
