@@ -139,22 +139,25 @@
   /* Arrow direction toggle */
   .dir-toggle-row { display: flex; gap: 4px; margin-bottom: 10px; }
   .dir-btn {
-    flex: 1; padding: 5px; border-radius: 5px;
-    background: var(--surface2); border: 1px solid var(--border);
-    color: var(--text2); font-size: 13px; cursor: pointer;
+    flex: 1; min-height: 28px; padding: 5px 8px; border-radius: 5px;
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text2); font-size: 13px; line-height: 1.1; cursor: pointer;
     transition: all 0.15s; text-align: center;
   }
-  .dir-btn:hover, .dir-btn.active { border-color: var(--accent); color: var(--accent3); background: var(--accent-soft); }
+  .dir-btn:hover,
+  .dir-btn.active { border-color: var(--accent); color: var(--accent3); background: var(--accent-soft); }
   .stroke-style-row { display: flex; gap: 4px; margin-bottom: 10px; }
   .stroke-style-btn {
     flex: 1;
     min-width: 0;
-    padding: 5px 4px;
+    min-height: 34px;
+    padding: 5px 6px;
     border-radius: 5px;
     background: transparent;
     border: 1px solid var(--border);
     color: var(--text2);
     font-size: 10px;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.12s;
     text-align: center;

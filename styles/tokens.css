@@ -25,12 +25,16 @@
     --node-external-edge: color-mix(in srgb, var(--node-external-border) 22%, var(--surface) 78%);
     --arrow-color: #ff8c42;
     --accent-soft: color-mix(in srgb, var(--accent) 14%, var(--surface) 86%);
+    --accent-strong: color-mix(in srgb, var(--accent) 88%, #000 12%);
     --accent-glow: color-mix(in srgb, var(--accent) 42%, transparent);
     --accent-wash: color-mix(in srgb, var(--accent) 8%, transparent);
     --accent-ring: color-mix(in srgb, var(--accent) 12%, transparent);
     --accent2-soft: color-mix(in srgb, var(--accent2) 14%, var(--surface) 86%);
     --accent2-ring: color-mix(in srgb, var(--accent2) 15%, transparent);
     --accent3-ring: color-mix(in srgb, var(--accent3) 20%, transparent);
+    --danger-soft: color-mix(in srgb, var(--danger) 10%, var(--surface) 90%);
+    --surface-hover: color-mix(in srgb, var(--surface2) 72%, var(--surface) 28%);
+    --shadow-soft: 0 6px 16px rgba(0,0,0,0.12);
     --label-bg: #f5f5f5cc;
     --io-input-bg: #e8f2fa;
     --io-input-border: #a8c8e8;

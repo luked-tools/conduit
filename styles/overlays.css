@@ -267,9 +267,9 @@
     padding: 9px 22px; border-radius: 7px;
     background: var(--accent); border: none; color: #fff;
     font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 600;
-    cursor: pointer; transition: filter 0.15s;
+    cursor: pointer; transition: background 0.15s;
   }
-  .export-download-btn:hover { filter: brightness(1.1); }
+  .export-download-btn:hover { background: var(--accent-strong); }
 
 
   /* ── Arrow tooltip ── */
@@ -281,7 +281,7 @@
     padding: 8px 11px;
     pointer-events: none;
     z-index: 300;
-    box-shadow: 0 4px 20px #00000070;
+    box-shadow: var(--shadow-soft);
     opacity: 0;
     transition: opacity 0.1s;
     max-width: 220px;
@@ -295,7 +295,7 @@
     padding: 7px 10px;
     pointer-events: none;
     z-index: 300;
-    box-shadow: 0 4px 20px #00000070;
+    box-shadow: var(--shadow-soft);
     opacity: 0;
     transition: opacity 0.1s;
     max-width: 220px;
