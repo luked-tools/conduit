@@ -1,4 +1,5 @@
 function selectNode(id) {
+  if (typeof _contextToolbarMenuOpen !== 'undefined') _contextToolbarMenuOpen = false;
   selectedNode = id;
   selectedArrow = null;
   arrowSVG.style.zIndex = '2';
@@ -17,9 +18,11 @@ function selectNode(id) {
   }
   renderArrows();
   renderSidebar();
+  if (typeof updateContextToolbar === 'function') updateContextToolbar();
 }
 
 function selectArrow(id) {
+  if (typeof _contextToolbarMenuOpen !== 'undefined') _contextToolbarMenuOpen = false;
   selectedArrow = id;
   selectedNode = null;
   closeAppearancePanel();
@@ -49,10 +52,12 @@ function selectArrow(id) {
   arrowSVG.style.zIndex = '4';
   renderArrows();
   renderSidebar();
+  if (typeof updateContextToolbar === 'function') updateContextToolbar();
 }
 
 function deselect(e) {
   if (e && (e.target !== canvas && !e.target.closest('#canvas-wrap') || e.target.closest('.node') || e.target.closest('.arrow-path'))) return;
+  if (typeof _contextToolbarMenuOpen !== 'undefined') _contextToolbarMenuOpen = false;
   selectedNode = null;
   selectedArrow = null;
   closeAppearancePanel();
@@ -65,4 +70,5 @@ function deselect(e) {
   arrowSVG.style.zIndex = '2';
   renderArrows();
   renderSidebar();
+  if (typeof updateContextToolbar === 'function') updateContextToolbar();
 }

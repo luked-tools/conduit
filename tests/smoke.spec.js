@@ -119,6 +119,61 @@ test.describe('Conduit smoke', () => {
     }, { firstId, secondId })).toEqual([2, 1]);
   });
 
+  test('context toolbar appears for selected node and can move it forward', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 880, 640);
+    await addNode(page, 'external', 940, 700);
+    const [firstId, secondId] = await getNodeIds(page);
+
+    await page.evaluate(id => selectNode(id), firstId);
+    await expect(page.locator('#context-toolbar')).toHaveClass(/visible/);
+    await expect(page.locator('#context-toolbar')).toContainText('Forward');
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="Move forward"]')?.click();
+    });
+
+    await expect.poll(async () => page.evaluate(ids => {
+      const first = state.nodes.find(node => node.id === ids.firstId);
+      const second = state.nodes.find(node => node.id === ids.secondId);
+      return [first?.z ?? null, second?.z ?? null];
+    }, { firstId, secondId })).toEqual([2, 1]);
+  });
+
+  test('context toolbar more menu can move a node to front and back', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 920, 680);
+    await addNode(page, 'internal', 980, 740);
+    const [firstId, secondId, thirdId] = await getNodeIds(page);
+
+    await page.evaluate(id => selectNode(id), firstId);
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="More actions"]')?.click();
+    });
+    await expect(page.locator('#context-toolbar .context-toolbar-menu')).toBeVisible();
+    await page.evaluate(() => {
+      [...document.querySelectorAll('#context-toolbar .context-toolbar-menu-item')]
+        .find(btn => btn.textContent.trim() === 'To front')?.click();
+    });
+
+    await expect.poll(async () => page.evaluate(ids => {
+      return ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
+    }, [firstId, secondId, thirdId])).toEqual([3, 1, 2]);
+
+    await page.evaluate(id => selectNode(id), thirdId);
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="More actions"]')?.click();
+      [...document.querySelectorAll('#context-toolbar .context-toolbar-menu-item')]
+        .find(btn => btn.textContent.trim() === 'To back')?.click();
+    });
+
+    await expect.poll(async () => page.evaluate(ids => {
+      return ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
+    }, [firstId, secondId, thirdId])).toEqual([3, 2, 1]);
+  });
+
   test('node layer controls can move a node backward and to the back', async ({ page }) => {
     await bootFresh(page);
 
@@ -347,6 +402,83 @@ test.describe('Conduit smoke', () => {
     await expect.poll(async () => page.evaluate(() => state.arrows[0].to)).toBe(toId);
   });
 
+  test('context toolbar appears for selected connection and can move it forward', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 760, 520);
+    await addNode(page, 'external', 1160, 520);
+    await addNode(page, 'internal', 760, 820);
+    await addNode(page, 'external', 1160, 820);
+    const [topLeftId, topRightId, bottomLeftId, bottomRightId] = await getNodeIds(page);
+
+    await dragBetween(
+      page,
+      `#node-${topLeftId} .conn-point[data-pos="e"]`,
+      `#node-${bottomRightId} .conn-point[data-pos="w"]`
+    );
+    await dragBetween(
+      page,
+      `#node-${bottomLeftId} .conn-point[data-pos="e"]`,
+      `#node-${topRightId} .conn-point[data-pos="w"]`
+    );
+
+    const [firstArrowId, secondArrowId] = await page.evaluate(() => state.arrows.map(arrow => arrow.id));
+    await page.evaluate(id => selectArrow(id), firstArrowId);
+
+    await expect(page.locator('#context-toolbar')).toHaveClass(/visible/);
+    await expect(page.locator('#context-toolbar')).toContainText('Forward');
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="Move forward"]')?.click();
+    });
+
+    await expect.poll(async () => page.evaluate(ids => {
+      return ids.map(id => state.arrows.find(arrow => arrow.id === id)?.z ?? null);
+    }, [firstArrowId, secondArrowId])).toEqual([2, 1]);
+  });
+
+  test('context toolbar more menu can move a connection to front and back', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 760, 520);
+    await addNode(page, 'external', 1160, 520);
+    await addNode(page, 'internal', 760, 820);
+    await addNode(page, 'external', 1160, 820);
+    const [topLeftId, topRightId, bottomLeftId, bottomRightId] = await getNodeIds(page);
+
+    await dragBetween(
+      page,
+      `#node-${topLeftId} .conn-point[data-pos="e"]`,
+      `#node-${bottomRightId} .conn-point[data-pos="w"]`
+    );
+    await dragBetween(
+      page,
+      `#node-${bottomLeftId} .conn-point[data-pos="e"]`,
+      `#node-${topRightId} .conn-point[data-pos="w"]`
+    );
+
+    const [firstArrowId, secondArrowId] = await page.evaluate(() => state.arrows.map(arrow => arrow.id));
+
+    await page.evaluate(id => selectArrow(id), firstArrowId);
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="More actions"]')?.click();
+      [...document.querySelectorAll('#context-toolbar .context-toolbar-menu-item')]
+        .find(btn => btn.textContent.trim() === 'To front')?.click();
+    });
+    await expect.poll(async () => page.evaluate(ids => {
+      return ids.map(id => state.arrows.find(arrow => arrow.id === id)?.z ?? null);
+    }, [firstArrowId, secondArrowId])).toEqual([2, 1]);
+
+    await page.evaluate(id => selectArrow(id), secondArrowId);
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="More actions"]')?.click();
+      [...document.querySelectorAll('#context-toolbar .context-toolbar-menu-item')]
+        .find(btn => btn.textContent.trim() === 'To back')?.click();
+    });
+    await expect.poll(async () => page.evaluate(ids => {
+      return ids.map(id => state.arrows.find(arrow => arrow.id === id)?.z ?? null);
+    }, [firstArrowId, secondArrowId])).toEqual([2, 1]);
+  });
+
   test('connection layer controls reorder connectors and persist after reload', async ({ page }) => {
     await bootFresh(page);
 
@@ -482,6 +614,7 @@ test.describe('Conduit smoke', () => {
 
     await expect.poll(async () => page.evaluate(() => document.body.classList.contains('connecting'))).toBe(true);
     await expect.poll(async () => targetNode.locator('.node-quick-edit-btn').evaluate(el => getComputedStyle(el).opacity)).toBe('0');
+    await expect.poll(async () => page.evaluate(() => document.getElementById('context-toolbar')?.classList.contains('visible'))).toBe(false);
 
     await page.mouse.up();
   });

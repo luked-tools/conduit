@@ -301,24 +301,45 @@
     transition: opacity 0.1s;
     max-width: 240px;
   }
-  #connect-tooltip.visible { opacity: 1; }
-  .ctt-label {
-    font-size: 9px;
-    color: var(--text3);
-    font-family: 'IBM Plex Mono', monospace;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 3px;
-  }
-  .ctt-name {
-    font-size: 11px;
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    line-height: 1.35;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+#connect-tooltip.visible { opacity: 1; }
+.ctt-label {
+  font-size: 9px;
+  color: var(--text3);
+  font-family: 'IBM Plex Mono', monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 3px;
+}
+.ctt-name {
+  font-size: 11px;
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#hover-tooltip {
+  position: fixed;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 7px 10px;
+  pointer-events: none;
+  z-index: 320;
+  box-shadow: var(--shadow-soft);
+  opacity: 0;
+  transition: opacity 0.1s;
+  max-width: 220px;
+  font-size: 10px;
+  line-height: 1.35;
+  font-family: 'IBM Plex Mono', monospace;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: var(--text2);
+  white-space: nowrap;
+}
+#hover-tooltip.visible { opacity: 1; }
   .att-route {
     display: flex; align-items: center; gap: 5px;
     font-size: 11px; color: var(--text2);
@@ -415,3 +436,117 @@
     background: #00d4aa08; z-index: 100;
   }
 
+  #context-toolbar {
+    position: absolute;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+    border-radius: 10px;
+    border: 1px solid var(--border2);
+    background: color-mix(in srgb, var(--surface) 94%, var(--bg) 6%);
+    box-shadow: var(--shadow-floating);
+    backdrop-filter: blur(8px);
+    z-index: 120;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(4px) scale(0.98);
+    transition: opacity 0.14s ease, transform 0.14s ease;
+  }
+  #context-toolbar.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0) scale(1);
+  }
+  .context-toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 28px;
+    padding: 5px 8px;
+    border-radius: 7px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text2);
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+  }
+  .context-toolbar-btn:hover {
+    background: var(--surface-hover);
+    border-color: var(--border2);
+    color: var(--text);
+  }
+  .context-toolbar-btn.danger { color: var(--danger); }
+  .context-toolbar-btn.danger:hover {
+    background: var(--danger-soft);
+    border-color: var(--danger);
+  }
+  .context-toolbar-btn:disabled {
+    opacity: 0.42;
+    cursor: default;
+  }
+  .context-toolbar-btn:disabled:hover {
+    background: transparent;
+    border-color: transparent;
+    color: inherit;
+  }
+  .context-toolbar-btn-icon {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 10px;
+  }
+.context-toolbar-btn-label { display: inline-block; }
+.context-toolbar-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 112px;
+  padding: 4px;
+  border-radius: 9px;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  box-shadow: var(--shadow-floating);
+}
+.context-toolbar-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 28px;
+  padding: 6px 9px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text2);
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.12s;
+  text-align: left;
+}
+.context-toolbar-menu-item:hover {
+  background: var(--surface-hover);
+  border-color: var(--border2);
+  color: var(--text);
+}
+.context-toolbar-menu-item:disabled {
+  opacity: 0.42;
+  cursor: default;
+}
+.context-toolbar-menu-item:disabled:hover {
+  background: transparent;
+  border-color: transparent;
+  color: inherit;
+}

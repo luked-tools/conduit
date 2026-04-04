@@ -544,7 +544,7 @@
     border-color: var(--accent);
     color: var(--accent3);
     background: var(--accent-soft);
-    transform: translateY(-1px);
+    transform: translateY(-1px) scale(var(--canvas-ui-scale));
   }
   .node-quick-edit-btn svg {
     position: absolute;
@@ -555,6 +555,10 @@
     pointer-events: none;
     display: block;
     transform: none;
+  }
+  .node-quick-edit-btn {
+    transform: scale(var(--canvas-ui-scale));
+    transform-origin: center;
   }
   .node-quick-edit-panel {
     position: fixed;
@@ -925,7 +929,6 @@
     box-shadow: var(--shadow-soft);
     max-width: 220px;
   }
-
   /* Scrollbar */
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }

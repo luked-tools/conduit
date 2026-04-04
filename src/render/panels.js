@@ -6,6 +6,7 @@ function render() {
   renderSidebar();
   updateStatusBar();
   updateEmptyState();
+  if (typeof updateContextToolbar === 'function') updateContextToolbar();
 }
 
 function updateEmptyState() {

@@ -41,6 +41,7 @@ window.addEventListener('mousemove', e => {
     panX = e.clientX - panStart.x;
     panY = e.clientY - panStart.y;
     applyTransform();
+    if (typeof updateContextToolbar === 'function') updateContextToolbar();
     return;
   }
   if (draggingNode) {
@@ -56,6 +57,7 @@ window.addEventListener('mousemove', e => {
       el.style.top = n.y + 'px';
     }
     renderArrows();
+    if (typeof updateContextToolbar === 'function') updateContextToolbar();
     return;
   }
   if (resizingNode) {
@@ -90,6 +92,7 @@ window.addEventListener('mousemove', e => {
       el.style.minHeight = n.h + 'px';
     }
     renderArrows();
+    if (typeof updateContextToolbar === 'function') updateContextToolbar();
     return;
   }
   if (wireActive) {
@@ -217,4 +220,5 @@ window.addEventListener('mouseup', e => {
   } else if (wasDragging || wasResizing) {
     saveToLocalStorage();
   }
+  if (typeof updateContextToolbar === 'function') updateContextToolbar();
 });

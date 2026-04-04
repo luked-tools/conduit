@@ -127,16 +127,25 @@ function createNodeEl(n) {
   const quickEditBtn = document.createElement('button');
   quickEditBtn.className = 'node-quick-edit-btn';
   quickEditBtn.type = 'button';
-  quickEditBtn.title = 'Quick edit title and description';
   quickEditBtn.setAttribute('aria-label', 'Quick edit title and description');
   quickEditBtn.innerHTML = '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 11h1.9l4.9-4.9-1.9-1.9L5 9.1V11Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/><path d="M8.9 5.1 10.8 7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M4.7 11.3h2.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>';
   quickEditBtn.addEventListener('mousedown', e => {
     e.preventDefault();
     e.stopPropagation();
   });
+  quickEditBtn.addEventListener('mouseenter', e => {
+    showHoverTooltip(e, 'Quick edit title and description');
+  });
+  quickEditBtn.addEventListener('mousemove', e => {
+    positionHoverTooltip(e);
+  });
+  quickEditBtn.addEventListener('mouseleave', () => {
+    hideHoverTooltip();
+  });
   quickEditBtn.addEventListener('click', e => {
     e.preventDefault();
     e.stopPropagation();
+    hideHoverTooltip();
     startInlineNodeEdit(n.id);
   });
   div.appendChild(quickEditBtn);
