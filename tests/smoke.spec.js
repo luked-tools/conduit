@@ -83,6 +83,172 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator('#node-count')).toHaveText('1');
   });
 
+  test('node layer controls reorder nodes and persist after reload', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 900, 650);
+    await addNode(page, 'external', 940, 690);
+    const [firstId, secondId] = await getNodeIds(page);
+
+    await expect.poll(async () => page.evaluate(ids => {
+      const first = state.nodes.find(node => node.id === ids.firstId);
+      const second = state.nodes.find(node => node.id === ids.secondId);
+      return [first?.z ?? null, second?.z ?? null];
+    }, { firstId, secondId })).toEqual([1, 2]);
+
+    await page.evaluate(id => selectNode(id), firstId);
+    await page.getByRole('button', { name: 'To front' }).click();
+
+    await expect.poll(async () => page.evaluate(ids => {
+      const first = state.nodes.find(node => node.id === ids.firstId);
+      const second = state.nodes.find(node => node.id === ids.secondId);
+      return [first?.z ?? null, second?.z ?? null];
+    }, { firstId, secondId })).toEqual([2, 1]);
+
+    await expect.poll(async () => page.evaluate(id => {
+      const el = document.getElementById(`node-${id}`);
+      return el ? getComputedStyle(el).zIndex : null;
+    }, firstId)).toBe('2');
+
+    await page.reload();
+
+    await expect.poll(async () => page.evaluate(ids => {
+      const first = state.nodes.find(node => node.id === ids.firstId);
+      const second = state.nodes.find(node => node.id === ids.secondId);
+      return [first?.z ?? null, second?.z ?? null];
+    }, { firstId, secondId })).toEqual([2, 1]);
+  });
+
+  test('node layer controls can move a node backward and to the back', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 840, 620);
+    await addNode(page, 'external', 900, 660);
+    await addNode(page, 'internal', 960, 700);
+    const [firstId, secondId, thirdId] = await getNodeIds(page);
+
+    await expect.poll(async () => page.evaluate(ids => {
+      return ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
+    }, [firstId, secondId, thirdId])).toEqual([1, 2, 3]);
+
+    await page.evaluate(id => selectNode(id), thirdId);
+    await page.getByRole('button', { name: 'Backward' }).click();
+
+    await expect.poll(async () => page.evaluate(ids => {
+      return ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
+    }, [firstId, secondId, thirdId])).toEqual([1, 3, 2]);
+
+    await page.getByRole('button', { name: 'To back' }).click();
+
+    await expect.poll(async () => page.evaluate(ids => {
+      return ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
+    }, [firstId, secondId, thirdId])).toEqual([2, 3, 1]);
+  });
+
+  test('overlapping nodes select the node on the top layer', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 920, 660);
+    await addNode(page, 'external', 920, 660);
+    const [bottomId, topId] = await getNodeIds(page);
+    const overlapBox = await page.locator(`#node-${topId}`).boundingBox();
+
+    if (!overlapBox) {
+      throw new Error('Could not resolve overlapping node bounds');
+    }
+
+    const overlapPoint = {
+      x: overlapBox.x + overlapBox.width / 2,
+      y: overlapBox.y + overlapBox.height / 2
+    };
+
+    await expect.poll(async () => page.evaluate(({ x, y }) => {
+      const el = document.elementFromPoint(x, y);
+      const host = el?.closest('.node');
+      return host?.id || null;
+    }, overlapPoint)).toBe(`node-${topId}`);
+
+    await page.evaluate(id => selectNode(id), bottomId);
+    await page.getByRole('button', { name: 'To front' }).click();
+
+    await expect.poll(async () => page.evaluate(({ x, y }) => {
+      const el = document.elementFromPoint(x, y);
+      const host = el?.closest('.node');
+      return host?.id || null;
+    }, overlapPoint)).toBe(`node-${bottomId}`);
+  });
+
+  test('newly added nodes and pasted nodes land on the top layer', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 840, 620);
+    await addNode(page, 'external', 940, 700);
+    const [firstId, secondId] = await getNodeIds(page);
+
+    await expect.poll(async () => page.evaluate(ids => {
+      return ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
+    }, [firstId, secondId])).toEqual([1, 2]);
+
+    await addNode(page, 'internal', 1040, 760);
+    const afterAddIds = await getNodeIds(page);
+    const newId = afterAddIds[2];
+
+    await expect.poll(async () => page.evaluate(id => state.nodes.find(node => node.id === id)?.z ?? null, newId)).toBe(3);
+
+    await page.evaluate(id => {
+      selectNode(id);
+      copySelectedNode();
+      pasteNode();
+    }, firstId);
+
+    const afterPasteIds = await getNodeIds(page);
+    expect(afterPasteIds).toHaveLength(4);
+    const pastedId = afterPasteIds[afterPasteIds.length - 1];
+    await expect.poll(async () => page.evaluate(id => state.nodes.find(node => node.id === id)?.z ?? null, pastedId)).toBe(4);
+  });
+
+  test('exported HTML keeps overlapping node layer order', async ({ page, context }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 920, 660);
+    await addNode(page, 'external', 920, 660);
+    const [firstId, secondId] = await getNodeIds(page);
+
+    await page.evaluate(id => selectNode(id), firstId);
+    await page.getByRole('button', { name: 'To front' }).click();
+
+    const exportPayload = await page.evaluate(() => buildExportHTML({
+      showGrid: false,
+      showLegend: false,
+      showHelp: false
+    }));
+    const exportPath = `playwright-layer-export-${Date.now()}.html`;
+    fs.writeFileSync(exportPath, exportPayload.html, 'utf8');
+
+    const exportPage = await context.newPage();
+    await exportPage.goto(`/${exportPath}`);
+
+    await expect.poll(async () => exportPage.locator('.node').count()).toBe(2);
+    const zMap = await exportPage.evaluate(() => {
+      return [...document.querySelectorAll('.node .node-title')]
+        .map(el => {
+          const host = el.closest('.node');
+          return {
+            title: el.textContent.trim(),
+            z: host ? getComputedStyle(host).zIndex : null
+          };
+        });
+    });
+
+    expect(zMap.length).toBe(2);
+    const topNode = zMap.find(entry => entry.z === '2');
+    expect(topNode).toBeTruthy();
+    expect(topNode.title).toContain('New System');
+
+    await exportPage.close();
+    fs.unlinkSync(exportPath);
+  });
+
   test('undo and redo restore node changes', async ({ page }) => {
     await bootFresh(page);
 

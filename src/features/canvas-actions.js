@@ -4,6 +4,138 @@ function updatePaletteHighlight() {
   });
 }
 
+function getNodeLayerValue(node, fallbackIndex = 0) {
+  if (typeof node?.z === 'number' && Number.isFinite(node.z)) return node.z;
+  return (node?.type === 'boundary' ? 1000 : 2000) + fallbackIndex;
+}
+
+function getArrowLayerValue(arrow, fallbackIndex = 0) {
+  if (typeof arrow?.z === 'number' && Number.isFinite(arrow.z)) return arrow.z;
+  return 1000 + fallbackIndex;
+}
+
+function getSortedNodeLayerEntries() {
+  return state.nodes
+    .map((node, index) => ({ node, index, layer: getNodeLayerValue(node, index) }))
+    .sort((a, b) => (a.layer - b.layer) || (a.index - b.index));
+}
+
+function getSortedArrowLayerEntries() {
+  return state.arrows
+    .map((arrow, index) => ({ arrow, index, layer: getArrowLayerValue(arrow, index) }))
+    .sort((a, b) => (a.layer - b.layer) || (a.index - b.index));
+}
+
+function normalizeNodeLayers(entries = getSortedNodeLayerEntries()) {
+  entries.forEach((entry, index) => {
+    entry.node.z = index + 1;
+  });
+}
+
+function normalizeArrowLayers(entries = getSortedArrowLayerEntries()) {
+  entries.forEach((entry, index) => {
+    entry.arrow.z = index + 1;
+  });
+}
+
+function getNodeLayerPosition(nodeId) {
+  const ordered = getSortedNodeLayerEntries();
+  const index = ordered.findIndex(entry => entry.node.id === nodeId);
+  return { index, count: ordered.length };
+}
+
+function getArrowLayerPosition(arrowId) {
+  const ordered = getSortedArrowLayerEntries();
+  const index = ordered.findIndex(entry => entry.arrow.id === arrowId);
+  return { index, count: ordered.length };
+}
+
+function canMoveNodeLayer(nodeId, mode) {
+  const { index, count } = getNodeLayerPosition(nodeId);
+  if (index < 0) return false;
+  if (mode === 'front') return index < count - 1;
+  if (mode === 'back') return index > 0;
+  if (mode === 'forward') return index < count - 1;
+  if (mode === 'backward') return index > 0;
+  return false;
+}
+
+function canMoveArrowLayer(arrowId, mode) {
+  const { index, count } = getArrowLayerPosition(arrowId);
+  if (index < 0) return false;
+  if (mode === 'front') return index < count - 1;
+  if (mode === 'back') return index > 0;
+  if (mode === 'forward') return index < count - 1;
+  if (mode === 'backward') return index > 0;
+  return false;
+}
+
+function moveNodeLayer(nodeId, mode) {
+  const ordered = getSortedNodeLayerEntries();
+  const index = ordered.findIndex(entry => entry.node.id === nodeId);
+  if (index < 0) return false;
+
+  const lastIndex = ordered.length - 1;
+  let targetIndex = index;
+  if (mode === 'front') targetIndex = lastIndex;
+  else if (mode === 'back') targetIndex = 0;
+  else if (mode === 'forward') targetIndex = Math.min(lastIndex, index + 1);
+  else if (mode === 'backward') targetIndex = Math.max(0, index - 1);
+  else return false;
+
+  if (targetIndex === index) return false;
+
+  pushUndo();
+  const [entry] = ordered.splice(index, 1);
+  ordered.splice(targetIndex, 0, entry);
+  normalizeNodeLayers(ordered);
+  render();
+  selectNode(nodeId);
+  saveToLocalStorage();
+
+  const labels = {
+    front: 'Node brought to front',
+    forward: 'Node moved forward',
+    backward: 'Node moved backward',
+    back: 'Node sent to back'
+  };
+  setStatusModeMessage(labels[mode] || 'Layer updated', { fade: true, autoClearMs: 1500 });
+  return true;
+}
+
+function moveArrowLayer(arrowId, mode) {
+  const ordered = getSortedArrowLayerEntries();
+  const index = ordered.findIndex(entry => entry.arrow.id === arrowId);
+  if (index < 0) return false;
+
+  const lastIndex = ordered.length - 1;
+  let targetIndex = index;
+  if (mode === 'front') targetIndex = lastIndex;
+  else if (mode === 'back') targetIndex = 0;
+  else if (mode === 'forward') targetIndex = Math.min(lastIndex, index + 1);
+  else if (mode === 'backward') targetIndex = Math.max(0, index - 1);
+  else return false;
+
+  if (targetIndex === index) return false;
+
+  pushUndo();
+  const [entry] = ordered.splice(index, 1);
+  ordered.splice(targetIndex, 0, entry);
+  normalizeArrowLayers(ordered);
+  renderArrows();
+  selectArrow(arrowId);
+  saveToLocalStorage();
+
+  const labels = {
+    front: 'Connection brought to front',
+    forward: 'Connection moved forward',
+    backward: 'Connection moved backward',
+    back: 'Connection sent to back'
+  };
+  setStatusModeMessage(labels[mode] || 'Connection order updated', { fade: true, autoClearMs: 1500 });
+  return true;
+}
+
 function addMode(type) {
   pushUndo();
   lastNodeType = type;
@@ -18,6 +150,7 @@ function addMode(type) {
     x: cx, y: cy, w: type === 'boundary' ? 300 : 180, h: type === 'boundary' ? 200 : 100,
     color: '', textColor: '', functions: []
   });
+  normalizeNodeLayers();
   render();
   selectNode(id);
 }
@@ -36,6 +169,7 @@ function addModeAt(type, canvasX, canvasY) {
     subtitle: '',
     x, y, w, h, color: '', textColor: '', functions: []
   });
+  normalizeNodeLayers();
   render();
   selectNode(id);
 }

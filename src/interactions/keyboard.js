@@ -67,11 +67,13 @@ function pasteNode() {
     id,
     x: src.x + OFFSET,
     y: src.y + OFFSET,
+    z: Number.MAX_SAFE_INTEGER,
   };
   if (copy.tag && copy.type !== 'boundary') {
     copy.tag = nextNodeTag(copy.type);
   }
   state.nodes.push(copy);
+  normalizeNodeLayers();
   render();
   selectNode(id);
   _clipboardNode = JSON.parse(JSON.stringify(copy));

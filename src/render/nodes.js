@@ -3,10 +3,10 @@
 function renderNodes() {
   // Remove old node elements (keep svg)
   document.querySelectorAll('.node').forEach(e => e.remove());
-  // Sort: boundary first so it renders behind
-  const sorted = [...state.nodes].sort((a,b) => (a.type==='boundary'?-1:1)-(b.type==='boundary'?-1:1));
-  sorted.forEach(n => {
+  getSortedNodeLayerEntries().forEach(entry => {
+    const n = entry.node;
     const el = createNodeEl(n);
+    el.style.zIndex = String(getNodeLayerValue(n, entry.index));
     canvas.appendChild(el);
   });
   saveToLocalStorage();
