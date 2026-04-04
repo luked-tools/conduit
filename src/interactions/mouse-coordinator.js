@@ -1,5 +1,5 @@
 // SHARED MOUSE INTERACTION COORDINATOR
-function isNearBoundaryEdge(node, mx, my, actualH, margin = 20) {
+function isNearNodeEdge(node, mx, my, actualH, margin = 20) {
   return (
     Math.abs(mx - node.x) <= margin ||
     Math.abs(mx - (node.x + node.w)) <= margin ||
@@ -106,6 +106,8 @@ window.addEventListener('mousemove', e => {
     let snapPortPos = null;
     let snapOffset = null;
     let bestPortDist = Infinity;
+    let bestEdgeCandidate = null;
+    let bestEdgeDist = Infinity;
 
     function getActualPortXY(n, pos) {
       return getPortXYActual(n, pos);
@@ -113,12 +115,8 @@ window.addEventListener('mousemove', e => {
 
     state.nodes.forEach(n => {
       if (n.id === wireSrcId) return;
+      if (n.type === 'boundary') return;
       ['n', 's', 'e', 'w'].forEach(pos => {
-        if (n.type === 'boundary') {
-          const el = document.getElementById('node-' + n.id);
-          const actualH = el ? el.offsetHeight : n.h;
-          if (!isNearBoundaryEdge(n, mx, my, actualH)) return;
-        }
         const p = getActualPortXY(n, pos);
         const d = Math.sqrt((mx - p.x) ** 2 + (my - p.y) ** 2);
         if (d < PORT_SNAP && d < bestPortDist) {
@@ -130,37 +128,45 @@ window.addEventListener('mousemove', e => {
       });
     });
 
-    if (!snapNodeId) {
-      let bestBoxDist = Infinity;
-      state.nodes.forEach(n => {
-        if (n.id === wireSrcId) return;
-        const el = document.getElementById('node-' + n.id);
-        const actualH = el ? el.offsetHeight : n.h;
-        const inBox = mx >= n.x - NODE_MARGIN && mx <= n.x + n.w + NODE_MARGIN &&
-                      my >= n.y - NODE_MARGIN && my <= n.y + actualH + NODE_MARGIN;
-        if (!inBox) return;
-        if (n.type === 'boundary' && !isNearBoundaryEdge(n, mx, my, actualH)) return;
-        if (epDragActive || n.type === 'boundary') {
-          const attachment = getNodeEdgeAttachment(n, mx, my, actualH);
-          const p = getPortXY(n, attachment.pos, attachment.offset, actualH);
-          const d = Math.sqrt((mx - p.x) ** 2 + (my - p.y) ** 2);
-          if (d < bestBoxDist) {
-            bestBoxDist = d;
-            snapNodeId = n.id;
-            snapPortPos = attachment.pos;
-            snapOffset = attachment.offset;
-          }
-        } else {
-          const cx = n.x + n.w / 2, cy = n.y + actualH / 2;
-          const d = Math.sqrt((mx - cx) ** 2 + (my - cy) ** 2);
-          if (d < bestBoxDist) {
-            bestBoxDist = d;
-            snapNodeId = n.id;
-            snapPortPos = null;
-            snapOffset = null;
-          }
+    let bestBoxDist = Infinity;
+    state.nodes.forEach(n => {
+      if (n.id === wireSrcId) return;
+      const el = document.getElementById('node-' + n.id);
+      const actualH = el ? el.offsetHeight : n.h;
+      const inBox = mx >= n.x - NODE_MARGIN && mx <= n.x + n.w + NODE_MARGIN &&
+                    my >= n.y - NODE_MARGIN && my <= n.y + actualH + NODE_MARGIN;
+      if (!inBox) return;
+      const nearEdge = isNearNodeEdge(n, mx, my, actualH);
+      if (n.type === 'boundary' && !nearEdge) return;
+      if (epDragActive || nearEdge) {
+        const attachment = getNodeEdgeAttachment(n, mx, my, actualH);
+        const p = getPortXY(n, attachment.pos, attachment.offset, actualH);
+        const d = Math.sqrt((mx - p.x) ** 2 + (my - p.y) ** 2);
+        if (d < bestEdgeDist) {
+          bestEdgeDist = d;
+          bestEdgeCandidate = {
+            nodeId: n.id,
+            pos: attachment.pos,
+            offset: attachment.offset,
+            isBoundary: n.type === 'boundary'
+          };
         }
-      });
+      } else if (!snapNodeId) {
+        const cx = n.x + n.w / 2, cy = n.y + actualH / 2;
+        const d = Math.sqrt((mx - cx) ** 2 + (my - cy) ** 2);
+        if (d < bestBoxDist) {
+          bestBoxDist = d;
+          snapNodeId = n.id;
+          snapPortPos = null;
+          snapOffset = null;
+        }
+      }
+    });
+
+    if (bestEdgeCandidate && (bestPortDist === Infinity || bestEdgeCandidate.isBoundary || bestEdgeDist <= bestPortDist)) {
+      snapNodeId = bestEdgeCandidate.nodeId;
+      snapPortPos = bestEdgeCandidate.pos;
+      snapOffset = bestEdgeCandidate.offset;
     }
 
     if (snapNodeId !== wireTargetId || snapPortPos !== wireTargetPos || snapOffset !== wireTargetOffset) {

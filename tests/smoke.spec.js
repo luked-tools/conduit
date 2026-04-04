@@ -344,6 +344,39 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator(`#node-${boundaryId}`)).toHaveClass(/connect-target/);
 
     await page.mouse.up();
+
+    await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(1);
+    await expect.poll(async () => page.evaluate(() => state.arrows[0].to)).toBe(boundaryId);
+    await expect.poll(async () => page.evaluate(() => state.arrows[0].toOffset !== null)).toBe(true);
+  });
+
+  test('normal nodes can use flexible edge snap when dragging near an edge', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 560, 620);
+    await addNode(page, 'external', 900, 520);
+    const [fromId, targetId] = await getNodeIds(page);
+
+    const fromBox = await page.locator(`#node-${fromId} .conn-point[data-pos="e"]`).boundingBox();
+    const targetBox = await page.locator(`#node-${targetId}`).boundingBox();
+
+    if (!fromBox || !targetBox) {
+      throw new Error('Could not resolve normal-node flexible edge snap elements');
+    }
+
+    const startX = fromBox.x + fromBox.width / 2;
+    const startY = fromBox.y + fromBox.height / 2;
+    const nearLeftEdgeX = targetBox.x + 10;
+    const edgeY = targetBox.y + targetBox.height * 0.34;
+
+    await page.mouse.move(startX, startY);
+    await page.mouse.down();
+    await page.mouse.move(nearLeftEdgeX, edgeY, { steps: 12 });
+    await page.mouse.up();
+
+    await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(1);
+    await expect.poll(async () => page.evaluate(() => state.arrows[0].to)).toBe(targetId);
+    await expect.poll(async () => page.evaluate(() => state.arrows[0].toOffset !== null)).toBe(true);
   });
 
   test('can open the node detail modal from a node', async ({ page }) => {
