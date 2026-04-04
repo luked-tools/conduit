@@ -4,7 +4,7 @@
     position: absolute; top: calc(100% + 6px); left: 0;
     background: var(--surface); border: 1px solid var(--border2);
     border-radius: 8px; padding: 4px;
-    box-shadow: 0 8px 32px #00000070;
+    box-shadow: var(--shadow-floating);
     z-index: 601; min-width: 170px;
     display: none; flex-direction: column; gap: 1px;
   }
@@ -20,13 +20,13 @@
     transition: background 0.1s, color 0.1s;
     white-space: nowrap;
   }
-  .tb-dropdown-item:hover { background: var(--surface2); color: var(--text); }
+  .tb-dropdown-item:hover { background: var(--surface-hover); color: var(--text); }
   .tb-dropdown-item.primary { color: var(--accent); }
   .tb-dropdown-item.primary:hover { background: var(--accent-soft); }
   .tb-dropdown-item.danger { color: var(--danger); }
-  .tb-dropdown-item.danger:hover { background: color-mix(in srgb, var(--danger) 10%, var(--surface2)); }
+  .tb-dropdown-item.danger:hover { background: var(--danger-soft); }
   .tb-dropdown-label {
-    padding: 6px 10px 4px;
+    padding: 7px 10px 5px;
     color: var(--text3);
     font-family: 'IBM Plex Mono', monospace;
     font-size: 9px;
@@ -164,7 +164,7 @@
   /* ══ EXPORT MODAL ══ */
   #export-modal-overlay {
     position: fixed; inset: 0;
-    background: #00000099; backdrop-filter: blur(4px);
+    background: var(--overlay-backdrop-strong); backdrop-filter: blur(4px);
     display: none; align-items: center; justify-content: center;
     z-index: 5000;
   }
@@ -175,16 +175,16 @@
     border-radius: 12px;
     width: 860px; max-width: 96vw; height: 90vh; max-height: 90vh;
     display: flex; flex-direction: column;
-    box-shadow: 0 32px 80px #00000095;
+    box-shadow: var(--shadow-modal);
     animation: slideUp 0.18s cubic-bezier(0.16,1,0.3,1);
     overflow: hidden;
   }
   #export-modal-header {
-    display: flex; align-items: center; gap: 12px;
-    padding: 18px 22px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: var(--space-5);
+    padding: var(--space-8) 22px var(--space-7); border-bottom: 1px solid var(--border);
     flex-shrink: 0;
   }
-  #export-modal-header h3 { font-size: 15px; font-weight: 600; color: var(--text); flex: 1; }
+  #export-modal-header h3 { font-size: 15px; font-weight: 700; color: var(--text); flex: 1; letter-spacing: -0.02em; }
   #export-modal-close {
     width: 28px; height: 28px; border-radius: 6px;
     background: transparent; border: 1px solid transparent;
@@ -192,7 +192,7 @@
     display: flex; align-items: center; justify-content: center;
     transition: all 0.15s;
   }
-  #export-modal-close:hover { background: var(--surface2); border-color: var(--border); color: var(--text); }
+  #export-modal-close:hover { background: var(--surface-hover); border-color: var(--border2); color: var(--text); }
   #export-modal-body {
     display: flex; flex: 1; overflow: hidden;
   }
@@ -200,7 +200,7 @@
   #export-options-pane {
     width: 220px; flex-shrink: 0;
     border-right: 1px solid var(--border);
-    padding: 18px 16px; overflow-y: auto;
+    padding: var(--space-8) 16px; overflow-y: auto;
     display: flex; flex-direction: column; gap: 20px;
   }
   .export-opt-group { display: flex; flex-direction: column; gap: 0; }
@@ -235,8 +235,9 @@
     background: #f0f0f0;
   }
   #export-preview-label {
-    padding: 10px 14px; font-size: 10px; color: var(--text3);
+    padding: 10px 14px; font-size: 9px; color: var(--text3);
     font-family: 'IBM Plex Mono', monospace; border-bottom: 1px solid var(--border);
+    letter-spacing: 0.08em; text-transform: uppercase;
     flex-shrink: 0; display: flex; align-items: center; justify-content: space-between;
   }
   #export-preview-label span { color: var(--text2); }
@@ -284,7 +285,7 @@
     box-shadow: var(--shadow-soft);
     opacity: 0;
     transition: opacity 0.1s;
-    max-width: 220px;
+    max-width: 240px;
   }
   #arrow-tooltip.visible { opacity: 1; }
   #connect-tooltip {
@@ -292,13 +293,13 @@
     background: var(--surface);
     border: 1px solid var(--border2);
     border-radius: 7px;
-    padding: 7px 10px;
+    padding: 8px 11px;
     pointer-events: none;
     z-index: 300;
     box-shadow: var(--shadow-soft);
     opacity: 0;
     transition: opacity 0.1s;
-    max-width: 220px;
+    max-width: 240px;
   }
   #connect-tooltip.visible { opacity: 1; }
   .ctt-label {
@@ -310,9 +311,9 @@
     margin-bottom: 3px;
   }
   .ctt-name {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--text);
-    font-family: 'IBM Plex Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     line-height: 1.35;
     white-space: nowrap;
     overflow: hidden;
@@ -322,7 +323,7 @@
     display: flex; align-items: center; gap: 5px;
     font-size: 11px; color: var(--text2);
     font-family: 'IBM Plex Sans', sans-serif;
-    margin-bottom: 4px; line-height: 1.4;
+    margin-bottom: 5px; line-height: 1.4;
   }
   .att-route-arrow { color: var(--accent); flex-shrink: 0; font-size: 13px; }
   .att-label {
@@ -335,7 +336,7 @@
     font-size: 9px; color: var(--text3);
     font-family: 'IBM Plex Mono', monospace;
     text-transform: uppercase; letter-spacing: 0.08em;
-    margin-top: 2px;
+    margin-top: 4px;
   }
 
 
