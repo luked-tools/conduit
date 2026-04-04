@@ -1,10 +1,12 @@
 // VIEWPORT TRANSFORM / ZOOM
 function applyTransform() {
   if (canvas) canvas.style.transform = `translate(${panX}px,${panY}px) scale(${scale})`;
+  document.documentElement.style.setProperty('--canvas-ui-scale', String(Math.max(0.9, Math.min(1.2, 1 / scale))));
   const zl = document.getElementById('zoom-label');
   const sz = document.getElementById('sb-zoom');
   if (zl) zl.textContent = Math.round(scale * 100) + '%';
   if (sz) sz.textContent = '⊕ ' + Math.round(scale * 100) + '%';
+  if (typeof positionContextToolbar === 'function') positionContextToolbar();
 }
 
 function zoom(factor, cx, cy) {

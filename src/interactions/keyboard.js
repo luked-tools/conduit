@@ -10,6 +10,7 @@ document.addEventListener('keydown', e => {
   if (!inTextField && e.key === 'Escape') {
     if (wireActive) cancelWire();
     if (_brushActive) { cancelStyleBrush(); return; }
+    if (_nodeLayerTargetMode) { cancelNodeLayerTargetMode(); return; }
     closeAppearancePanel();
     deselect();
   }

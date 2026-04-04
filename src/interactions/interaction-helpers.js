@@ -116,6 +116,7 @@ function closeInlineNodeEdit({ save = false } = {}) {
   const nodeEl = document.getElementById('node-' + session.nodeId);
   if (nodeEl) nodeEl.classList.remove('quick-editing');
   if (session.wrap.parentNode) session.wrap.remove();
+  updateContextToolbar();
   if (save) {
     const node = state.nodes.find(x => x.id === session.nodeId);
     if (node) {
@@ -191,6 +192,7 @@ function startInlineNodeEdit(nodeId) {
     titleInput,
     subtitleInput
   };
+  updateContextToolbar();
 
   const [cancelBtn, saveBtn] = wrap.querySelectorAll('button');
   cancelBtn.addEventListener('click', e => {

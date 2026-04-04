@@ -1,4 +1,5 @@
 function startConnect(nodeId, pos, e) {
+  if (typeof _contextToolbarMenuOpen !== 'undefined') _contextToolbarMenuOpen = false;
   e.preventDefault();
   e.stopPropagation();
 
@@ -46,6 +47,7 @@ function startConnect(nodeId, pos, e) {
 
   document.body.classList.add('connecting');
   setStatusModeMessage('→ Drag to target node — release to connect');
+  if (typeof updateContextToolbar === 'function') updateContextToolbar();
 }
 
 function updateWirePreview(mouseX, mouseY) {
@@ -127,6 +129,7 @@ function cancelWire() {
   hideConnectTargetTooltip();
   const sbMode = document.getElementById('sb-mode');
   if (sbMode) setStatusModeMessage('');
+  if (typeof updateContextToolbar === 'function') updateContextToolbar();
 }
 
 function completeWire() {
@@ -157,6 +160,7 @@ function completeWire() {
 }
 
 function startEndpointDrag(arrowId, nodeId, pos, e, forcedEnd) {
+  if (typeof _contextToolbarMenuOpen !== 'undefined') _contextToolbarMenuOpen = false;
   e.preventDefault();
   e.stopPropagation();
   const arr = state.arrows.find(a => a.id === arrowId);
@@ -203,6 +207,7 @@ function startEndpointDrag(arrowId, nodeId, pos, e, forcedEnd) {
 
   document.body.classList.add('connecting');
   setStatusModeMessage('↔ Drag to reposition arrow endpoint');
+  if (typeof updateContextToolbar === 'function') updateContextToolbar();
 }
 
 function completeEndpointDrag() {
@@ -238,6 +243,7 @@ function completeEndpointDrag() {
     selectedArrow = arrowId;
     selectArrow(arrowId);
   }
+  if (typeof updateContextToolbar === 'function') updateContextToolbar();
 }
 
 function getNodeActualH(n) {

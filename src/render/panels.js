@@ -6,6 +6,7 @@ function render() {
   renderSidebar();
   updateStatusBar();
   updateEmptyState();
+  if (typeof updateContextToolbar === 'function') updateContextToolbar();
 }
 
 function updateEmptyState() {
@@ -398,10 +399,10 @@ function renderPropsPanel() {
 
     const layerRow = document.createElement('div');
     layerRow.className = 'prop-row';
-    const layerLbl = document.createElement('div');
-    layerLbl.className = 'prop-label';
-    layerLbl.textContent = 'Layer order';
-    layerRow.appendChild(layerLbl);
+    const layerBody = document.createElement('div');
+    layerBody.className = 'prop-section-body';
+    const layerHeader = createPropSectionHeader('Layer order', 'Arrange', 'layering', layerBody);
+    layerRow.appendChild(layerHeader);
     const layerGrid = document.createElement('div');
     layerGrid.style.cssText = 'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;';
     const layerActions = [
@@ -426,7 +427,29 @@ function renderPropsPanel() {
       });
       layerGrid.appendChild(btn);
     });
-    layerRow.appendChild(layerGrid);
+    [
+      { mode: 'front-of', label: 'In front of...', title: 'Pick another node to place this node in front of it' },
+      { mode: 'behind', label: 'Behind...', title: 'Pick another node to place this node behind it' }
+    ].forEach(action => {
+      const btn = document.createElement('button');
+      btn.className = 'prop-btn accent layer-target-btn';
+      btn.type = 'button';
+      btn.title = action.title;
+      btn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-bottom:0;';
+      btn.textContent = action.label;
+      if (state.nodes.length < 2) {
+        btn.disabled = true;
+        btn.style.opacity = '0.45';
+      }
+      if (isNodeLayerTargetMode(n.id, action.mode)) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        if (state.nodes.length < 2) return;
+        startNodeLayerTargetMode(n.id, action.mode);
+      });
+      layerGrid.appendChild(btn);
+    });
+    layerBody.appendChild(layerGrid);
+    layerRow.appendChild(layerBody);
     body.appendChild(layerRow);
 
     // Duplicate

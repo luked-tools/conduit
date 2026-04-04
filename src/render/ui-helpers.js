@@ -38,6 +38,7 @@ document.addEventListener('click', e => {
 // ── Arrow tooltip ──
 const _arrowTooltip = document.getElementById('arrow-tooltip');
 const _connectTooltip = document.getElementById('connect-tooltip');
+const _hoverTooltip = document.getElementById('hover-tooltip');
 let _tooltipTimer = null;
 
 function showArrowTooltip(e, arrow) {
@@ -109,4 +110,33 @@ function positionConnectTooltip(e) {
 function hideConnectTargetTooltip() {
   if (!_connectTooltip) return;
   _connectTooltip.classList.remove('visible');
+}
+
+function showHoverTooltip(e, text) {
+  if (!_hoverTooltip || !text) return;
+  _hoverTooltip.textContent = text;
+  positionHoverTooltip(e);
+  _hoverTooltip.classList.add('visible');
+}
+
+function positionHoverTooltip(e) {
+  if (!_hoverTooltip) return;
+  const tt = _hoverTooltip;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const tw = tt.offsetWidth || 180;
+  const th = tt.offsetHeight || 32;
+  let x = e.clientX + 14;
+  let y = e.clientY - th - 12;
+  if (x + tw > vw - 10) x = e.clientX - tw - 14;
+  if (x < 10) x = 10;
+  if (y < 10) y = e.clientY + 16;
+  if (y + th > vh - 10) y = vh - th - 10;
+  tt.style.left = x + 'px';
+  tt.style.top = y + 'px';
+}
+
+function hideHoverTooltip() {
+  if (!_hoverTooltip) return;
+  _hoverTooltip.classList.remove('visible');
 }

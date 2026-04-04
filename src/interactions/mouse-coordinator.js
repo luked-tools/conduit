@@ -11,6 +11,7 @@ function isNearNodeEdge(node, mx, my, actualH, margin = 20) {
 document.getElementById('canvas-wrap')?.addEventListener('mousedown', e => {
   const wrap = document.getElementById('canvas-wrap');
   if (!wrap) return;
+  if (_nodeLayerTargetMode) return;
   if (e.button === 1) {
     e.preventDefault();
     panDragging = true;
@@ -28,6 +29,7 @@ document.getElementById('canvas-wrap')?.addEventListener('mousedown', e => {
 document.getElementById('canvas-wrap')?.addEventListener('dblclick', e => {
   const wrap = document.getElementById('canvas-wrap');
   if (!wrap) return;
+  if (_nodeLayerTargetMode) return;
   if (e.target !== wrap && e.target.id !== 'canvas' && e.target !== arrowSVG) return;
   if (wireActive) return;
   const rect = wrap.getBoundingClientRect();
@@ -41,6 +43,7 @@ window.addEventListener('mousemove', e => {
     panX = e.clientX - panStart.x;
     panY = e.clientY - panStart.y;
     applyTransform();
+    if (typeof updateContextToolbar === 'function') updateContextToolbar();
     return;
   }
   if (draggingNode) {
@@ -56,6 +59,7 @@ window.addEventListener('mousemove', e => {
       el.style.top = n.y + 'px';
     }
     renderArrows();
+    if (typeof updateContextToolbar === 'function') updateContextToolbar();
     return;
   }
   if (resizingNode) {
@@ -90,6 +94,7 @@ window.addEventListener('mousemove', e => {
       el.style.minHeight = n.h + 'px';
     }
     renderArrows();
+    if (typeof updateContextToolbar === 'function') updateContextToolbar();
     return;
   }
   if (wireActive) {
@@ -217,4 +222,5 @@ window.addEventListener('mouseup', e => {
   } else if (wasDragging || wasResizing) {
     saveToLocalStorage();
   }
+  if (typeof updateContextToolbar === 'function') updateContextToolbar();
 });
