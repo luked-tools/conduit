@@ -41,6 +41,12 @@ function init() {
 }
 
 function loadSample() {
+  const titleInput = document.getElementById('diagram-title-input');
+  const subtitleInput = document.getElementById('diagram-subtitle-input');
+  if (titleInput) titleInput.value = 'Manufacturing Operations Map';
+  if (subtitleInput) subtitleInput.value = 'Example workflow across planning, execution, and quality';
+  updateDocumentPanelFromInputs();
+
   state.nodes = [
     {id:'n1', type:'external', tag:'CLIENT', title:'Customer Portal', subtitle:'Demand capture,\npriority updates,\nand service notes', x:90, y:190, w:190, h:110, color:'#f6efe6', colorOpacity:255, textColor:'#5a3820', subtitleColor:'#7a573f', functions:[{name:'Order intake',inputs:['Demand signal, service notes'],outputs:['Approved order, priority flag'],description:'Captures customer demand and pushes the approved request into planning.',hidden:false},{name:'Change requests',inputs:['Project feedback'],outputs:['Spec adjustment'],description:'',hidden:false}]},
     {id:'n2', type:'internal', tag:'PLM', title:'Product Lifecycle\nManagement', subtitle:'Engineering source of truth\nwith richer style treatment', x:410, y:80, w:220, h:125, color:'#eef3f8', colorOpacity:255, textColor:'#223548', subtitleColor:'#4c6277', tagColor:'#6c8ead', fnLabelColor:'#4c6277', functions:[{name:'BoM authoring',inputs:['Design package'],outputs:['Released BoM'],description:'Creates and maintains the engineering BoM.',hidden:false},{name:'Change control',inputs:['Spec adjustment'],outputs:['Approved ECO'],description:'',hidden:false}], notes:'Styled to demonstrate custom background and text colours.'},

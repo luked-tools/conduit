@@ -1,6 +1,11 @@
 const { test, expect } = require('@playwright/test');
 const fs = require('fs');
 
+const BLANK_TITLE = 'System Map';
+const BLANK_SUBTITLE = 'Processes, platforms, and data flows';
+const SAMPLE_TITLE = 'Manufacturing Operations Map';
+const SAMPLE_SUBTITLE = 'Example workflow across planning, execution, and quality';
+
 async function bootFresh(page) {
   await page.goto('/');
   await page.evaluate(() => {
@@ -104,6 +109,58 @@ test.describe('Conduit smoke', () => {
 
     await expect(page.locator('.node')).toHaveCount(2);
     await expect(page.locator('#node-count')).toHaveText('2');
+  });
+
+  test('blank draft uses the default document title and subtitle', async ({ page }) => {
+    await bootFresh(page);
+
+    await expect(page.locator('#diagram-title-input')).toHaveValue(BLANK_TITLE);
+    await expect(page.locator('#diagram-subtitle-input')).toHaveValue(BLANK_SUBTITLE);
+    await expect(page.locator('#document-panel-preview-title')).toHaveText(BLANK_TITLE);
+    await expect(page.locator('#document-panel-preview-subtitle')).toHaveText(BLANK_SUBTITLE);
+  });
+
+  test('sample load applies the sample document title and subtitle', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      loadSampleIntoCurrentDraft();
+    });
+
+    await expect(page.locator('#diagram-title-input')).toHaveValue(SAMPLE_TITLE);
+    await expect(page.locator('#diagram-subtitle-input')).toHaveValue(SAMPLE_SUBTITLE);
+    await expect(page.locator('#document-panel-preview-title')).toHaveText(SAMPLE_TITLE);
+    await expect(page.locator('#document-panel-preview-subtitle')).toHaveText(SAMPLE_SUBTITLE);
+  });
+
+  test('creating a new draft resets document metadata to the blank defaults', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.locator('#diagram-title-input').fill('Temporary Working Title');
+    await page.locator('#diagram-subtitle-input').fill('Temporary working subtitle');
+    await page.evaluate(() => {
+      createDraftFromPayload(createBlankDiagramPayload(), 'Fresh Draft', { activate: true });
+      saveToLocalStorage();
+    });
+
+    await expect(page.locator('#active-draft-chip')).toContainText('Fresh Draft');
+    await expect(page.locator('#diagram-title-input')).toHaveValue(BLANK_TITLE);
+    await expect(page.locator('#diagram-subtitle-input')).toHaveValue(BLANK_SUBTITLE);
+  });
+
+  test('sample document metadata persists after reload', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      loadSampleIntoCurrentDraft();
+    });
+
+    await page.reload();
+
+    await expect(page.locator('#diagram-title-input')).toHaveValue(SAMPLE_TITLE);
+    await expect(page.locator('#diagram-subtitle-input')).toHaveValue(SAMPLE_SUBTITLE);
+    await expect(page.locator('#document-panel-preview-title')).toHaveText(SAMPLE_TITLE);
+    await expect(page.locator('#document-panel-preview-subtitle')).toHaveText(SAMPLE_SUBTITLE);
   });
 
   test('can create a connection by dragging between node ports', async ({ page }) => {
@@ -778,7 +835,7 @@ test.describe('Conduit smoke', () => {
     const exportedPage = await page.context().newPage();
     await exportedPage.setContent(html, { waitUntil: 'load' });
 
-    await expect(exportedPage.locator('#export-header h1')).toContainText('SYSTEM INTERFACE MAP');
+    await expect(exportedPage.locator('#export-header h1')).toContainText(BLANK_TITLE);
     await expect(exportedPage.locator('.node')).toHaveCount(2);
     await expect(exportedPage.locator('#zoom-hud')).toBeVisible();
     await expect(exportedPage.locator('#legend-wrap')).toBeVisible();
