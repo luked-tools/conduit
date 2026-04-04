@@ -396,6 +396,39 @@ function renderPropsPanel() {
     actionDivider.className = 'prop-divider';
     body.appendChild(actionDivider);
 
+    const layerRow = document.createElement('div');
+    layerRow.className = 'prop-row';
+    const layerLbl = document.createElement('div');
+    layerLbl.className = 'prop-label';
+    layerLbl.textContent = 'Layer order';
+    layerRow.appendChild(layerLbl);
+    const layerGrid = document.createElement('div');
+    layerGrid.style.cssText = 'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;';
+    const layerActions = [
+      { mode: 'front', label: 'To front', icon: '↑↑', title: 'Bring node to front' },
+      { mode: 'forward', label: 'Forward', icon: '↑', title: 'Move node forward' },
+      { mode: 'backward', label: 'Backward', icon: '↓', title: 'Move node backward' },
+      { mode: 'back', label: 'To back', icon: '↓↓', title: 'Send node to back' }
+    ];
+    layerActions.forEach(action => {
+      const btn = document.createElement('button');
+      btn.className = 'prop-btn';
+      btn.type = 'button';
+      btn.title = action.title;
+      btn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-bottom:0;';
+      btn.innerHTML = `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;line-height:1;">${action.icon}</span><span>${action.label}</span>`;
+      const enabled = canMoveNodeLayer(n.id, action.mode);
+      btn.disabled = !enabled;
+      if (!enabled) btn.style.opacity = '0.45';
+      btn.addEventListener('click', () => {
+        if (!canMoveNodeLayer(n.id, action.mode)) return;
+        moveNodeLayer(n.id, action.mode);
+      });
+      layerGrid.appendChild(btn);
+    });
+    layerRow.appendChild(layerGrid);
+    body.appendChild(layerRow);
+
     // Duplicate
     const dupBtn = document.createElement('button');
     dupBtn.className = 'prop-btn accent';
@@ -609,6 +642,39 @@ function renderPropsPanel() {
       });
       return row;
     });
+
+    const arrowLayerRow = document.createElement('div');
+    arrowLayerRow.className = 'prop-row';
+    const arrowLayerLbl = document.createElement('div');
+    arrowLayerLbl.className = 'prop-label';
+    arrowLayerLbl.textContent = 'Connection order';
+    arrowLayerRow.appendChild(arrowLayerLbl);
+    const arrowLayerGrid = document.createElement('div');
+    arrowLayerGrid.style.cssText = 'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;';
+    const arrowLayerActions = [
+      { mode: 'front', label: 'To front', icon: '↑↑', title: 'Bring connection to front' },
+      { mode: 'forward', label: 'Forward', icon: '↑', title: 'Move connection forward' },
+      { mode: 'backward', label: 'Backward', icon: '↓', title: 'Move connection backward' },
+      { mode: 'back', label: 'To back', icon: '↓↓', title: 'Send connection to back' }
+    ];
+    arrowLayerActions.forEach(action => {
+      const btn = document.createElement('button');
+      btn.className = 'prop-btn';
+      btn.type = 'button';
+      btn.title = action.title;
+      btn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-bottom:0;';
+      btn.innerHTML = `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;line-height:1;">${action.icon}</span><span>${action.label}</span>`;
+      const enabled = canMoveArrowLayer(a.id, action.mode);
+      btn.disabled = !enabled;
+      if (!enabled) btn.style.opacity = '0.45';
+      btn.addEventListener('click', () => {
+        if (!canMoveArrowLayer(a.id, action.mode)) return;
+        moveArrowLayer(a.id, action.mode);
+      });
+      arrowLayerGrid.appendChild(btn);
+    });
+    arrowLayerRow.appendChild(arrowLayerGrid);
+    body.appendChild(arrowLayerRow);
 
     // Color
     const colorRow2 = document.createElement('div');

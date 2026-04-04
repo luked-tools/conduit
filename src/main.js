@@ -293,7 +293,14 @@ function renderArrows() {
     return { x: base.x + perp.x * offset, y: base.y + perp.y * offset };
   }
 
-  state.arrows.forEach(a => {
+  const orderedArrows = getSortedArrowLayerEntries().sort((a, b) => {
+    const aBoost = a.arrow.id === selectedArrow ? 1 : 0;
+    const bBoost = b.arrow.id === selectedArrow ? 1 : 0;
+    return (aBoost - bBoost) || (a.layer - b.layer) || (a.index - b.index);
+  });
+
+  orderedArrows.forEach(entry => {
+    const a = entry.arrow;
     const fromNode = state.nodes.find(n => n.id === a.from);
     const toNode   = state.nodes.find(n => n.id === a.to);
     if (!fromNode || !toNode) return;
@@ -344,11 +351,15 @@ function renderArrows() {
     hit.setAttribute('opacity', '0');
     hit.style.cursor = 'pointer';
     hit.style.pointerEvents = 'stroke';
+    const arrowGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+    arrowGroup.setAttribute('data-arrow-id', a.id);
+    arrowGroup.style.pointerEvents = 'none';
+
     hit.addEventListener('click', e => { e.stopPropagation(); selectArrow(a.id); });
     hit.addEventListener('mouseenter', e => { showArrowTooltip(e, a); });
     hit.addEventListener('mousemove',  e => { positionArrowTooltip(e); });
     hit.addEventListener('mouseleave', () => { hideArrowTooltip(); });
-    arrowSVG.appendChild(hit);
+    arrowGroup.appendChild(hit);
 
     if (isSelected) {
       const selectionPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
@@ -360,7 +371,7 @@ function renderArrows() {
       selectionPath.style.pointerEvents = 'none';
       const selectionDasharray = getArrowStrokeDasharray(a);
       if (selectionDasharray) selectionPath.setAttribute('stroke-dasharray', selectionDasharray);
-      arrowSVG.appendChild(selectionPath);
+      arrowGroup.appendChild(selectionPath);
     }
 
     // Visible path with markers
@@ -378,7 +389,7 @@ function renderArrows() {
       path.setAttribute('marker-end',   `url(#mf-${uid})`);
       path.setAttribute('marker-start', `url(#mb-${uid})`);
     }
-    arrowSVG.appendChild(path);
+    arrowGroup.appendChild(path);
 
     if (isSelected) {
       [
@@ -397,7 +408,7 @@ function renderArrows() {
         c.setAttribute('r', '5.5');
         g.appendChild(c);
         g.addEventListener('mousedown', e => startEndpointDrag(a.id, handle.nodeId, handle.pos, e, handle.end));
-        arrowSVG.appendChild(g);
+        arrowGroup.appendChild(g);
       });
     }
 
@@ -424,7 +435,7 @@ function renderArrows() {
       bg.setAttribute('fill', 'var(--bg)');
       bg.setAttribute('stroke', isSelected ? 'var(--accent3)' : 'var(--border)');
       bg.setAttribute('stroke-width', isSelected ? '1.5' : '1');
-      arrowSVG.appendChild(bg);
+      arrowGroup.appendChild(bg);
 
       // Text — one tspan per line for multi-line support
       const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
@@ -444,7 +455,7 @@ function renderArrows() {
         ts.textContent = line;
         txt.appendChild(ts);
       });
-      arrowSVG.appendChild(txt);
+      arrowGroup.appendChild(txt);
 
       bg.style.cursor = txt.style.cursor = 'move';
       bg.style.pointerEvents = txt.style.pointerEvents = 'all';
@@ -512,15 +523,15 @@ function renderArrows() {
           grip.appendChild(gl);
         });
 
-        arrowSVG.appendChild(pill);
-        arrowSVG.appendChild(grip);
+        arrowGroup.appendChild(pill);
+        arrowGroup.appendChild(grip);
 
         pill.addEventListener('mousedown', e2 => {
           startOrthogonalHandleDrag(a.id, prop, info, isXDrag, e2);
         });
       });
     }
-
+    arrowSVG.appendChild(arrowGroup);
   });
 }
 

@@ -128,7 +128,8 @@ function buildExportHTML(opts) {
   }
   const exportArrowColor = cs.getPropertyValue('--arrow-color').trim() || '#ff8c42';
 
-  arrows.forEach(a => {
+  getSortedArrowLayerEntries().forEach(entry => {
+    const a = entry.arrow;
     const fn = nodes.find(x=>x.id===a.from), tn = nodes.find(x=>x.id===a.to);
     if(!fn||!tn) return;
     const color = a.color || exportArrowColor;
@@ -137,7 +138,8 @@ function buildExportHTML(opts) {
   });
   svgArrows = svgArrows.replace('<defs id="edefs"></defs>', `<defs>${eDefsHtml}</defs>`);
 
-  arrows.forEach(a => {
+  getSortedArrowLayerEntries().forEach(entry => {
+    const a = entry.arrow;
     const fn = nodes.find(x=>x.id===a.from), tn = nodes.find(x=>x.id===a.to);
     if(!fn||!tn) return;
     const p1=staggeredPortXYE(fn,a.fromPos||'e',a.id,'from',getArrowEndOffset(a, 'from')),
@@ -198,8 +200,8 @@ function buildExportHTML(opts) {
   const nodeDetailJson = JSON.stringify(nodeDetailData).replace(/</g,'\\u003c').replace(/>/g,'\\u003e');
 
   let nodeHtml = '';
-  const sortedN = [...nodes].sort((a,b)=>(a.type==='boundary'?-1:1)-(b.type==='boundary'?-1:1));
-  sortedN.forEach(n => {
+  getSortedNodeLayerEntries().forEach(entry => {
+    const n = entry.node;
     const hasDetail = !!nodeDetailData[n.id];
     const nodeType = getExportNodeType(n.type);
     const op = n.colorOpacity !== undefined ? n.colorOpacity : 51;
@@ -244,7 +246,8 @@ function buildExportHTML(opts) {
         + `</div>`;
     }
 
-    const clickAttr = (n.type !== 'boundary' && hasDetail) ? `onclick='openDetail(${JSON.stringify(String(n.id))})' style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${colorStyle}cursor:pointer;"` : `style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${colorStyle}"`;
+    const zStyle = `z-index:${getNodeLayerValue(n, entry.index)};`;
+    const clickAttr = (n.type !== 'boundary' && hasDetail) ? `onclick='openDetail(${JSON.stringify(String(n.id))})' style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${zStyle}${colorStyle}cursor:pointer;"` : `style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${zStyle}${colorStyle}"`;
     nodeHtml += `<div class="node ${nodeType}" ${clickAttr}>${innerHtml}${detailBtn}</div>`;
   });
 
