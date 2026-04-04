@@ -1,4 +1,13 @@
 // SHARED MOUSE INTERACTION COORDINATOR
+function isNearBoundaryEdge(node, mx, my, actualH, margin = 20) {
+  return (
+    Math.abs(mx - node.x) <= margin ||
+    Math.abs(mx - (node.x + node.w)) <= margin ||
+    Math.abs(my - node.y) <= margin ||
+    Math.abs(my - (node.y + actualH)) <= margin
+  );
+}
+
 document.getElementById('canvas-wrap')?.addEventListener('mousedown', e => {
   const wrap = document.getElementById('canvas-wrap');
   if (!wrap) return;
@@ -105,16 +114,10 @@ window.addEventListener('mousemove', e => {
     state.nodes.forEach(n => {
       if (n.id === wireSrcId) return;
       ['n', 's', 'e', 'w'].forEach(pos => {
-        if (epDragActive && n.type === 'boundary') {
+        if (n.type === 'boundary') {
           const el = document.getElementById('node-' + n.id);
           const actualH = el ? el.offsetHeight : n.h;
-          const EDGE_ONLY_MARGIN = 20;
-          const nearBoundaryEdge =
-            Math.abs(mx - n.x) <= EDGE_ONLY_MARGIN ||
-            Math.abs(mx - (n.x + n.w)) <= EDGE_ONLY_MARGIN ||
-            Math.abs(my - n.y) <= EDGE_ONLY_MARGIN ||
-            Math.abs(my - (n.y + actualH)) <= EDGE_ONLY_MARGIN;
-          if (!nearBoundaryEdge) return;
+          if (!isNearBoundaryEdge(n, mx, my, actualH)) return;
         }
         const p = getActualPortXY(n, pos);
         const d = Math.sqrt((mx - p.x) ** 2 + (my - p.y) ** 2);
@@ -136,16 +139,8 @@ window.addEventListener('mousemove', e => {
         const inBox = mx >= n.x - NODE_MARGIN && mx <= n.x + n.w + NODE_MARGIN &&
                       my >= n.y - NODE_MARGIN && my <= n.y + actualH + NODE_MARGIN;
         if (!inBox) return;
-        if (epDragActive) {
-          if (n.type === 'boundary') {
-            const EDGE_ONLY_MARGIN = 20;
-            const nearBoundaryEdge =
-              Math.abs(mx - n.x) <= EDGE_ONLY_MARGIN ||
-              Math.abs(mx - (n.x + n.w)) <= EDGE_ONLY_MARGIN ||
-              Math.abs(my - n.y) <= EDGE_ONLY_MARGIN ||
-              Math.abs(my - (n.y + actualH)) <= EDGE_ONLY_MARGIN;
-            if (!nearBoundaryEdge) return;
-          }
+        if (n.type === 'boundary' && !isNearBoundaryEdge(n, mx, my, actualH)) return;
+        if (epDragActive || n.type === 'boundary') {
           const attachment = getNodeEdgeAttachment(n, mx, my, actualH);
           const p = getPortXY(n, attachment.pos, attachment.offset, actualH);
           const d = Math.sqrt((mx - p.x) ** 2 + (my - p.y) ** 2);

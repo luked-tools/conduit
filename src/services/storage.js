@@ -51,12 +51,12 @@ function updateDraftUI() {
   const draftName = draftDisplayName(currentDraftName);
   const label = document.getElementById('file-draft-label');
   if (label) {
-    label.textContent = `Draft · ${draftName}`;
+    label.textContent = draftName;
     label.title = draftName;
   }
   const chip = document.getElementById('active-draft-chip');
   if (chip) {
-    chip.textContent = `Draft · ${draftName}`;
+    chip.textContent = draftName;
     chip.title = draftName;
   }
 }

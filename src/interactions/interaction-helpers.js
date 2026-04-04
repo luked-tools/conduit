@@ -85,6 +85,171 @@ document.addEventListener('keydown', e => {
   }
 });
 
+let _inlineNodeEditor = null;
+
+function autosizeQuickEditField(el) {
+  if (!el) return;
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 140) + 'px';
+}
+
+function positionInlineNodeEdit(nodeEl, wrap) {
+  if (!nodeEl || !wrap) return;
+  const rect = nodeEl.getBoundingClientRect();
+  const width = wrap.offsetWidth || 280;
+  const height = wrap.offsetHeight || 150;
+  const margin = 12;
+  let left = rect.left + (rect.width - width) / 2;
+  let top = rect.top + Math.min(12, Math.max(6, rect.height * 0.12));
+  if (left + width > window.innerWidth - margin) left = window.innerWidth - margin - width;
+  if (left < margin) left = margin;
+  if (top + height > window.innerHeight - margin) top = Math.max(margin, rect.bottom - height - 8);
+  if (top < margin) top = margin;
+  wrap.style.left = Math.round(left) + 'px';
+  wrap.style.top = Math.round(top) + 'px';
+}
+
+function closeInlineNodeEdit({ save = false } = {}) {
+  if (!_inlineNodeEditor) return;
+  const session = _inlineNodeEditor;
+  _inlineNodeEditor = null;
+  const nodeEl = document.getElementById('node-' + session.nodeId);
+  if (nodeEl) nodeEl.classList.remove('quick-editing');
+  if (session.wrap.parentNode) session.wrap.remove();
+  if (save) {
+    const node = state.nodes.find(x => x.id === session.nodeId);
+    if (node) {
+      const nextTitle = session.titleInput.value.trim() || node.title || 'Untitled';
+      const nextSubtitle = session.subtitleInput.value.trim();
+      if (node.title !== nextTitle || (node.subtitle || '') !== nextSubtitle) {
+        pushUndo();
+        node.title = nextTitle;
+        node.subtitle = nextSubtitle;
+        renderNodes();
+        renderSidebar();
+        saveToLocalStorage();
+        return;
+      }
+    }
+  }
+}
+
+function startInlineNodeEdit(nodeId) {
+  const node = state.nodes.find(x => x.id === nodeId);
+  const nodeEl = document.getElementById('node-' + nodeId);
+  if (!node || !nodeEl) return;
+  if (selectedNode !== nodeId) {
+    selectNode(nodeId);
+    requestAnimationFrame(() => startInlineNodeEdit(nodeId));
+    return;
+  }
+
+  closeInlineNodeEdit();
+  nodeEl.classList.add('quick-editing');
+
+  const wrap = document.createElement('div');
+  wrap.className = 'node-quick-edit-panel';
+
+  const titleInput = document.createElement('textarea');
+  titleInput.className = 'node-quick-edit-field title';
+  titleInput.value = node.title || '';
+  titleInput.placeholder = node.type === 'boundary' ? 'Boundary label' : 'Node title';
+  titleInput.rows = 2;
+  titleInput.spellcheck = false;
+  if (node.textColor) titleInput.style.color = node.textColor;
+
+  const subtitleInput = document.createElement('textarea');
+  subtitleInput.className = 'node-quick-edit-field subtitle';
+  subtitleInput.value = node.subtitle || '';
+  subtitleInput.placeholder = node.type === 'boundary' ? 'Boundary description' : 'Subtitle / description';
+  subtitleInput.rows = 2;
+  subtitleInput.spellcheck = false;
+  if (node.subtitleColor) subtitleInput.style.color = node.subtitleColor;
+
+  const actions = document.createElement('div');
+  actions.className = 'node-quick-edit-actions';
+  actions.innerHTML =
+    '<div class="node-quick-edit-hint">Enter to save · Esc to cancel</div>' +
+    '<div class="node-quick-edit-buttons">' +
+      '<button type="button" class="node-quick-edit-action">Cancel</button>' +
+      '<button type="button" class="node-quick-edit-action primary">Save</button>' +
+    '</div>';
+
+  wrap.appendChild(titleInput);
+  wrap.appendChild(subtitleInput);
+  wrap.appendChild(actions);
+  document.body.appendChild(wrap);
+
+  autosizeQuickEditField(titleInput);
+  autosizeQuickEditField(subtitleInput);
+  positionInlineNodeEdit(nodeEl, wrap);
+
+  _inlineNodeEditor = {
+    nodeId,
+    nodeEl,
+    wrap,
+    titleInput,
+    subtitleInput
+  };
+
+  const [cancelBtn, saveBtn] = wrap.querySelectorAll('button');
+  cancelBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    closeInlineNodeEdit();
+  });
+  saveBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    closeInlineNodeEdit({ save: true });
+  });
+
+  [titleInput, subtitleInput].forEach((input, index) => {
+    input.addEventListener('mousedown', e => e.stopPropagation());
+    input.addEventListener('click', e => e.stopPropagation());
+    input.addEventListener('input', () => {
+      autosizeQuickEditField(input);
+      positionInlineNodeEdit(nodeEl, wrap);
+    });
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
+        closeInlineNodeEdit();
+        return;
+      }
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        closeInlineNodeEdit({ save: true });
+      }
+      if (e.key === 'Tab' && !e.shiftKey && index === 0) {
+        e.preventDefault();
+        subtitleInput.focus();
+      }
+    });
+  });
+
+  wrap.addEventListener('mousedown', e => e.stopPropagation());
+  wrap.addEventListener('click', e => e.stopPropagation());
+
+  requestAnimationFrame(() => {
+    positionInlineNodeEdit(nodeEl, wrap);
+    titleInput.focus();
+    titleInput.select();
+  });
+}
+
+document.addEventListener('mousedown', e => {
+  if (!_inlineNodeEditor) return;
+  if (_inlineNodeEditor.wrap.contains(e.target)) return;
+  closeInlineNodeEdit({ save: true });
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && _inlineNodeEditor) {
+    closeInlineNodeEdit();
+  }
+});
+
 
 // ── Inline label editor ──
 function startInlineLabelEdit(arrow, svgX, svgY) {

@@ -12,6 +12,10 @@ let connState = {
   activePicker: null   // 'from' | 'to'
 };
 
+function getConnNodeType(type) {
+  return type === 'external' || type === 'boundary' ? type : 'internal';
+}
+
 function openConnectModal(presetFromId) {
   connState = { fromId: presetFromId || null, toId: null, dir: 'directed', fromPort: 'auto', toPort: 'auto', activePicker: null };
   document.getElementById('conn-label-input').value = '';
@@ -51,10 +55,11 @@ function renderConnNodeDisplay(side) {
   }
   const n = state.nodes.find(x => x.id === id);
   if (!n) return;
-  el.className = 'conn-node-picker selected' + (n.type === 'external' ? ' external' : '');
+  const nodeType = getConnNodeType(n.type);
+  el.className = 'conn-node-picker selected' + (nodeType === 'external' ? ' external' : '');
   content.innerHTML =
-    (n.tag ? '<div class="conn-node-picker-tag">' + n.tag + '</div>' : '') +
-    '<div class="conn-node-picker-name">' + (n.title || '').replace(/\n/g, ' ') + '</div>';
+    (n.tag ? '<div class="conn-node-picker-tag">' + escapeHtml(n.tag) + '</div>' : '') +
+    '<div class="conn-node-picker-name">' + escapeHtml((n.title || '').replace(/\n/g, ' ')) + '</div>';
 }
 
 function openNodePicker(side) {
@@ -96,12 +101,13 @@ function renderInlinePickerList(side, query) {
   }
   const currentSel = side === 'from' ? connState.fromId : connState.toId;
   filtered.forEach(n => {
+    const nodeType = getConnNodeType(n.type);
     const opt = document.createElement('div');
     opt.className = 'conn-node-option' + (n.id === currentSel ? ' active' : '');
     opt.innerHTML =
-      '<span class="conn-node-opt-badge ' + n.type + '">' + (n.tag || n.type.slice(0,3).toUpperCase()) + '</span>' +
-      '<div class="conn-node-opt-text"><div class="conn-node-opt-name">' + (n.title || '').replace(/\n/g, ' ') + '</div>' +
-      (n.subtitle ? '<div class="conn-node-opt-sub">' + (n.subtitle || '').replace(/\n/g,' ').slice(0,60) + '</div>' : '') +
+      '<span class="conn-node-opt-badge ' + nodeType + '">' + escapeHtml(n.tag || nodeType.slice(0,3).toUpperCase()) + '</span>' +
+      '<div class="conn-node-opt-text"><div class="conn-node-opt-name">' + escapeHtml((n.title || '').replace(/\n/g, ' ')) + '</div>' +
+      (n.subtitle ? '<div class="conn-node-opt-sub">' + escapeHtml((n.subtitle || '').replace(/\n/g,' ').slice(0,60)) + '</div>' : '') +
       '</div>';
     opt.addEventListener('click', e => {
       e.stopPropagation();
@@ -203,8 +209,8 @@ function renderConnExisting() {
     item.innerHTML =
       '<span class="conn-existing-dir">' + dirIcon + '</span>' +
       '<div class="conn-existing-info">' +
-        '<span style="font-weight:600;color:var(--text);">' + (other.title||'').replace(/\n/g,' ') + '</span>' +
-        (a.label ? ' <span class="conn-existing-label">· ' + a.label + '</span>' : '') +
+        '<span style="font-weight:600;color:var(--text);">' + escapeHtml((other.title||'').replace(/\n/g,' ')) + '</span>' +
+        (a.label ? ' <span class="conn-existing-label">· ' + escapeHtml(a.label) + '</span>' : '') +
       '</div>' +
       '<button class="conn-existing-del" title="Delete this connection">×</button>';
     item.querySelector('.conn-existing-del').addEventListener('click', () => {
@@ -237,6 +243,8 @@ function createConnection() {
     fromPos: fromPort,
     toPos:   toPort,
     direction: connState.dir,
+    lineStyle: nextArrowLineStyle,
+    strokeStyle: 'solid',
     label: document.getElementById('conn-label-input').value.trim(),
     labelOffsetX: 0, labelOffsetY: 0,
     color: '', dash: false, bend: 0
