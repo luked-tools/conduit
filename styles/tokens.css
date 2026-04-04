@@ -26,6 +26,9 @@
     --arrow-color: #ff8c42;
     --accent-soft: color-mix(in srgb, var(--accent) 14%, var(--surface) 86%);
     --accent-strong: color-mix(in srgb, var(--accent) 88%, #000 12%);
+    --field-bg: color-mix(in srgb, var(--surface2) 78%, var(--surface) 22%);
+    --field-bg-hover: color-mix(in srgb, var(--surface3) 68%, var(--surface) 32%);
+    --field-bg-focus: var(--surface);
     --accent-glow: color-mix(in srgb, var(--accent) 42%, transparent);
     --accent-wash: color-mix(in srgb, var(--accent) 8%, transparent);
     --accent-ring: color-mix(in srgb, var(--accent) 12%, transparent);

@@ -188,16 +188,16 @@
     box-sizing: border-box;
     border-radius: 8px;
     border: 1px solid var(--border);
-    background: var(--surface2);
+    background: var(--field-bg);
     color: var(--text);
     padding: 8px 10px;
     outline: none;
     overflow-x: hidden;
     overflow-y: hidden;
-    transition: border-color 0.15s, background 0.15s;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
   }
-  .doc-panel-textarea:hover { background: var(--surface3); }
-  .doc-panel-textarea:focus { border-color: var(--accent); background: var(--surface); }
+  .doc-panel-textarea:hover { background: var(--field-bg-hover); }
+  .doc-panel-textarea:focus { border-color: var(--accent); background: var(--field-bg-focus); box-shadow: 0 0 0 3px var(--accent-ring); }
   #doc-title-input {
     font-family: 'Inter', sans-serif;
     font-size: 14px;
@@ -299,13 +299,14 @@
     color: var(--text3); text-transform: uppercase; margin-bottom: 4px;
   }
   .prop-input {
-    width: 100%; padding: 6px 8px;
-    background: var(--surface2); border: 1px solid var(--border);
+    width: 100%; min-height: 30px; padding: 6px 8px;
+    background: var(--field-bg); border: 1px solid var(--border);
     border-radius: 5px; color: var(--text);
-    font-family: 'Inter', sans-serif; font-size: 11.5px;
-    outline: none; transition: border-color 0.15s;
+    font-family: 'Inter', sans-serif; font-size: 11.5px; line-height: 1.3;
+    outline: none; transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
   }
-  .prop-input:focus { border-color: var(--accent); }
+  .prop-input:hover { background: var(--field-bg-hover); }
+  .prop-input:focus { border-color: var(--accent); background: var(--field-bg-focus); box-shadow: 0 0 0 3px var(--accent-ring); }
   .prop-input[type="color"] { height: 30px; padding: 2px 4px; cursor: pointer; }
   .prop-input[type="range"] {
     padding: 0; margin: 4px 0;
@@ -343,12 +344,14 @@
   .prop-row-inline { display: flex; gap: 6px; align-items: center; }
   .prop-row-inline .prop-input { flex: 1; }
   .prop-select {
-    width: 100%; padding: 6px 8px;
-    background: var(--surface2); border: 1px solid var(--border);
+    width: 100%; min-height: 30px; padding: 6px 8px;
+    background: var(--field-bg); border: 1px solid var(--border);
     border-radius: 5px; color: var(--text);
-    font-family: 'Inter', sans-serif; font-size: 11.5px;
-    outline: none;
+    font-family: 'Inter', sans-serif; font-size: 11.5px; line-height: 1.3;
+    outline: none; transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
   }
+  .prop-select:hover { background: var(--field-bg-hover); }
+  .prop-select:focus { border-color: var(--accent); background: var(--field-bg-focus); box-shadow: 0 0 0 3px var(--accent-ring); }
   .prop-btn {
     width: 100%; min-height: 30px; padding: 6px 8px; border-radius: 5px;
     background: transparent; border: 1px solid var(--border);
@@ -569,17 +572,22 @@
   }
   .node-quick-edit-field {
     width: 100%;
-    background: var(--surface3);
+    background: var(--field-bg);
     border: 1px solid var(--border);
     border-radius: 5px;
     color: var(--text);
     font-family: 'Inter', sans-serif;
     outline: none;
     resize: none;
-    transition: border-color 0.12s;
+    transition: border-color 0.12s, background 0.12s, box-shadow 0.12s;
+  }
+  .node-quick-edit-field:hover {
+    background: var(--field-bg-hover);
   }
   .node-quick-edit-field:focus {
-    border-color: var(--accent3);
+    border-color: var(--accent);
+    background: var(--field-bg-focus);
+    box-shadow: 0 0 0 3px var(--accent-ring);
   }
   .node-quick-edit-field.title {
     min-height: 42px;
