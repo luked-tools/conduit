@@ -60,6 +60,103 @@ function canMoveNodeLayer(nodeId, mode) {
   return false;
 }
 
+let _nodeLayerTargetMode = null;
+
+function isNodeLayerTargetMode(nodeId, mode) {
+  return !!_nodeLayerTargetMode
+    && _nodeLayerTargetMode.sourceId === nodeId
+    && _nodeLayerTargetMode.mode === mode;
+}
+
+function getNodeLayerTargetBannerText(mode) {
+  if (mode === 'front-of') return 'Layer order - click a node to bring this node in front of it';
+  if (mode === 'behind') return 'Layer order - click a node to place this node behind it';
+  return 'Layer order - click a node';
+}
+
+function updateNodeLayerTargetUI() {
+  const banner = document.getElementById('layer-target-banner');
+  const text = document.getElementById('layer-target-text');
+  const wrap = document.getElementById('canvas-wrap');
+  if (!banner || !text || !wrap) return;
+
+  if (_nodeLayerTargetMode) {
+    text.textContent = getNodeLayerTargetBannerText(_nodeLayerTargetMode.mode);
+    banner.classList.add('active');
+    wrap.classList.add('layer-target-mode');
+    wrap.style.cursor = 'crosshair';
+  } else {
+    banner.classList.remove('active');
+    wrap.classList.remove('layer-target-mode');
+    if (!wireActive && !_brushActive) wrap.style.cursor = '';
+  }
+}
+
+function cancelNodeLayerTargetMode() {
+  if (!_nodeLayerTargetMode) return;
+  _nodeLayerTargetMode = null;
+  updateNodeLayerTargetUI();
+  renderSidebar();
+  if (typeof updateContextToolbar === 'function') updateContextToolbar();
+}
+
+function startNodeLayerTargetMode(nodeId, mode) {
+  const node = state.nodes.find(x => x.id === nodeId);
+  if (!node) return false;
+  if (_nodeLayerTargetMode && _nodeLayerTargetMode.sourceId === nodeId && _nodeLayerTargetMode.mode === mode) {
+    cancelNodeLayerTargetMode();
+    return false;
+  }
+
+  if (_brushActive) cancelStyleBrush();
+  if (_inlineNodeEditor) closeInlineNodeEdit();
+  if (selectedNode !== nodeId) selectNode(nodeId);
+
+  _nodeLayerTargetMode = { sourceId: nodeId, mode };
+  updateNodeLayerTargetUI();
+  renderSidebar();
+  if (typeof updateContextToolbar === 'function') updateContextToolbar();
+  return true;
+}
+
+function moveNodeLayerRelative(sourceId, targetId, mode) {
+  if (!sourceId || !targetId || sourceId === targetId) return false;
+  const ordered = getSortedNodeLayerEntries();
+  const sourceIndex = ordered.findIndex(entry => entry.node.id === sourceId);
+  const initialTargetIndex = ordered.findIndex(entry => entry.node.id === targetId);
+  if (sourceIndex < 0 || initialTargetIndex < 0) return false;
+
+  pushUndo();
+  const [sourceEntry] = ordered.splice(sourceIndex, 1);
+  const targetIndex = ordered.findIndex(entry => entry.node.id === targetId);
+  if (targetIndex < 0) return false;
+
+  const insertIndex = mode === 'front-of' ? targetIndex + 1 : targetIndex;
+  ordered.splice(insertIndex, 0, sourceEntry);
+  normalizeNodeLayers(ordered);
+  render();
+  selectNode(sourceId);
+  saveToLocalStorage();
+
+  const targetNode = state.nodes.find(node => node.id === targetId);
+  const targetName = targetNode ? (targetNode.title || targetNode.tag || 'target node').replace(/\n/g, ' ') : 'target node';
+  const labels = {
+    'front-of': `Node placed in front of ${targetName}`,
+    'behind': `Node placed behind ${targetName}`
+  };
+  setStatusModeMessage(labels[mode] || 'Layer updated', { fade: true, autoClearMs: 1800 });
+  return true;
+}
+
+function applyNodeLayerTarget(targetId) {
+  if (!_nodeLayerTargetMode) return false;
+  const { sourceId, mode } = _nodeLayerTargetMode;
+  if (!targetId || targetId === sourceId) return false;
+  const applied = moveNodeLayerRelative(sourceId, targetId, mode);
+  cancelNodeLayerTargetMode();
+  return applied;
+}
+
 function canMoveArrowLayer(arrowId, mode) {
   const { index, count } = getArrowLayerPosition(arrowId);
   if (index < 0) return false;
@@ -71,6 +168,7 @@ function canMoveArrowLayer(arrowId, mode) {
 }
 
 function moveNodeLayer(nodeId, mode) {
+  if (_nodeLayerTargetMode && _nodeLayerTargetMode.sourceId === nodeId) cancelNodeLayerTargetMode();
   const ordered = getSortedNodeLayerEntries();
   const index = ordered.findIndex(entry => entry.node.id === nodeId);
   if (index < 0) return false;

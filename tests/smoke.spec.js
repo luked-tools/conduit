@@ -200,6 +200,55 @@ test.describe('Conduit smoke', () => {
     }, [firstId, secondId, thirdId])).toEqual([2, 3, 1]);
   });
 
+  test('sidebar can start relative node layering mode and place a node in front of another node', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 840, 620);
+    await addNode(page, 'external', 920, 680);
+    await addNode(page, 'internal', 1000, 740);
+    const [firstId, secondId, thirdId] = await getNodeIds(page);
+
+    await page.evaluate(id => selectNode(id), firstId);
+    await page.getByRole('button', { name: 'In front of...' }).click();
+
+    await expect(page.locator('#layer-target-banner')).toHaveClass(/active/);
+    await expect(page.locator('#layer-target-banner')).toContainText('bring this node in front of it');
+    await expect(page.locator('#context-toolbar')).not.toHaveClass(/visible/);
+
+    await page.locator(`#node-${secondId}`).click();
+
+    await expect(page.locator('#layer-target-banner')).not.toHaveClass(/active/);
+    await expect.poll(async () => page.evaluate(ids => {
+      return ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
+    }, [firstId, secondId, thirdId])).toEqual([2, 1, 3]);
+  });
+
+  test('toolbar more menu can start relative node layering mode and place a node behind another node', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 840, 620);
+    await addNode(page, 'external', 920, 680);
+    await addNode(page, 'internal', 1000, 740);
+    const [firstId, secondId, thirdId] = await getNodeIds(page);
+
+    await page.evaluate(id => selectNode(id), thirdId);
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="More actions"]')?.click();
+      [...document.querySelectorAll('#context-toolbar .context-toolbar-menu-item')]
+        .find(btn => btn.textContent.trim() === 'Send behind...')?.click();
+    });
+
+    await expect(page.locator('#layer-target-banner')).toHaveClass(/active/);
+    await expect(page.locator('#layer-target-banner')).toContainText('place this node behind it');
+
+    await page.locator(`#node-${firstId}`).click();
+
+    await expect(page.locator('#layer-target-banner')).not.toHaveClass(/active/);
+    await expect.poll(async () => page.evaluate(ids => {
+      return ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
+    }, [firstId, secondId, thirdId])).toEqual([2, 3, 1]);
+  });
+
   test('overlapping nodes select the node on the top layer', async ({ page }) => {
     await bootFresh(page);
 
@@ -601,8 +650,7 @@ test.describe('Conduit smoke', () => {
     const [fromId, toId] = await getNodeIds(page);
 
     const fromBox = await page.locator(`#node-${fromId} .conn-point[data-pos="e"]`).boundingBox();
-    const targetNode = page.locator(`#node-${toId}`);
-    const targetBox = await targetNode.boundingBox();
+    const targetBox = await page.locator(`#node-${toId}`).boundingBox();
 
     if (!fromBox || !targetBox) {
       throw new Error('Could not resolve connection drag nodes');
@@ -613,7 +661,6 @@ test.describe('Conduit smoke', () => {
     await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 8 });
 
     await expect.poll(async () => page.evaluate(() => document.body.classList.contains('connecting'))).toBe(true);
-    await expect.poll(async () => targetNode.locator('.node-quick-edit-btn').evaluate(el => getComputedStyle(el).opacity)).toBe('0');
     await expect.poll(async () => page.evaluate(() => document.getElementById('context-toolbar')?.classList.contains('visible'))).toBe(false);
 
     await page.mouse.up();
@@ -870,7 +917,9 @@ test.describe('Conduit smoke', () => {
     const [nodeId] = await getNodeIds(page);
 
     await page.locator(`#node-${nodeId}`).click();
-    await page.locator(`#node-${nodeId} .node-quick-edit-btn`).click();
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="Quick edit title and description"]')?.click();
+    });
 
     await expect(page.locator('.node-quick-edit-panel')).toBeVisible();
     await page.locator('.node-quick-edit-field.title').fill('Order Hub');
@@ -889,12 +938,16 @@ test.describe('Conduit smoke', () => {
     const [nodeId] = await getNodeIds(page);
 
     await page.locator(`#node-${nodeId}`).click();
-    await page.locator(`#node-${nodeId} .node-quick-edit-btn`).click();
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="Quick edit title and description"]')?.click();
+    });
     await expect(page.locator('.node-quick-edit-panel')).toBeVisible();
     await page.locator('.node-quick-edit-field.title').press('Escape');
     await expect(page.locator('.node-quick-edit-panel')).toHaveCount(0);
 
-    await page.locator(`#node-${nodeId} .node-quick-edit-btn`).click();
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="Quick edit title and description"]')?.click();
+    });
     await expect(page.locator('.node-quick-edit-panel')).toBeVisible();
     await page.locator('#topbar').click({ position: { x: 20, y: 20 } });
     await expect(page.locator('.node-quick-edit-panel')).toHaveCount(0);

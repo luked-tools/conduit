@@ -20,7 +20,7 @@ function getContextToolbarAnchor() {
 
 function shouldShowContextToolbar() {
   if (!selectedNode && !selectedArrow) return false;
-  if (wireActive || epDragActive || draggingNode || resizingNode || panDragging) return false;
+  if (wireActive || epDragActive || draggingNode || resizingNode || panDragging || _inlineNodeEditor || _nodeLayerTargetMode) return false;
   return true;
 }
 
@@ -66,6 +66,12 @@ function renderContextToolbar() {
 
   if (selectedNode) {
     const nodeId = selectedNode;
+    toolbar.appendChild(makeContextToolbarButton({
+      title: 'Quick edit title and description',
+      label: 'Edit',
+      icon: '✎',
+      onClick: () => startInlineNodeEdit(nodeId)
+    }));
     toolbar.appendChild(makeContextToolbarButton({
       title: 'Move backward',
       label: 'Back',
@@ -166,6 +172,14 @@ function makeContextToolbarMenu() {
       label: 'To back',
       disabled: !canMoveNodeLayer(nodeId, 'back'),
       onClick: () => moveNodeLayer(nodeId, 'back')
+    }));
+    menu.appendChild(makeContextToolbarMenuItem({
+      label: 'Bring in front of...',
+      onClick: () => startNodeLayerTargetMode(nodeId, 'front-of')
+    }));
+    menu.appendChild(makeContextToolbarMenuItem({
+      label: 'Send behind...',
+      onClick: () => startNodeLayerTargetMode(nodeId, 'behind')
     }));
   } else if (selectedArrow) {
     const arrowId = selectedArrow;

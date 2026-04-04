@@ -11,6 +11,7 @@ function isNearNodeEdge(node, mx, my, actualH, margin = 20) {
 document.getElementById('canvas-wrap')?.addEventListener('mousedown', e => {
   const wrap = document.getElementById('canvas-wrap');
   if (!wrap) return;
+  if (_nodeLayerTargetMode) return;
   if (e.button === 1) {
     e.preventDefault();
     panDragging = true;
@@ -28,6 +29,7 @@ document.getElementById('canvas-wrap')?.addEventListener('mousedown', e => {
 document.getElementById('canvas-wrap')?.addEventListener('dblclick', e => {
   const wrap = document.getElementById('canvas-wrap');
   if (!wrap) return;
+  if (_nodeLayerTargetMode) return;
   if (e.target !== wrap && e.target.id !== 'canvas' && e.target !== arrowSVG) return;
   if (wireActive) return;
   const rect = wrap.getBoundingClientRect();

@@ -124,42 +124,28 @@ function createNodeEl(n) {
   }
   div.appendChild(inner);
 
-  const quickEditBtn = document.createElement('button');
-  quickEditBtn.className = 'node-quick-edit-btn';
-  quickEditBtn.type = 'button';
-  quickEditBtn.setAttribute('aria-label', 'Quick edit title and description');
-  quickEditBtn.innerHTML = '<svg viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5 11h1.9l4.9-4.9-1.9-1.9L5 9.1V11Z" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/><path d="M8.9 5.1 10.8 7" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/><path d="M4.7 11.3h2.5" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg>';
-  quickEditBtn.addEventListener('mousedown', e => {
-    e.preventDefault();
-    e.stopPropagation();
-  });
-  quickEditBtn.addEventListener('mouseenter', e => {
-    showHoverTooltip(e, 'Quick edit title and description');
-  });
-  quickEditBtn.addEventListener('mousemove', e => {
-    positionHoverTooltip(e);
-  });
-  quickEditBtn.addEventListener('mouseleave', () => {
-    hideHoverTooltip();
-  });
-  quickEditBtn.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    hideHoverTooltip();
-    startInlineNodeEdit(n.id);
-  });
-  div.appendChild(quickEditBtn);
-
   // Resize handles
   const rh = document.createElement('div');
   rh.className = 'node-resize';
-  rh.addEventListener('mousedown', e => startResize(e, n.id, 'se'));
+  rh.addEventListener('mousedown', e => {
+    if (_nodeLayerTargetMode) {
+      e.stopPropagation();
+      return;
+    }
+    startResize(e, n.id, 'se');
+  });
   div.appendChild(rh);
   if (n.type === 'boundary') {
     ['n','e','s','w'].forEach(edge => {
       const eh = document.createElement('div');
       eh.className = 'node-boundary-edge ' + edge;
-      eh.addEventListener('mousedown', e => startResize(e, n.id, edge));
+      eh.addEventListener('mousedown', e => {
+        if (_nodeLayerTargetMode) {
+          e.stopPropagation();
+          return;
+        }
+        startResize(e, n.id, edge);
+      });
       div.appendChild(eh);
     });
   }
@@ -172,6 +158,10 @@ function createNodeEl(n) {
       cp.dataset.pos = pos;
       cp.addEventListener('mousedown', e => {
         e.stopPropagation();
+        if (_nodeLayerTargetMode) {
+          applyNodeLayerTarget(n.id);
+          return;
+        }
         if (selectedArrow && cp.classList.contains('arrow-endpoint-port')) {
           startEndpointDrag(selectedArrow, n.id, pos, e);
         } else {
@@ -213,6 +203,11 @@ function createNodeEl(n) {
       e.stopPropagation();
       applyStyleBrush(n.id);
       return; // don't select, don't drag
+    }
+    if (_nodeLayerTargetMode) {
+      e.stopPropagation();
+      if (n.id !== _nodeLayerTargetMode.sourceId) applyNodeLayerTarget(n.id);
+      return;
     }
     selectNode(n.id);
     startDrag(e, n.id);

@@ -1,4 +1,5 @@
 function selectNode(id) {
+  if (_nodeLayerTargetMode && _nodeLayerTargetMode.sourceId !== id) cancelNodeLayerTargetMode();
   if (typeof _contextToolbarMenuOpen !== 'undefined') _contextToolbarMenuOpen = false;
   selectedNode = id;
   selectedArrow = null;
@@ -22,6 +23,7 @@ function selectNode(id) {
 }
 
 function selectArrow(id) {
+  if (_nodeLayerTargetMode) cancelNodeLayerTargetMode();
   if (typeof _contextToolbarMenuOpen !== 'undefined') _contextToolbarMenuOpen = false;
   selectedArrow = id;
   selectedNode = null;
@@ -57,6 +59,7 @@ function selectArrow(id) {
 
 function deselect(e) {
   if (e && (e.target !== canvas && !e.target.closest('#canvas-wrap') || e.target.closest('.node') || e.target.closest('.arrow-path'))) return;
+  if (_nodeLayerTargetMode) cancelNodeLayerTargetMode();
   if (typeof _contextToolbarMenuOpen !== 'undefined') _contextToolbarMenuOpen = false;
   selectedNode = null;
   selectedArrow = null;

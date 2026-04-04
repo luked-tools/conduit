@@ -74,9 +74,11 @@
   /* Button in props panel to open content style panel */
   .prop-btn.accent.ap-open-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent3); }
   .prop-btn.accent.brush-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent3); }
+  .prop-btn.accent.layer-target-btn.active { background: var(--accent-soft); border-color: var(--accent); color: var(--accent3); }
 
   /* ── Canvas banners ── */
   #style-brush-banner,
+  #layer-target-banner,
   #canvas-notice-banner {
     position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
     display: none; align-items: center; gap: 8px;
@@ -89,27 +91,46 @@
     pointer-events: all;
   }
   #style-brush-banner.active { display: flex; }
+  #layer-target-banner.active { display: flex; }
   #canvas-notice-banner.active { display: flex; }
   #canvas-notice-banner.danger {
     background: var(--danger);
     box-shadow: 0 2px 12px color-mix(in srgb, var(--danger) 32%, transparent), 0 4px 24px rgba(0,0,0,0.12);
   }
   #style-brush-banner svg { flex-shrink: 0; opacity: 0.9; }
+  #layer-target-banner svg { flex-shrink: 0; opacity: 0.9; }
   #canvas-notice-banner svg { flex-shrink: 0; opacity: 0.9; }
-  #style-brush-cancel {
+  #style-brush-cancel,
+  #layer-target-cancel {
     background: rgba(255,255,255,0.25); border: none; border-radius: 4px;
     color: #fff; cursor: pointer; font-size: 11px; padding: 1px 7px;
     font-family: 'Inter', sans-serif; font-weight: 500; margin-left: 4px;
     transition: background 0.12s;
   }
-  #style-brush-cancel:hover { background: rgba(255,255,255,0.4); }
+  #style-brush-cancel:hover,
+  #layer-target-cancel:hover { background: rgba(255,255,255,0.4); }
   .style-brush-active-node { outline: 2px dashed var(--accent) !important; outline-offset: 3px; cursor: crosshair !important; }
-  #canvas-wrap.brush-mode::after {
+  #canvas-wrap.brush-mode::after,
+  #canvas-wrap.layer-target-mode::after {
     content: '';
     position: absolute; inset: 0;
     background: var(--accent-wash);
     pointer-events: none;
     z-index: 1;
+  }
+  #canvas-wrap.layer-target-mode .node:not(.selected) {
+    outline: 2px dashed var(--accent) !important;
+    outline-offset: 3px;
+    cursor: crosshair !important;
+  }
+  #canvas-wrap.layer-target-mode .node.selected {
+    cursor: default !important;
+  }
+  #canvas-wrap.layer-target-mode .conn-point,
+  #canvas-wrap.layer-target-mode .node-resize,
+  #canvas-wrap.layer-target-mode .node-boundary-edge {
+    opacity: 0 !important;
+    pointer-events: none !important;
   }
   /* ── Help overlay ── */
   #help-tip {
