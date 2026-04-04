@@ -37,6 +37,7 @@ document.addEventListener('click', e => {
 
 // ── Arrow tooltip ──
 const _arrowTooltip = document.getElementById('arrow-tooltip');
+const _connectTooltip = document.getElementById('connect-tooltip');
 let _tooltipTimer = null;
 
 function showArrowTooltip(e, arrow) {
@@ -77,4 +78,35 @@ function positionArrowTooltip(e) {
 
 function hideArrowTooltip() {
   _arrowTooltip.classList.remove('visible');
+}
+
+function showConnectTargetTooltip(e, node) {
+  if (!_connectTooltip || !node) return;
+
+  const nodeName = [node.tag, node.title].filter(Boolean).join(' ').replace(/\n/g, ' ').trim() || 'Untitled node';
+  _connectTooltip.innerHTML = '<div class="ctt-label">Connect To</div><div class="ctt-name"></div>';
+  const nameEl = _connectTooltip.querySelector('.ctt-name');
+  if (nameEl) nameEl.textContent = nodeName;
+  positionConnectTooltip(e);
+  _connectTooltip.classList.add('visible');
+}
+
+function positionConnectTooltip(e) {
+  if (!_connectTooltip) return;
+  const tt = _connectTooltip;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const tw = tt.offsetWidth || 180;
+  const th = tt.offsetHeight || 44;
+  let x = e.clientX + 16;
+  let y = e.clientY + 16;
+  if (x + tw > vw - 10) x = e.clientX - tw - 16;
+  if (y + th > vh - 10) y = e.clientY - th - 16;
+  tt.style.left = x + 'px';
+  tt.style.top = y + 'px';
+}
+
+function hideConnectTargetTooltip() {
+  if (!_connectTooltip) return;
+  _connectTooltip.classList.remove('visible');
 }

@@ -123,6 +123,7 @@ function cancelWire() {
   document.querySelectorAll('.conn-point.drag-active').forEach(cp => cp.classList.remove('drag-active'));
   document.querySelectorAll('.conn-point.snap-target').forEach(cp => cp.classList.remove('snap-target'));
   document.querySelectorAll('.node.connect-target').forEach(n => n.classList.remove('connect-target'));
+  hideConnectTargetTooltip();
   const sbMode = document.getElementById('sb-mode');
   if (sbMode) setStatusModeMessage('');
 }

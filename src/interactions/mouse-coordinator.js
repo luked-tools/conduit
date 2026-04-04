@@ -190,6 +190,14 @@ window.addEventListener('mousemove', e => {
       }
     }
 
+    if (wireTargetId) {
+      const targetNode = state.nodes.find(n => n.id === wireTargetId);
+      if (targetNode) showConnectTargetTooltip(e, targetNode);
+      else hideConnectTargetTooltip();
+    } else {
+      hideConnectTargetTooltip();
+    }
+
     updateWirePreview(mx, my);
   }
 });
