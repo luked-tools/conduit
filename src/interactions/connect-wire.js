@@ -52,15 +52,16 @@ function updateWirePreview(mouseX, mouseY) {
   if (!wireActive || !wireTempPath) return;
   const srcNode = state.nodes.find(x => x.id === wireSrcId);
   if (!srcNode) return;
+  let previewArrow = null;
 
   let p1 = getPortXY(srcNode, wireSrcPos);
   if (epDragActive && epDragArrowId) {
-    const arr = state.arrows.find(x => x.id === epDragArrowId);
-    if (arr) {
+    previewArrow = state.arrows.find(x => x.id === epDragArrowId) || null;
+    if (previewArrow) {
       const otherEnd = epDragEnd === 'from' ? 'to' : 'from';
-      const otherNode = state.nodes.find(x => x.id === (otherEnd === 'from' ? arr.from : arr.to));
-      const otherPos = otherEnd === 'from' ? (arr.fromPos || 'e') : (arr.toPos || 'w');
-      const otherOffset = getArrowEndOffset(arr, otherEnd);
+      const otherNode = state.nodes.find(x => x.id === (otherEnd === 'from' ? previewArrow.from : previewArrow.to));
+      const otherPos = otherEnd === 'from' ? (previewArrow.fromPos || 'e') : (previewArrow.toPos || 'w');
+      const otherOffset = getArrowEndOffset(previewArrow, otherEnd);
       if (otherNode) p1 = getPortXY(otherNode, otherPos, otherOffset);
     }
   }
@@ -82,26 +83,26 @@ function updateWirePreview(mouseX, mouseY) {
     }
   }
 
-  const offsets = { n: { x: 0, y: -1 }, s: { x: 0, y: 1 }, e: { x: 1, y: 0 }, w: { x: -1, y: 0 } };
-  const fo = offsets[wireSrcPos] || { x: 1, y: 0 };
-  const dx = p2x - p1.x, dy = p2y - p1.y;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  const curve = Math.max(40, dist * 0.4);
-  const cx1 = p1.x + fo.x * curve;
-  const cy1 = p1.y + fo.y * curve;
-
-  let cx2, cy2;
-  if (snapPos) {
-    const to2 = offsets[snapPos] || { x: -1, y: 0 };
-    cx2 = p2x + to2.x * curve;
-    cy2 = p2y + to2.y * curve;
-  } else {
-    cx2 = p2x - fo.x * curve * 0.5;
-    cy2 = p2y - fo.y * curve * 0.5;
-  }
-
-  const d = `M${p1.x},${p1.y} C${cx1},${cy1} ${cx2},${cy2} ${p2x},${p2y}`;
-  wireTempPath.setAttribute('d', d);
+  const previewLineStyle = previewArrow ? (previewArrow.lineStyle || 'curved') : (nextArrowLineStyle || 'curved');
+  const previewBend = previewArrow ? (previewArrow.bend || 0) : 0;
+  const previewOrthoY = previewArrow ? (previewArrow.orthoY || 0) : 0;
+  const previewToPos = snapPos || (
+    previewArrow
+      ? (epDragEnd === 'from' ? (previewArrow.fromPos || 'e') : (previewArrow.toPos || 'w'))
+      : 'w'
+  );
+  const previewPath = buildArrowPath(
+    p1,
+    { x: p2x, y: p2y },
+    wireSrcPos,
+    previewToPos,
+    previewBend,
+    previewLineStyle,
+    0,
+    0,
+    previewOrthoY
+  );
+  wireTempPath.setAttribute('d', previewPath.d);
 }
 
 function cancelWire() {
@@ -142,15 +143,16 @@ function completeWire() {
     id,
     from: wireSrcId, to: wireTargetId,
     fromPos: wireSrcPos, toPos,
+    toOffset: wireTargetOffset,
     direction: nextArrowType,
+    lineStyle: nextArrowLineStyle,
+    strokeStyle: 'solid',
     label: '', labelOffsetX: 0, labelOffsetY: 0,
     color: '', dash: false, bend: 0
   });
   cancelWire();
   render();
-  selectedArrow = id;
-  renderArrows();
-  renderSidebar();
+  selectArrow(id);
 }
 
 function startEndpointDrag(arrowId, nodeId, pos, e, forcedEnd) {

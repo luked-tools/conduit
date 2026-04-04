@@ -2,6 +2,27 @@ function buildExportHTML(opts) {
   const title = document.getElementById('diagram-title-input').value;
   const subtitle = document.getElementById('diagram-subtitle-input').value;
   const stateJson = JSON.stringify(state);
+  const safeTitle = escapeHtml(title);
+  const safeSubtitle = escapeHtml(subtitle);
+
+  function getExportNodeType(type) {
+    return type === 'external' || type === 'boundary' ? type : 'internal';
+  }
+
+  function getExportArrowStrokeStyle(arr) {
+    if (typeof arr?.strokeStyle === 'string' && arr.strokeStyle) return arr.strokeStyle;
+    return arr?.dash ? 'dashed' : 'solid';
+  }
+
+  function getExportArrowDasharray(arr) {
+    switch (getExportArrowStrokeStyle(arr)) {
+      case 'dashed': return '6 3';
+      case 'dotted': return '1.5 4';
+      case 'dashdot': return '8 3 1.5 3';
+      case 'longdash': return '12 4';
+      default: return '';
+    }
+  }
 
   // Capture live CSS variable values so the export is pixel-perfect
   const cs = getComputedStyle(document.documentElement);
@@ -127,12 +148,13 @@ function buildExportHTML(opts) {
     let mEnd='', mStart='';
     if(a.direction==='directed'){mEnd=`marker-end="url(#emf-${a.id})"`;}
     else if(a.direction==='bidirectional'){mEnd=`marker-end="url(#emf-${a.id})"`;mStart=`marker-start="url(#emb-${a.id})"`;}
-    const dash=a.dash?'stroke-dasharray="6 3"':'';
+    const dashArray = getExportArrowDasharray(a);
+    const dash = dashArray ? `stroke-dasharray="${dashArray}"` : '';
     svgArrows+=`<path d="${d2}" fill="none" stroke="${color}" stroke-width="1.5" ${mEnd} ${mStart} ${dash}/>`;
     if(a.label){
       const lx=_elx+(a.labelOffsetX||0);
       const ly=_ely+(a.labelOffsetY||0);
-      const eLines=a.label.split('\n');
+      const eLines=a.label.split('\n').map(line => escapeHtml(line));
       const eFontSize=11;
       const eLineH=eFontSize+4;
       const eTotalH=eLines.length*eLineH;
@@ -179,6 +201,7 @@ function buildExportHTML(opts) {
   const sortedN = [...nodes].sort((a,b)=>(a.type==='boundary'?-1:1)-(b.type==='boundary'?-1:1));
   sortedN.forEach(n => {
     const hasDetail = !!nodeDetailData[n.id];
+    const nodeType = getExportNodeType(n.type);
     const op = n.colorOpacity !== undefined ? n.colorOpacity : 51;
     const opHex = op.toString(16).padStart(2,'0');
     const colorStyle = n.color ? `background:${n.color}${opHex};` : '';
@@ -189,8 +212,8 @@ function buildExportHTML(opts) {
     let innerHtml = '';
     if (n.type === 'boundary') {
       innerHtml = `<div class="node-inner">`
-        + (n.title ? `<div class="node-title">${n.title}</div>` : '')
-        + (n.subtitle ? `<div class="node-boundary-sub" style="${n.subtitleColor ? 'color:'+n.subtitleColor+';' : (n.textColor ? 'color:'+n.textColor+';' : '')}">${n.subtitle}</div>` : '')
+        + (n.title ? `<div class="node-title">${escapeHtml(n.title)}</div>` : '')
+        + (n.subtitle ? `<div class="node-boundary-sub" style="${n.subtitleColor ? 'color:'+n.subtitleColor+';' : (n.textColor ? 'color:'+n.textColor+';' : '')}">${escapeHtml(n.subtitle)}</div>` : '')
         + `</div>`;
     } else {
       // Always render exactly what the canvas shows - visibility controlled in editor
@@ -201,28 +224,28 @@ function buildExportHTML(opts) {
         const fns2 = (n.functions||[]).filter(f => (typeof f === 'string' ? f : (f.name || '')).trim() && !f.hidden);
         if (!fns2.length) return '';
         const items = fns2.map(f => {
-          const name = typeof f === 'string' ? f : (f.name || '');
+          const name = escapeHtml(typeof f === 'string' ? f : (f.name || ''));
           const hidIn  = f.hiddenInputs  || [];
           const hidOut = f.hiddenOutputs || [];
           const ins  = (Array.isArray(f.inputs)  ? f.inputs  : (f.inputs  ? [f.inputs]  : [])).filter((_,i) => !hidIn.includes(i));
           const outs = (Array.isArray(f.outputs) ? f.outputs : (f.outputs ? [f.outputs] : [])).filter((_,i) => !hidOut.includes(i));
           let ioHtml = '';
-          if (ins.length)  ioHtml += `<div class="node-io-wrap">${ins.map(v=>`<span class="node-io-pill input" ${inSt?`style="${inSt}"`:''}><span class="io-pill-prefix">IN</span>${v}</span>`).join('')}</div>`;
-          if (outs.length) ioHtml += `<div class="node-io-wrap">${outs.map(v=>`<span class="node-io-pill output" ${outSt?`style="${outSt}"`:''}><span class="io-pill-prefix">OUT</span>${v}</span>`).join('')}</div>`;
+          if (ins.length)  ioHtml += `<div class="node-io-wrap">${ins.map(v=>`<span class="node-io-pill input" ${inSt?`style="${inSt}"`:''}><span class="io-pill-prefix">IN</span>${escapeHtml(v)}</span>`).join('')}</div>`;
+          if (outs.length) ioHtml += `<div class="node-io-wrap">${outs.map(v=>`<span class="node-io-pill output" ${outSt?`style="${outSt}"`:''}><span class="io-pill-prefix">OUT</span>${escapeHtml(v)}</span>`).join('')}</div>`;
           return `<div class="node-fn-item" style="${n.fnTextColor ? 'color:'+n.fnTextColor+';' : tc}">${name}</div>${ioHtml}`;
         }).join('');
         return `<div class="node-functions"><div class="node-functions-label" style="${n.fnLabelColor ? 'color:'+n.fnLabelColor+';' : tc}">Functions</div>${items}</div>`;
       })();
       innerHtml = `<div class="node-inner" style="padding-right:${hasDetail?'26px':'14px'};">`
-        + (n.tag ? `<div class="node-tag" style="${n.tagColor ? 'color:'+n.tagColor+';' : tc}">${n.tag}</div>` : '')
-        + `<div class="node-title" style="${tc}">${n.title}</div>`
-        + (n.subtitle ? `<div class="node-subtitle" style="${n.subtitleColor ? 'color:'+n.subtitleColor+';' : tc}">${n.subtitle}</div>` : '')
+        + (n.tag ? `<div class="node-tag" style="${n.tagColor ? 'color:'+n.tagColor+';' : tc}">${escapeHtml(n.tag)}</div>` : '')
+        + `<div class="node-title" style="${tc}">${escapeHtml(n.title)}</div>`
+        + (n.subtitle ? `<div class="node-subtitle" style="${n.subtitleColor ? 'color:'+n.subtitleColor+';' : tc}">${escapeHtml(n.subtitle)}</div>` : '')
         + fnItems
         + `</div>`;
     }
 
-    const clickAttr = (n.type !== 'boundary' && hasDetail) ? `onclick="openDetail('${n.id}')" style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${colorStyle}cursor:pointer;"` : `style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${colorStyle}"`;
-    nodeHtml += `<div class="node ${n.type}" ${clickAttr}>${innerHtml}${detailBtn}</div>`;
+    const clickAttr = (n.type !== 'boundary' && hasDetail) ? `onclick='openDetail(${JSON.stringify(String(n.id))})' style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${colorStyle}cursor:pointer;"` : `style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${colorStyle}"`;
+    nodeHtml += `<div class="node ${nodeType}" ${clickAttr}>${innerHtml}${detailBtn}</div>`;
   });
 
   const html = `<!DOCTYPE html>
@@ -230,7 +253,7 @@ function buildExportHTML(opts) {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${title}</title>
+<title>${safeTitle}</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -336,8 +359,8 @@ ${opts.showGrid ? '<div class="grid-bg"></div>' : ''}
 </div>
 <div id="export-header">
   <div>
-    <h1>${title}</h1>
-    ${subtitle ? `<p>${subtitle}</p>` : ''}
+    <h1>${safeTitle}</h1>
+    ${subtitle ? `<p>${safeSubtitle}</p>` : ''}
   </div>
 </div>
 <div id="viewport">
@@ -432,6 +455,14 @@ function closeDetail() {
   document.getElementById('detail-panel').classList.remove('open');
 }
 document.addEventListener('keydown', e => { if (e.key==='Escape') closeDetail(); });
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 // Pan / Zoom
 const _vp = document.getElementById('viewport');

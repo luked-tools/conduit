@@ -33,9 +33,17 @@ document.getElementById('file-input').addEventListener('change', e => {
           state: data.state
         }, suggestDraftName(nameFromFile), { activate: true });
         saveToLocalStorage();
+      } else {
+        showCanvasNotice('Import failed', {
+          tone: 'danger',
+          autoHideMs: 2600
+        });
       }
     } catch (err) {
-      alert('Invalid file: ' + err.message);
+      showCanvasNotice('Import failed', {
+        tone: 'danger',
+        autoHideMs: 2600
+      });
     }
   };
   reader.readAsText(file);

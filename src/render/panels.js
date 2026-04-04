@@ -576,14 +576,39 @@ function renderPropsPanel() {
       });
     }
 
-    // Dash
-    const dashRow = document.createElement('div');
-    dashRow.className = 'prop-row prop-row-inline';
-    const dashChk = document.createElement('input'); dashChk.type='checkbox'; dashChk.checked=!!a.dash;
-    dashChk.addEventListener('change', () => { pushUndo(); a.dash=dashChk.checked; renderArrows(); });
-    const dashLbl = document.createElement('label'); dashLbl.textContent=' Dashed line'; dashLbl.style.fontSize='12px'; dashLbl.style.color='var(--text2)';
-    dashRow.appendChild(dashChk); dashRow.appendChild(dashLbl);
-    body.appendChild(dashRow);
+    addPropRow(body, 'Stroke pattern', () => {
+      const row = document.createElement('div');
+      row.className = 'stroke-style-row';
+      row.dataset.control = 'stroke-style';
+      const options = [
+        { v: 'solid', l: 'Solid', dash: '' },
+        { v: 'dashed', l: 'Dash', dash: '6 3' },
+        { v: 'dotted', l: 'Dot', dash: '1.5 4' },
+        { v: 'dashdot', l: 'Dash-dot', dash: '8 3 1.5 3' }
+      ];
+      const activeStyle = getArrowStrokeStyle(a);
+      options.forEach(opt => {
+        const b = document.createElement('button');
+        b.className = 'stroke-style-btn' + (activeStyle === opt.v ? ' active' : '');
+        b.title = opt.l;
+        b.innerHTML =
+          '<svg viewBox="0 0 22 8" aria-hidden="true">' +
+            '<line x1="1" y1="4" x2="21" y2="4"' + (opt.dash ? ' stroke-dasharray="' + opt.dash + '"' : '') + ' />' +
+          '</svg>' +
+          '<span class="stroke-style-btn-label">' + opt.l + '</span>';
+        b.addEventListener('click', () => {
+          pushUndo();
+          a.strokeStyle = opt.v;
+          a.dash = opt.v === 'dashed';
+          renderArrows();
+          saveToLocalStorage();
+          row.querySelectorAll('.stroke-style-btn').forEach(x => x.classList.remove('active'));
+          b.classList.add('active');
+        });
+        row.appendChild(b);
+      });
+      return row;
+    });
 
     // Color
     const colorRow2 = document.createElement('div');

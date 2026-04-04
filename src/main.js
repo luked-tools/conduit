@@ -13,6 +13,7 @@ let selectedArrow = null;
 let connectMode = false;
 let connectFrom = null; // {nodeId, pos}
 let nextArrowType = 'directed';
+let nextArrowLineStyle = 'curved';
 let _propSectionState = { functions: true, connections: true };
 let draggingNode = null;
 let dragOffset = {x:0, y:0};
@@ -87,6 +88,21 @@ function normalizeSideOffset(value) {
 function getArrowEndOffset(arr, end) {
   const key = end === 'from' ? 'fromOffset' : 'toOffset';
   return typeof arr?.[key] === 'number' && Number.isFinite(arr[key]) ? clamp(arr[key], 0, 1) : null;
+}
+
+function getArrowStrokeStyle(arr) {
+  if (typeof arr?.strokeStyle === 'string' && arr.strokeStyle) return arr.strokeStyle;
+  return arr?.dash ? 'dashed' : 'solid';
+}
+
+function getArrowStrokeDasharray(arr) {
+  switch (getArrowStrokeStyle(arr)) {
+    case 'dashed': return '6 3';
+    case 'dotted': return '1.5 4';
+    case 'dashdot': return '8 3 1.5 3';
+    case 'longdash': return '12 4';
+    default: return '';
+  }
 }
 
 function getPortXY(node, pos, offset, heightOverride) {
@@ -280,7 +296,8 @@ function renderArrows() {
     const p2 = staggeredPortXY(toNode,   a.toPos   || 'w', a.id, 'to', getArrowEndOffset(a, 'to'));
 
     const isSelected = selectedArrow === a.id;
-    const stroke = isSelected ? (getComputedStyle(document.documentElement).getPropertyValue('--accent3').trim()||'#e85e00') : (a.color || (getComputedStyle(document.documentElement).getPropertyValue('--arrow-color').trim()||'#ff8c42'));
+    const accentStroke = getComputedStyle(document.documentElement).getPropertyValue('--accent3').trim()||'#e85e00';
+    const stroke = a.color || (getComputedStyle(document.documentElement).getPropertyValue('--arrow-color').trim()||'#ff8c42');
 
     // Per-arrow markers so colour is baked in.
     // Triangle: M0,0 L0,6 L8,3 z  — base at x=0, tip at x=8, centre at y=3
@@ -327,6 +344,19 @@ function renderArrows() {
     hit.addEventListener('mouseleave', () => { hideArrowTooltip(); });
     arrowSVG.appendChild(hit);
 
+    if (isSelected) {
+      const selectionPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      selectionPath.setAttribute('d', d);
+      selectionPath.setAttribute('fill', 'none');
+      selectionPath.setAttribute('stroke', accentStroke);
+      selectionPath.setAttribute('stroke-width', '5');
+      selectionPath.setAttribute('opacity', '0.28');
+      selectionPath.style.pointerEvents = 'none';
+      const selectionDasharray = getArrowStrokeDasharray(a);
+      if (selectionDasharray) selectionPath.setAttribute('stroke-dasharray', selectionDasharray);
+      arrowSVG.appendChild(selectionPath);
+    }
+
     // Visible path with markers
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', d);
@@ -334,7 +364,8 @@ function renderArrows() {
     path.setAttribute('stroke', stroke);
     path.setAttribute('stroke-width', isSelected ? '2' : '1.5');
     path.style.pointerEvents = 'none';
-    if (a.dash) path.setAttribute('stroke-dasharray', '6 3');
+    const dasharray = getArrowStrokeDasharray(a);
+    if (dasharray) path.setAttribute('stroke-dasharray', dasharray);
     if (a.direction === 'directed') {
       path.setAttribute('marker-end', `url(#mf-${uid})`);
     } else if (a.direction === 'bidirectional') {
@@ -409,27 +440,14 @@ function renderArrows() {
       });
       arrowSVG.appendChild(txt);
 
-      // Drag label
-      let dragging = false, ldx, ldy;
       bg.style.cursor = txt.style.cursor = 'move';
       bg.style.pointerEvents = txt.style.pointerEvents = 'all';
       const onDown = e2 => {
         if (e2.detail === 2) return; // dblclick handled separately
-        e2.stopPropagation(); dragging = true;
-        ldx = e2.clientX; ldy = e2.clientY;
-        pushUndo();
-        selectArrow(a.id);
+        startArrowLabelDrag(a.id, e2);
       };
       bg.addEventListener('mousedown', onDown);
       txt.addEventListener('mousedown', onDown);
-      window.addEventListener('mousemove', e2 => {
-        if (!dragging) return;
-        a.labelOffsetX = (a.labelOffsetX||0) + (e2.clientX - ldx) / scale;
-        a.labelOffsetY = (a.labelOffsetY||0) + (e2.clientY - ldy) / scale;
-        ldx = e2.clientX; ldy = e2.clientY;
-        renderArrows();
-      });
-      window.addEventListener('mouseup', () => { if (dragging) { dragging = false; saveToLocalStorage(); } });
 
       // Double-click label to inline edit
       const onDbl = e2 => {
@@ -491,47 +509,8 @@ function renderArrows() {
         arrowSVG.appendChild(pill);
         arrowSVG.appendChild(grip);
 
-        // Drag — raw pixels, 1:1 with mouse movement
-        let dragging = false, startPos = 0, startVal = 0;
         pill.addEventListener('mousedown', e2 => {
-          e2.stopPropagation();
-          dragging = true;
-          startPos = isXDrag ? e2.clientX : e2.clientY;
-          startVal = a[prop] || 0;
-          pushUndo();
-          selectArrow(a.id);
-        });
-        const SNAP_THRESHOLD = 12; // canvas px within which we snap
-        window.addEventListener('mousemove', e2 => {
-          if (!dragging) return;
-          const delta = (isXDrag ? (e2.clientX - startPos) : (e2.clientY - startPos)) / scale;
-          let val = startVal + delta;
-
-          // Snap to port alignment targets if snap targets are defined on this handle
-          if (info.snapTargets && info.snapBase !== undefined) {
-            for (const target of info.snapTargets) {
-              const offset = target - info.snapBase; // what a[prop] would need to be
-              if (Math.abs(val - offset) < SNAP_THRESHOLD) {
-                val = offset;
-                break;
-              }
-            }
-          }
-
-          a[prop] = val;
-          renderArrows();
-          // Sync sidebar sliders
-          const slA = document.getElementById('ortho-slider-bend');
-          const slB = document.getElementById('ortho-slider-orthoY');
-          if (slA) { slA.value = Math.round(a.bend || 0); updateSliderPct(slA); }
-          if (slB) { slB.value = Math.round(a.orthoY || 0); updateSliderPct(slB); }
-        });
-        window.addEventListener('mouseup', () => {
-          if (dragging) {
-            dragging = false;
-            saveToLocalStorage();
-            if (selectedArrow === a.id) renderSidebar();
-          }
+          startOrthogonalHandleDrag(a.id, prop, info, isXDrag, e2);
         });
       });
     }
@@ -630,6 +609,14 @@ function setArrowType(t) {
   ['directed','bidirectional','undirected'].forEach(x => {
     const el = document.getElementById('atype-'+x);
     if (el) el.classList.toggle('active', x===t);
+  });
+}
+
+function setNextArrowLineStyle(style) {
+  nextArrowLineStyle = style;
+  ['curved', 'straight', 'orthogonal'].forEach(x => {
+    const el = document.getElementById('next-line-style-' + x);
+    if (el) el.classList.toggle('active', x === style);
   });
 }
 
