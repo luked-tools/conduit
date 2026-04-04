@@ -124,6 +124,37 @@ test.describe('Conduit smoke', () => {
     await expect.poll(async () => page.evaluate(() => state.arrows[0].to)).toBe(toId);
   });
 
+  test('new connection drag shows the target node tooltip', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 1180, 620);
+    const [fromId, toId] = await getNodeIds(page);
+
+    await page.evaluate(id => {
+      const node = state.nodes.find(n => n.id === id);
+      if (!node) return;
+      node.title = 'Receiving System';
+      render();
+    }, toId);
+
+    const fromBox = await page.locator(`#node-${fromId} .conn-point[data-pos="e"]`).boundingBox();
+    const toBox = await page.locator(`#node-${toId} .conn-point[data-pos="w"]`).boundingBox();
+
+    if (!fromBox || !toBox) {
+      throw new Error('Could not resolve connection tooltip endpoints');
+    }
+
+    await page.mouse.move(fromBox.x + fromBox.width / 2, fromBox.y + fromBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(toBox.x + toBox.width / 2, toBox.y + toBox.height / 2, { steps: 12 });
+
+    await expect(page.locator('#connect-tooltip')).toHaveClass(/visible/);
+    await expect(page.locator('#connect-tooltip')).toContainText('Receiving System');
+
+    await page.mouse.up();
+  });
+
   test('palette default connection type applies to new connections', async ({ page }) => {
     await bootFresh(page);
 
@@ -263,6 +294,50 @@ test.describe('Conduit smoke', () => {
     await page.mouse.up();
 
     await expect.poll(async () => page.evaluate(() => state.arrows[0].to)).toBe(secondTargetId);
+  });
+
+  test('endpoint drag shows the target node tooltip', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 760, 620);
+    await addNode(page, 'external', 1080, 620);
+    await addNode(page, 'internal', 1360, 620);
+    const [fromId, firstTargetId, secondTargetId] = await getNodeIds(page);
+
+    await page.evaluate(id => {
+      const node = state.nodes.find(n => n.id === id);
+      if (!node) return;
+      node.title = 'Fallback Target';
+      render();
+    }, secondTargetId);
+
+    await dragBetween(
+      page,
+      `#node-${fromId} .conn-point[data-pos="e"]`,
+      `#node-${firstTargetId} .conn-point[data-pos="w"]`
+    );
+
+    await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(1);
+
+    await page.evaluate(() => {
+      selectArrow(state.arrows[0].id);
+    });
+
+    const handleBox = await page.locator('.arrow-endpoint-handle .hit').nth(1).boundingBox();
+    const targetBox = await page.locator(`#node-${secondTargetId} .conn-point[data-pos="w"]`).boundingBox();
+
+    if (!handleBox || !targetBox) {
+      throw new Error('Could not resolve endpoint tooltip elements');
+    }
+
+    await page.mouse.move(handleBox.x + handleBox.width / 2, handleBox.y + handleBox.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(targetBox.x + targetBox.width / 2, targetBox.y + targetBox.height / 2, { steps: 12 });
+
+    await expect(page.locator('#connect-tooltip')).toHaveClass(/visible/);
+    await expect(page.locator('#connect-tooltip')).toContainText('Fallback Target');
+
+    await page.mouse.up();
   });
 
   test('arrow stroke pattern presets update the rendered connector', async ({ page }) => {
