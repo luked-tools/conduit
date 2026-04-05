@@ -61,6 +61,7 @@ function canMoveNodeLayer(nodeId, mode) {
 }
 
 let _nodeLayerTargetMode = null;
+let _quickConnectMode = null;
 
 function isNodeLayerTargetMode(nodeId, mode) {
   return !!_nodeLayerTargetMode
@@ -90,6 +91,92 @@ function updateNodeLayerTargetUI() {
     wrap.classList.remove('layer-target-mode');
     if (!wireActive && !_brushActive) wrap.style.cursor = '';
   }
+}
+
+function updateQuickConnectUI() {
+  const banner = document.getElementById('quick-connect-banner');
+  const text = document.getElementById('quick-connect-text');
+  const wrap = document.getElementById('canvas-wrap');
+  if (!banner || !text || !wrap) return;
+
+  if (_quickConnectMode) {
+    const sourceNode = state.nodes.find(node => node.id === _quickConnectMode.sourceId);
+    const sourceName = sourceNode ? (sourceNode.title || sourceNode.tag || 'selected node').replace(/\n/g, ' ') : 'selected node';
+    text.textContent = `Quick connect — click a node to connect from ${sourceName}`;
+    banner.classList.add('active');
+    wrap.classList.add('quick-connect-mode');
+    wrap.style.cursor = 'crosshair';
+  } else {
+    banner.classList.remove('active');
+    wrap.classList.remove('quick-connect-mode');
+    if (!wireActive && !_brushActive && !_nodeLayerTargetMode) wrap.style.cursor = '';
+  }
+}
+
+function cancelQuickConnectMode() {
+  if (!_quickConnectMode) return;
+  _quickConnectMode = null;
+  updateQuickConnectUI();
+  renderSidebar();
+  if (typeof updateContextToolbar === 'function') updateContextToolbar();
+}
+
+function startQuickConnectMode(nodeId) {
+  const node = state.nodes.find(x => x.id === nodeId);
+  if (!node) return false;
+  if (_quickConnectMode && _quickConnectMode.sourceId === nodeId) {
+    cancelQuickConnectMode();
+    return false;
+  }
+
+  if (_brushActive) cancelStyleBrush();
+  if (_nodeLayerTargetMode) cancelNodeLayerTargetMode();
+  if (_inlineNodeEditor) closeInlineNodeEdit();
+  if (selectedNode !== nodeId) selectNode(nodeId);
+
+  _quickConnectMode = { sourceId: nodeId };
+  updateQuickConnectUI();
+  renderSidebar();
+  if (typeof updateContextToolbar === 'function') updateContextToolbar();
+  return true;
+}
+
+function applyQuickConnectTarget(targetId) {
+  if (!_quickConnectMode) return false;
+  const sourceId = _quickConnectMode.sourceId;
+  if (!targetId || targetId === sourceId) return false;
+  const sourceNode = state.nodes.find(node => node.id === sourceId);
+  const targetNode = state.nodes.find(node => node.id === targetId);
+  if (!sourceNode || !targetNode) return false;
+
+  const { fromPos, toPos } = getBestPos(sourceId, targetId);
+  pushUndo();
+  const id = nextArrowId();
+  state.arrows.push({
+    id,
+    from: sourceId,
+    to: targetId,
+    fromPos,
+    toPos,
+    direction: nextArrowType,
+    lineStyle: nextArrowLineStyle,
+    strokeStyle: 'solid',
+    label: '',
+    labelOffsetX: 0,
+    labelOffsetY: 0,
+    color: '',
+    dash: false,
+    bend: 0
+  });
+  normalizeArrowLayers();
+  cancelQuickConnectMode();
+  render();
+  selectArrow(id);
+  saveToLocalStorage();
+
+  const targetName = (targetNode.title || targetNode.tag || 'target node').replace(/\n/g, ' ');
+  setStatusModeMessage(`Connected to ${targetName}`, { fade: true, autoClearMs: 1600 });
+  return true;
 }
 
 function cancelNodeLayerTargetMode() {

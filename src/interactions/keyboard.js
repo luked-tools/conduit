@@ -11,6 +11,7 @@ document.addEventListener('keydown', e => {
     if (wireActive) cancelWire();
     if (_brushActive) { cancelStyleBrush(); return; }
     if (_nodeLayerTargetMode) { cancelNodeLayerTargetMode(); return; }
+    if (_quickConnectMode) { cancelQuickConnectMode(); return; }
     closeAppearancePanel();
     deselect();
   }

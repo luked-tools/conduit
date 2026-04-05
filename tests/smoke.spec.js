@@ -181,6 +181,48 @@ test.describe('Conduit smoke', () => {
     }, [firstId, secondId, thirdId])).toEqual([3, 2, 1]);
   });
 
+  test('context toolbar can quick connect a node to another node', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 980, 700);
+    const [sourceId, targetId] = await getNodeIds(page);
+
+    await page.evaluate(id => selectNode(id), sourceId);
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="Quick connect to another node"]')?.click();
+    });
+
+    await expect(page.locator('#quick-connect-banner')).toHaveClass(/active/);
+    await expect(page.locator('#context-toolbar')).not.toHaveClass(/visible/);
+
+    await page.locator(`#node-${targetId}`).click();
+
+    await expect(page.locator('#quick-connect-banner')).not.toHaveClass(/active/);
+    await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(1);
+    await expect.poll(async () => page.evaluate(() => {
+      const arrow = state.arrows[0];
+      return arrow ? { from: arrow.from, to: arrow.to, direction: arrow.direction, lineStyle: arrow.lineStyle } : null;
+    })).toEqual({ from: sourceId, to: targetId, direction: 'directed', lineStyle: 'curved' });
+  });
+
+  test('quick connect mode cancels on escape', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    const [sourceId] = await getNodeIds(page);
+
+    await page.evaluate(id => selectNode(id), sourceId);
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="Quick connect to another node"]')?.click();
+    });
+
+    await expect(page.locator('#quick-connect-banner')).toHaveClass(/active/);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#quick-connect-banner')).not.toHaveClass(/active/);
+    await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(0);
+  });
+
   test('node layer controls can move a node backward and to the back', async ({ page }) => {
     await bootFresh(page);
 
