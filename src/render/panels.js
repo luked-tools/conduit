@@ -35,6 +35,14 @@ function dismissWelcomeCard() {
   updateWelcomeCard();
 }
 
+function showWelcomeCardAgain() {
+  _showWelcomeCard = true;
+  try {
+    localStorage.removeItem(WELCOME_SEEN_KEY);
+  } catch (e) {}
+  updateWelcomeCard();
+}
+
 function updateWelcomeCard() {
   const empty = document.getElementById('canvas-empty');
   const welcome = document.getElementById('canvas-welcome-card');

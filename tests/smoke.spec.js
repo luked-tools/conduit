@@ -91,6 +91,19 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator('#canvas-welcome-card')).not.toHaveClass(/visible/);
   });
 
+  test('help modal opens with quick start and product background', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.getByRole('button', { name: 'Dismiss quick start' }).click();
+    await expect(page.locator('#canvas-welcome-card')).not.toHaveClass(/visible/);
+
+    await page.getByRole('button', { name: 'Help' }).click();
+    await expect(page.locator('#modal-overlay')).toHaveClass(/open/);
+    await expect(page.locator('#modal-title')).toHaveText('Help');
+    await expect(page.locator('#modal-body')).toContainText('Quick Start');
+    await expect(page.locator('#modal-body')).toContainText('About Conduit');
+  });
+
   test('can add a node from app helpers', async ({ page }) => {
     await bootFresh(page);
 

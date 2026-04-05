@@ -59,6 +59,12 @@ First-launch guidance should follow the same rule:
 - explain only the core actions needed to start
 - make dismissal immediate and persistent
 
+Help surfaces should extend that same model:
+
+- use one calm reference modal for quick-start, workflow guidance, and product background
+- keep copy concise and action-oriented
+- allow the quick-start surface to be re-enabled from Help rather than duplicating onboarding elsewhere
+
 ### 3.4 Direct Manipulation Wins
 
 If a task can be done by dragging, selecting, editing inline, or acting directly on an object, prefer that over distant controls.
