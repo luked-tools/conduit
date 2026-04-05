@@ -1,5 +1,22 @@
 let _contextToolbarMenuOpen = false;
 
+function getContextMenuIcon(name) {
+  switch (name) {
+    case 'details':
+      return '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" stroke-width="1.2"/><path d="M6 5v2.6M6 3.6h.01" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>';
+    case 'front':
+      return '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 9.5V3.8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2.8 5.4 4.5 3.5 6.2 5.4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.4 2.2h1.8M8.4 5.2h1.8M8.4 8.2h1.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>';
+    case 'back':
+      return '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2.5v5.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2.8 6.6 4.5 8.5 6.2 6.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.4 2.2h1.8M8.4 5.2h1.8M8.4 8.2h1.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>';
+    case 'front-of':
+      return '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="4.2" width="3.6" height="3.6" rx="0.9" stroke="currentColor" stroke-width="1.1"/><rect x="6.9" y="2.4" width="3.6" height="3.6" rx="0.9" stroke="currentColor" stroke-width="1.1"/><path d="M5.7 5.8h.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M8.7 6.8 10 5.5 8.7 4.2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    case 'behind':
+      return '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="2.4" width="3.6" height="3.6" rx="0.9" stroke="currentColor" stroke-width="1.1"/><rect x="6.9" y="4.2" width="3.6" height="3.6" rx="0.9" stroke="currentColor" stroke-width="1.1"/><path d="M5.7 5.8h.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M7.3 4.2 6 5.5 7.3 6.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    default:
+      return '';
+  }
+}
+
 function getContextToolbarAnchor() {
   if (selectedNode) {
     const nodeEl = document.getElementById(`node-${selectedNode}`);
@@ -149,7 +166,7 @@ function makeContextToolbarMoreButton(type, id) {
   return makeContextToolbarButton({
     title: 'More actions',
     label: 'More',
-    icon: '...',
+    icon: '⋯',
     onClick: () => {
       const nextState = !_contextToolbarMenuOpen;
       _contextToolbarMenuOpen = nextState;
@@ -163,66 +180,69 @@ function makeContextToolbarMoreButton(type, id) {
 }
 
 function makeContextToolbarMenu() {
-  const menu = document.createElement('div');
-  menu.className = 'context-toolbar-menu';
+  const menu = createAppMenu({ className: 'context-toolbar-menu' });
   menu.addEventListener('mousedown', e => e.stopPropagation());
   menu.addEventListener('click', e => e.stopPropagation());
+  const runMenuAction = fn => () => {
+    _contextToolbarMenuOpen = false;
+    fn();
+  };
 
   if (selectedNode) {
     const nodeId = selectedNode;
-    menu.appendChild(makeContextToolbarMenuItem({
+    menu.appendChild(createAppMenuItem({
+      className: 'context-toolbar-menu-item',
       label: 'Details',
-      onClick: () => openNodeModal(nodeId)
+      icon: getContextMenuIcon('details'),
+      onClick: runMenuAction(() => openNodeModal(nodeId))
     }));
-    menu.appendChild(makeContextToolbarMenuItem({
+    menu.appendChild(createAppMenuDivider('context-toolbar-menu-divider'));
+    menu.appendChild(createAppMenuItem({
+      className: 'context-toolbar-menu-item',
       label: 'To front',
+      icon: getContextMenuIcon('front'),
       disabled: !canMoveNodeLayer(nodeId, 'front'),
-      onClick: () => moveNodeLayer(nodeId, 'front')
+      onClick: runMenuAction(() => moveNodeLayer(nodeId, 'front'))
     }));
-    menu.appendChild(makeContextToolbarMenuItem({
+    menu.appendChild(createAppMenuItem({
+      className: 'context-toolbar-menu-item',
       label: 'To back',
+      icon: getContextMenuIcon('back'),
       disabled: !canMoveNodeLayer(nodeId, 'back'),
-      onClick: () => moveNodeLayer(nodeId, 'back')
+      onClick: runMenuAction(() => moveNodeLayer(nodeId, 'back'))
     }));
-    menu.appendChild(makeContextToolbarMenuItem({
+    menu.appendChild(createAppMenuDivider('context-toolbar-menu-divider'));
+    menu.appendChild(createAppMenuItem({
+      className: 'context-toolbar-menu-item',
       label: 'Bring in front of...',
-      onClick: () => startNodeLayerTargetMode(nodeId, 'front-of')
+      icon: getContextMenuIcon('front-of'),
+      onClick: runMenuAction(() => startNodeLayerTargetMode(nodeId, 'front-of'))
     }));
-    menu.appendChild(makeContextToolbarMenuItem({
+    menu.appendChild(createAppMenuItem({
+      className: 'context-toolbar-menu-item',
       label: 'Send behind...',
-      onClick: () => startNodeLayerTargetMode(nodeId, 'behind')
+      icon: getContextMenuIcon('behind'),
+      onClick: runMenuAction(() => startNodeLayerTargetMode(nodeId, 'behind'))
     }));
   } else if (selectedArrow) {
     const arrowId = selectedArrow;
-    menu.appendChild(makeContextToolbarMenuItem({
+    menu.appendChild(createAppMenuItem({
+      className: 'context-toolbar-menu-item',
       label: 'To front',
+      icon: getContextMenuIcon('front'),
       disabled: !canMoveArrowLayer(arrowId, 'front'),
-      onClick: () => moveArrowLayer(arrowId, 'front')
+      onClick: runMenuAction(() => moveArrowLayer(arrowId, 'front'))
     }));
-    menu.appendChild(makeContextToolbarMenuItem({
+    menu.appendChild(createAppMenuItem({
+      className: 'context-toolbar-menu-item',
       label: 'To back',
+      icon: getContextMenuIcon('back'),
       disabled: !canMoveArrowLayer(arrowId, 'back'),
-      onClick: () => moveArrowLayer(arrowId, 'back')
+      onClick: runMenuAction(() => moveArrowLayer(arrowId, 'back'))
     }));
   }
 
   return menu;
-}
-
-function makeContextToolbarMenuItem({ label, onClick, disabled = false }) {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'context-toolbar-menu-item';
-  btn.textContent = label;
-  btn.disabled = !!disabled;
-  btn.addEventListener('click', e => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (btn.disabled) return;
-    _contextToolbarMenuOpen = false;
-    onClick();
-  });
-  return btn;
 }
 
 function positionContextToolbar() {
