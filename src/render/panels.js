@@ -519,8 +519,50 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
   } else if (selectedArrow) {
     const a = state.arrows.find(x => x.id===selectedArrow);
     if (!a) return;
+    const fromNode = state.nodes.find(x => x.id === a.from);
+    const toNode = state.nodes.find(x => x.id === a.to);
+    const routeBody = appendPropGroup(body, 'Route');
+    const styleBody = appendPropGroup(body, 'Style');
+    const arrangeBody = appendPropGroup(body, 'Arrange');
 
-    addPropRow(body, 'Label', () => {
+    const routeSummary = document.createElement('div');
+    routeSummary.className = 'prop-row';
+    routeSummary.style.marginBottom = '10px';
+
+    [
+      { label: 'From', node: fromNode, dir: a.direction === 'bidirectional' ? '↔' : '→' },
+      { label: 'To', node: toNode, dir: a.direction === 'bidirectional' ? '↔' : '←' }
+    ].forEach((entry, index) => {
+      const card = document.createElement('div');
+      card.style.cssText = 'display:flex;align-items:flex-start;gap:8px;padding:7px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);' + (index === 0 ? 'margin-bottom:6px;' : '');
+
+      const glyph = document.createElement('span');
+      glyph.style.cssText = 'flex-shrink:0;color:var(--accent3);font-family:"IBM Plex Mono",monospace;font-size:11px;line-height:1.3;padding-top:1px;';
+      glyph.textContent = entry.dir;
+      card.appendChild(glyph);
+
+      const info = document.createElement('div');
+      info.style.cssText = 'min-width:0;flex:1;';
+
+      const title = document.createElement('div');
+      title.style.cssText = 'font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      title.textContent = entry.node ? (entry.node.title || 'Untitled node').replace(/\n/g, ' ') : 'Unknown node';
+      info.appendChild(title);
+
+      const metaParts = [];
+      metaParts.push(entry.label);
+      if (entry.node?.tag) metaParts.push(entry.node.tag);
+      const meta = document.createElement('div');
+      meta.style.cssText = 'font-size:9px;color:var(--text3);font-family:"IBM Plex Mono",monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;';
+      meta.textContent = metaParts.join(' · ');
+      info.appendChild(meta);
+
+      card.appendChild(info);
+      routeSummary.appendChild(card);
+    });
+    routeBody.appendChild(routeSummary);
+
+    addPropRow(routeBody, 'Label', () => {
       const ta = document.createElement('textarea');
       ta.className = 'prop-input';
       ta.rows = 2;
@@ -539,7 +581,7 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
     });
 
     // Line style
-    addPropRow(body, 'Line style', () => {
+    addPropRow(styleBody, 'Line style', () => {
       const row = document.createElement('div');
       row.className = 'line-style-row';
       const styles = [{v:'curved',l:'∿'},{v:'straight',l:'╱'},{v:'orthogonal',l:'⌐'}];
@@ -559,7 +601,7 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       return row;
     });
 
-    addPropRow(body, 'Direction', () => {
+    addPropRow(routeBody, 'Direction', () => {
       const row = document.createElement('div');
       row.className = 'dir-toggle-row';
       const opts = [{v:'directed',l:'→'},{v:'bidirectional',l:'↔'},{v:'undirected',l:'──'}];
@@ -580,8 +622,8 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
     });
 
     // From/To port
-    addPropRow(body, 'From port (source)', () => makePortSelect(a, 'fromPos', () => { renderArrows(); renderSidebar(); }));
-    addPropRow(body, 'To port (target)', () => makePortSelect(a, 'toPos', () => { renderArrows(); renderSidebar(); }));
+    addPropRow(routeBody, 'From port', () => makePortSelect(a, 'fromPos', () => { renderArrows(); renderSidebar(); }));
+    addPropRow(routeBody, 'To port', () => makePortSelect(a, 'toPos', () => { renderArrows(); renderSidebar(); }));
 
     // Bend
     const _isOrth = a.lineStyle === 'orthogonal';
@@ -598,7 +640,7 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       updateSliderPct(bendInp);
       bendInp.addEventListener('input', () => { updateSliderPct(bendInp); pushUndoDebounced(); a.bend = parseInt(bendInp.value); renderArrows(); });
       bendRow.appendChild(bendInp);
-      body.appendChild(bendRow);
+      styleBody.appendChild(bendRow);
     }
     const hasManualEndpointOffsets = getArrowEndOffset(a, 'from') !== null || getArrowEndOffset(a, 'to') !== null;
     const resetControlsRow = document.createElement('div');
@@ -645,7 +687,7 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       selectArrow(a.id);
     });
     resetControlsRow.appendChild(resetEndpointsBtn);
-    body.appendChild(resetControlsRow);
+    styleBody.appendChild(resetControlsRow);
 
     if (_isOrth) {
       // Two sliders ? one per axis. Labels depend on from-port direction.
@@ -674,11 +716,11 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
           saveToLocalStorage();
         });
         row.appendChild(sl);
-        body.appendChild(row);
+        styleBody.appendChild(row);
       });
     }
 
-    addPropRow(body, 'Stroke pattern', () => {
+    addPropRow(styleBody, 'Stroke pattern', () => {
       const row = document.createElement('div');
       row.className = 'stroke-style-row';
       row.dataset.control = 'stroke-style';
@@ -689,19 +731,18 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
         { v: 'dashdot', l: 'Dash-dot', dash: '8 3 1.5 3' }
       ];
       const activeStyle = getArrowStrokeStyle(a);
-      options.forEach(opt => {
-        const b = document.createElement('button');
-        b.className = 'stroke-style-btn' + (activeStyle === opt.v ? ' active' : '');
-        b.title = opt.l;
-        b.innerHTML =
-          '<svg viewBox="0 0 22 8" aria-hidden="true">' +
-            '<line x1="1" y1="4" x2="21" y2="4"' + (opt.dash ? ' stroke-dasharray="' + opt.dash + '"' : '') + ' />' +
-          '</svg>' +
-          '<span class="stroke-style-btn-label">' + opt.l + '</span>';
-        b.addEventListener('click', () => {
-          pushUndo();
-          a.strokeStyle = opt.v;
-          a.dash = opt.v === 'dashed';
+        options.forEach(opt => {
+          const b = document.createElement('button');
+          b.className = 'stroke-style-btn' + (activeStyle === opt.v ? ' active' : '');
+          b.title = opt.l;
+          b.innerHTML =
+            '<svg viewBox="0 0 22 8" aria-hidden="true">' +
+              '<line x1="1" y1="4" x2="21" y2="4"' + (opt.dash ? ' stroke-dasharray="' + opt.dash + '"' : '') + ' />' +
+            '</svg>';
+          b.addEventListener('click', () => {
+            pushUndo();
+            a.strokeStyle = opt.v;
+            a.dash = opt.v === 'dashed';
           renderArrows();
           saveToLocalStorage();
           row.querySelectorAll('.stroke-style-btn').forEach(x => x.classList.remove('active'));
@@ -743,7 +784,7 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       arrowLayerGrid.appendChild(btn);
     });
     arrowLayerRow.appendChild(arrowLayerGrid);
-    body.appendChild(arrowLayerRow);
+    arrangeBody.appendChild(arrowLayerRow);
 
     // Color
     const colorRow2 = document.createElement('div');
@@ -764,7 +805,7 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
     });
     ci2Inline.appendChild(ci2); ci2Inline.appendChild(ci2Reset);
     colorRow2.appendChild(ci2Inline);
-    body.appendChild(colorRow2);
+    styleBody.appendChild(colorRow2);
 
     // ── Label section ──
     const lblSec = document.createElement('div');
@@ -825,12 +866,12 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
     lblHint.style.cssText = 'font-size:9.5px;color:var(--text3);margin-top:5px;font-family:"IBM Plex Mono",monospace;';
     lblHint.textContent = '↖ Drag to reposition · Double-click to edit inline';
     lblSec.appendChild(lblHint);
-    body.appendChild(lblSec);
+    styleBody.appendChild(lblSec);
 
     const delBtn = document.createElement('button');
     delBtn.className = 'prop-btn danger'; delBtn.textContent = '✕ Delete arrow';
     delBtn.addEventListener('click', () => deleteSelected());
-    body.appendChild(delBtn);
+    arrangeBody.appendChild(delBtn);
   }
 }
 

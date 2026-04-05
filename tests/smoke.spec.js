@@ -400,6 +400,44 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator('#props-body .prop-group-title')).toHaveText(['Identity', 'Appearance', 'Structure', 'Arrange']);
   });
 
+test('selected connection properties are grouped and prioritize route titles over tags', async ({ page }) => {
+  await bootFresh(page);
+
+  await addNode(page, 'internal', 760, 520);
+  await addNode(page, 'external', 1020, 640);
+
+  await page.evaluate(() => {
+    state.nodes[0].tag = 'ERP';
+    state.nodes[0].title = 'Enterprise Planning';
+    state.nodes[1].tag = 'CRM';
+    state.nodes[1].title = 'Customer Portal';
+    state.arrows.push({
+      id: 'a-panel-test',
+      from: state.nodes[0].id,
+      to: state.nodes[1].id,
+      fromPos: 'e',
+      toPos: 'w',
+      direction: 'directed',
+      lineStyle: 'curved',
+      strokeStyle: 'solid',
+      bend: 0,
+      orthoY: 0,
+      labelDx: 0,
+      labelDy: 0,
+      color: getComputedStyle(document.documentElement).getPropertyValue('--arrow-color').trim() || '#c16d23'
+    });
+    render();
+  });
+
+  await page.evaluate(() => selectArrow('a-panel-test'));
+
+  await expect(page.locator('#props-body .prop-group-title')).toHaveText(['Route', 'Style', 'Arrange']);
+  await expect(page.locator('#props-body .prop-group').first()).toContainText('Enterprise Planning');
+  await expect(page.locator('#props-body .prop-group').first()).toContainText('Customer Portal');
+    await expect(page.locator('#props-body .prop-group').first()).toContainText('ERP');
+    await expect(page.locator('#props-body .prop-group').first()).toContainText('CRM');
+  });
+
   test('newly added nodes and pasted nodes land on the top layer', async ({ page }) => {
     await bootFresh(page);
 
