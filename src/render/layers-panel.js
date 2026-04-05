@@ -206,9 +206,21 @@ function getNodeRowTitle(node) {
   return (node.title || node.tag || 'Untitled node').replace(/\n/g, ' ');
 }
 
+function getNodeDisplayLayerNumber(nodeId) {
+  const ordered = getSortedNodeLayerEntries();
+  const index = ordered.findIndex(entry => entry.node.id === nodeId);
+  return index >= 0 ? index + 1 : null;
+}
+
+function getArrowDisplayLayerNumber(arrowId) {
+  const ordered = getSortedArrowLayerEntries();
+  const index = ordered.findIndex(entry => entry.arrow.id === arrowId);
+  return index >= 0 ? index + 1 : null;
+}
+
 function getNodeRowMeta(node, entry) {
   const identifier = (node.tag || '').replace(/\n/g, ' ').trim();
-  const layerText = `Layer ${getNodeLayerValue(node, entry.index)}`;
+  const layerText = `Layer ${getNodeDisplayLayerNumber(node.id) || (entry.index + 1)}`;
   return identifier ? `${identifier} · ${layerText}` : layerText;
 }
 
@@ -396,7 +408,8 @@ function renderLayersPanel() {
     const fromName = fromNode ? (fromNode.tag || fromNode.title || arrow.from).replace(/\n/g, ' ') : arrow.from;
     const toName = toNode ? (toNode.tag || toNode.title || arrow.to).replace(/\n/g, ' ') : arrow.to;
     const title = `${fromName} → ${toName}`;
-    const meta = arrow.label ? `${arrow.label} · Layer ${getArrowLayerValue(arrow, entry.index)}` : `Layer ${getArrowLayerValue(arrow, entry.index)}`;
+    const layerText = `Layer ${getArrowDisplayLayerNumber(arrow.id) || (entry.index + 1)}`;
+    const meta = arrow.label ? `${arrow.label} · ${layerText}` : layerText;
     return makeLayersRow({
       kind: 'arrow',
       id: arrow.id,

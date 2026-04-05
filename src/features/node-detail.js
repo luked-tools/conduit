@@ -68,6 +68,7 @@ function openNodeModal(nodeId) {
     renderNodes();
     renderArrows();
     renderSidebar();
+    if (typeof renderLayersPanel === 'function') renderLayersPanel();
     triggerNMSaved();
     saveToLocalStorage();
   }

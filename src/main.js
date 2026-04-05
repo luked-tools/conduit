@@ -67,6 +67,8 @@ function loadSample() {
     {id:'a8', from:'n3', to:'n6', fromPos:'s', toPos:'n', direction:'directed', label:'Inspection trigger', labelOffsetX:10, labelOffsetY:0, color:'', dash:false, bend:0, lineStyle:'straight'},
     {id:'a9', from:'n6', to:'n4', fromPos:'w', toPos:'e', direction:'bidirectional', label:'Release status', labelOffsetX:0, labelOffsetY:-12, color:'#9b5f9a', dash:false, bend:0, lineStyle:'orthogonal', orthoY:-30},
   ];
+  normalizeNodeLayers(getSortedNodeLayerEntries());
+  normalizeArrowLayers(getSortedArrowLayerEntries());
   setDiagramCounters(10, 20);
 }
 

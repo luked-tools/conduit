@@ -569,6 +569,20 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator('#document-panel-preview-subtitle')).toHaveText(SAMPLE_SUBTITLE);
   });
 
+  test('sample load normalizes layer numbering in the layers panel', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      loadSampleIntoCurrentDraft();
+    });
+    await page.locator('#layers-toggle-btn').click();
+
+    const panelText = await page.locator('#layers-panel-body').textContent();
+    expect(panelText).not.toContain('Layer 100');
+    expect(panelText).not.toContain('Layer 200');
+    expect(panelText).toContain('Layer 1');
+  });
+
   test('can create a connection by dragging between node ports', async ({ page }) => {
     await bootFresh(page);
 
@@ -585,6 +599,17 @@ test.describe('Conduit smoke', () => {
     await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(1);
     await expect.poll(async () => page.evaluate(() => state.arrows[0].from)).toBe(fromId);
     await expect.poll(async () => page.evaluate(() => state.arrows[0].to)).toBe(toId);
+  });
+
+  test('sample arrow labels remain selectable inside the boundary area', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      loadSampleIntoCurrentDraft();
+    });
+
+    await page.locator('#arrow-svg text', { hasText: 'Engineering sync' }).click();
+    await expect.poll(async () => page.evaluate(() => selectedArrow)).toBe('a4');
   });
 
   test('context toolbar appears for selected connection and can move it forward', async ({ page }) => {
