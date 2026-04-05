@@ -458,6 +458,9 @@
     pointer-events: auto;
     transform: translateY(0) scale(1);
   }
+  #context-toolbar.under-layers-panel {
+    z-index: 40;
+  }
   .context-toolbar-btn {
     display: inline-flex;
     align-items: center;

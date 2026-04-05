@@ -1,4 +1,5 @@
 let _layersPanelOpen = false;
+let _layersPanelDragState = null;
 
 function toggleLayersPanel(force) {
   const next = typeof force === 'boolean' ? force : !_layersPanelOpen;
@@ -10,12 +11,24 @@ function toggleLayersPanel(force) {
   panel.classList.toggle('open', next);
   toggle.classList.toggle('active', next);
   toggle.setAttribute('aria-expanded', next ? 'true' : 'false');
+  if (!next) finishLayersDrag();
   if (typeof updateContextToolbar === 'function') updateContextToolbar();
   if (next) renderLayersPanel();
 }
 
 function closeLayersPanel() {
   toggleLayersPanel(false);
+}
+
+function clearLayersDropIndicators() {
+  document.querySelectorAll('.layers-row.drag-before, .layers-row.drag-after, .layers-row.dragging').forEach(el => {
+    el.classList.remove('drag-before', 'drag-after', 'dragging');
+  });
+}
+
+function finishLayersDrag() {
+  _layersPanelDragState = null;
+  clearLayersDropIndicators();
 }
 
 function getLayerActionIcon(action) {
@@ -93,6 +106,58 @@ function makeLayersActionButton({ title, action, disabled = false, onClick }) {
   return btn;
 }
 
+function makeLayersDragHandle(kind, id) {
+  const handle = document.createElement('button');
+  handle.type = 'button';
+  handle.className = 'layers-drag-handle';
+  handle.title = 'Drag to reorder';
+  handle.draggable = true;
+  handle.setAttribute('aria-label', 'Drag to reorder');
+  handle.innerHTML = '<svg viewBox="0 0 16 16" aria-hidden="true"><path d="M5 4h1.5M9.5 4H11M5 8h1.5M9.5 8H11M5 12h1.5M9.5 12H11" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
+  handle.addEventListener('click', e => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  handle.addEventListener('mousedown', e => e.stopPropagation());
+  handle.addEventListener('dragstart', e => {
+    e.stopPropagation();
+    _layersPanelDragState = { kind, id };
+    const row = handle.closest('.layers-row');
+    row?.classList.add('dragging');
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', `${kind}:${id}`);
+    }
+  });
+  handle.addEventListener('dragend', () => {
+    finishLayersDrag();
+  });
+  return handle;
+}
+
+function applyLayersDrop(kind, sourceId, targetId, position) {
+  if (!sourceId || !targetId || sourceId === targetId) return false;
+  if (kind === 'node') {
+    const display = getSortedNodeLayerEntries().slice().reverse();
+    const sourceIndex = display.findIndex(entry => entry.node.id === sourceId);
+    const targetIndex = display.findIndex(entry => entry.node.id === targetId);
+    if (sourceIndex < 0 || targetIndex < 0) return false;
+    const nextIndex = position === 'after' ? targetIndex + 1 : targetIndex;
+    const normalizedIndex = sourceIndex < nextIndex ? nextIndex - 1 : nextIndex;
+    return moveNodeLayerToDisplayIndex(sourceId, normalizedIndex);
+  }
+  if (kind === 'arrow') {
+    const display = getSortedArrowLayerEntries().slice().reverse();
+    const sourceIndex = display.findIndex(entry => entry.arrow.id === sourceId);
+    const targetIndex = display.findIndex(entry => entry.arrow.id === targetId);
+    if (sourceIndex < 0 || targetIndex < 0) return false;
+    const nextIndex = position === 'after' ? targetIndex + 1 : targetIndex;
+    const normalizedIndex = sourceIndex < nextIndex ? nextIndex - 1 : nextIndex;
+    return moveArrowLayerToDisplayIndex(sourceId, normalizedIndex);
+  }
+  return false;
+}
+
 function makeLayersRow({ kind, id, nodeType = '', previewMarkup = '', title, meta, selected, actions, onSelect }) {
   const row = document.createElement('div');
   row.className = 'layers-row' + (selected ? ' selected' : '');
@@ -113,6 +178,9 @@ function makeLayersRow({ kind, id, nodeType = '', previewMarkup = '', title, met
 
   const head = document.createElement('div');
   head.className = 'layers-row-head';
+
+  const dragHandle = makeLayersDragHandle(kind, id);
+  head.appendChild(dragHandle);
 
   const preview = document.createElement('span');
   preview.className = 'layers-row-preview ' + (kind === 'node' ? 'node-preview' : 'arrow-preview');
@@ -136,6 +204,29 @@ function makeLayersRow({ kind, id, nodeType = '', previewMarkup = '', title, met
   const actionWrap = document.createElement('div');
   actionWrap.className = 'layers-row-actions';
   actions.forEach(actionWrap.appendChild.bind(actionWrap));
+
+  row.addEventListener('dragover', e => {
+    if (!_layersPanelDragState || _layersPanelDragState.kind !== kind || _layersPanelDragState.id === id) return;
+    e.preventDefault();
+    const rect = row.getBoundingClientRect();
+    const midpoint = rect.top + rect.height / 2;
+    const position = e.clientY >= midpoint ? 'after' : 'before';
+    row.classList.toggle('drag-before', position === 'before');
+    row.classList.toggle('drag-after', position === 'after');
+  });
+  row.addEventListener('dragleave', e => {
+    if (!row.contains(e.relatedTarget)) {
+      row.classList.remove('drag-before', 'drag-after');
+    }
+  });
+  row.addEventListener('drop', e => {
+    if (!_layersPanelDragState || _layersPanelDragState.kind !== kind || _layersPanelDragState.id === id) return;
+    e.preventDefault();
+    const rect = row.getBoundingClientRect();
+    const position = e.clientY >= rect.top + rect.height / 2 ? 'after' : 'before';
+    applyLayersDrop(kind, _layersPanelDragState.id, id, position);
+    finishLayersDrag();
+  });
 
   row.appendChild(info);
   row.appendChild(actionWrap);

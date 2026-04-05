@@ -234,6 +234,44 @@ function moveArrowLayer(arrowId, mode) {
   return true;
 }
 
+function moveNodeLayerToDisplayIndex(nodeId, displayIndex) {
+  const display = getSortedNodeLayerEntries().slice().reverse();
+  const sourceIndex = display.findIndex(entry => entry.node.id === nodeId);
+  if (sourceIndex < 0) return false;
+
+  const boundedIndex = Math.max(0, Math.min(display.length - 1, displayIndex));
+  if (boundedIndex === sourceIndex) return false;
+
+  pushUndo();
+  const [entry] = display.splice(sourceIndex, 1);
+  display.splice(boundedIndex, 0, entry);
+  normalizeNodeLayers(display.slice().reverse());
+  render();
+  selectNode(nodeId);
+  saveToLocalStorage();
+  setStatusModeMessage('Node layer order updated', { fade: true, autoClearMs: 1500 });
+  return true;
+}
+
+function moveArrowLayerToDisplayIndex(arrowId, displayIndex) {
+  const display = getSortedArrowLayerEntries().slice().reverse();
+  const sourceIndex = display.findIndex(entry => entry.arrow.id === arrowId);
+  if (sourceIndex < 0) return false;
+
+  const boundedIndex = Math.max(0, Math.min(display.length - 1, displayIndex));
+  if (boundedIndex === sourceIndex) return false;
+
+  pushUndo();
+  const [entry] = display.splice(sourceIndex, 1);
+  display.splice(boundedIndex, 0, entry);
+  normalizeArrowLayers(display.slice().reverse());
+  renderArrows();
+  selectArrow(arrowId);
+  saveToLocalStorage();
+  setStatusModeMessage('Connection layer order updated', { fade: true, autoClearMs: 1500 });
+  return true;
+}
+
 function addMode(type) {
   pushUndo();
   lastNodeType = type;
