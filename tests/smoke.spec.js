@@ -1079,7 +1079,7 @@ test.describe('Conduit smoke', () => {
 
     await page.locator(`#node-${nodeId}`).click();
     await page.evaluate(() => {
-      document.querySelector('#context-toolbar button[title="Quick edit title and description"]')?.click();
+document.querySelector('#context-toolbar button[title="Rename title and description"]')?.click();
     });
 
     await expect(page.locator('.node-quick-edit-panel')).toBeVisible();
@@ -1100,14 +1100,14 @@ test.describe('Conduit smoke', () => {
 
     await page.locator(`#node-${nodeId}`).click();
     await page.evaluate(() => {
-      document.querySelector('#context-toolbar button[title="Quick edit title and description"]')?.click();
+document.querySelector('#context-toolbar button[title="Rename title and description"]')?.click();
     });
     await expect(page.locator('.node-quick-edit-panel')).toBeVisible();
     await page.locator('.node-quick-edit-field.title').press('Escape');
     await expect(page.locator('.node-quick-edit-panel')).toHaveCount(0);
 
     await page.evaluate(() => {
-      document.querySelector('#context-toolbar button[title="Quick edit title and description"]')?.click();
+document.querySelector('#context-toolbar button[title="Rename title and description"]')?.click();
     });
     await expect(page.locator('.node-quick-edit-panel')).toBeVisible();
     await page.locator('#topbar').click({ position: { x: 20, y: 20 } });

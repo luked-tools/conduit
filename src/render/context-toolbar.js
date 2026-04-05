@@ -68,8 +68,8 @@ function renderContextToolbar() {
   if (selectedNode) {
     const nodeId = selectedNode;
     toolbar.appendChild(makeContextToolbarButton({
-      title: 'Quick edit title and description',
-      label: 'Edit',
+      title: 'Rename title and description',
+      label: 'Rename',
       icon: '✎',
       onClick: () => startInlineNodeEdit(nodeId)
     }));
@@ -164,6 +164,10 @@ function makeContextToolbarMenu() {
 
   if (selectedNode) {
     const nodeId = selectedNode;
+    menu.appendChild(makeContextToolbarMenuItem({
+      label: 'Details',
+      onClick: () => openNodeModal(nodeId)
+    }));
     menu.appendChild(makeContextToolbarMenuItem({
       label: 'To front',
       disabled: !canMoveNodeLayer(nodeId, 'front'),
