@@ -133,6 +133,7 @@ let _brushData = null;
 function startStyleBrush(nodeId) {
   const n = state.nodes.find(x => x.id === nodeId);
   if (!n) return;
+  if (_quickConnectMode) cancelQuickConnectMode();
   _brushData = {};
   STYLE_BRUSH_FIELDS.forEach(f => { _brushData[f] = n[f]; });
   _brushActive = true;

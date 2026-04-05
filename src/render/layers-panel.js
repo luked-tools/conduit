@@ -98,6 +98,8 @@ function getNodePreviewMarkup(node) {
     ? 'var(--text3)'
     : (isExternal ? 'var(--node-external-border)' : 'var(--node-internal-border)');
   const titleColor = node.textColor || (isBoundary ? 'var(--text3)' : 'var(--text)');
+  const subtitleColor = node.subtitleColor || 'var(--text2)';
+  const tagColor = node.tagColor || 'var(--text3)';
   const borderDash = isBoundary || isExternal ? '3 2' : '';
   const leftRailDash = isExternal ? '3 2' : '';
 
@@ -110,8 +112,9 @@ function getNodePreviewMarkup(node) {
           stroke-width="1"
           ${borderDash ? `stroke-dasharray="${borderDash}"` : ''} />
         ${isBoundary ? '' : `<line x1="2.25" y1="1.8" x2="2.25" y2="12.2" stroke="${accentColor}" stroke-width="2.5" stroke-linecap="round" ${leftRailDash ? `stroke-dasharray="${leftRailDash}"` : ''} />`}
-        ${isBoundary ? `<rect x="6.2" y="6.1" width="11.6" height="1.35" rx="0.675" fill="${titleColor}" opacity="0.55" />` : `<rect x="7.6" y="4" width="9.4" height="1.7" rx="0.85" fill="${titleColor}" opacity="0.82" />`}
-        ${isBoundary ? '' : `<rect x="7.6" y="7.1" width="7" height="1.4" rx="0.7" fill="${titleColor}" opacity="0.46" />`}
+        ${isBoundary ? `<rect x="6.2" y="6.1" width="11.6" height="1.35" rx="0.675" fill="${titleColor}" opacity="0.55" />` : `<rect x="7.6" y="3.45" width="4.2" height="1" rx="0.5" fill="${tagColor}" opacity="0.78" />`}
+        ${isBoundary ? '' : `<rect x="7.6" y="5.1" width="9.4" height="1.7" rx="0.85" fill="${titleColor}" opacity="0.82" />`}
+        ${isBoundary ? '' : `<rect x="7.6" y="8.25" width="7" height="1.4" rx="0.7" fill="${subtitleColor}" opacity="0.58" />`}
       </svg>
     </span>
   `;

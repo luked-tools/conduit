@@ -497,6 +497,7 @@
   /* ── Canvas banners ── */
   #style-brush-banner,
   #layer-target-banner,
+  #quick-connect-banner,
   #canvas-notice-banner {
     position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
     display: none; align-items: center; gap: 8px;
@@ -510,6 +511,7 @@
   }
   #style-brush-banner.active { display: flex; }
   #layer-target-banner.active { display: flex; }
+  #quick-connect-banner.active { display: flex; }
   #canvas-notice-banner.active { display: flex; }
   #canvas-notice-banner.danger {
     background: var(--danger);
@@ -517,19 +519,23 @@
   }
   #style-brush-banner svg { flex-shrink: 0; opacity: 0.9; }
   #layer-target-banner svg { flex-shrink: 0; opacity: 0.9; }
+  #quick-connect-banner svg { flex-shrink: 0; opacity: 0.9; }
   #canvas-notice-banner svg { flex-shrink: 0; opacity: 0.9; }
   #style-brush-cancel,
-  #layer-target-cancel {
+  #layer-target-cancel,
+  #quick-connect-cancel {
     background: rgba(255,255,255,0.25); border: none; border-radius: 4px;
     color: #fff; cursor: pointer; font-size: 11px; padding: 1px 7px;
     font-family: 'Inter', sans-serif; font-weight: 500; margin-left: 4px;
     transition: background 0.12s;
   }
   #style-brush-cancel:hover,
-  #layer-target-cancel:hover { background: rgba(255,255,255,0.4); }
+  #layer-target-cancel:hover,
+  #quick-connect-cancel:hover { background: rgba(255,255,255,0.4); }
   .style-brush-active-node { outline: 2px dashed var(--accent) !important; outline-offset: 3px; cursor: crosshair !important; }
   #canvas-wrap.brush-mode::after,
-  #canvas-wrap.layer-target-mode::after {
+  #canvas-wrap.layer-target-mode::after,
+  #canvas-wrap.quick-connect-mode::after {
     content: '';
     position: absolute; inset: 0;
     background: var(--accent-wash);
@@ -537,6 +543,11 @@
     z-index: 1;
   }
   #canvas-wrap.layer-target-mode .node:not(.selected) {
+    outline: 2px dashed var(--accent) !important;
+    outline-offset: 3px;
+    cursor: crosshair !important;
+  }
+  #canvas-wrap.quick-connect-mode .node:not(.selected) {
     outline: 2px dashed var(--accent) !important;
     outline-offset: 3px;
     cursor: crosshair !important;
