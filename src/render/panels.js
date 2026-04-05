@@ -299,7 +299,7 @@ function renderPropsPanel() {
 
       // Per-function rows with visibility toggle + click-to-edit
       const fnList = document.createElement('div');
-      fnList.style.cssText = 'display:flex;flex-direction:column;gap:2px;margin-bottom:8px;';
+      fnList.style.cssText = 'display:flex;flex-direction:column;gap:2px;margin-bottom:8px;max-height:176px;overflow-y:auto;padding-right:2px;';
       const namedFns = n.functions.filter(f => (f.name||'').trim());
       if (namedFns.length === 0) {
         const empty = document.createElement('div');
@@ -375,7 +375,7 @@ function renderPropsPanel() {
       connSection.appendChild(connHeader);
 
       const connList = document.createElement('div');
-      connList.style.cssText = 'display:flex;flex-direction:column;gap:2px;margin-bottom:8px;';
+      connList.style.cssText = 'display:flex;flex-direction:column;gap:2px;margin-bottom:8px;max-height:176px;overflow-y:auto;padding-right:2px;';
       if (relatedConnections.length === 0) {
         const empty = document.createElement('div');
         empty.style.cssText = 'font-size:11px;color:var(--text3);font-style:italic;padding:2px 0;';
