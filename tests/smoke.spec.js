@@ -181,6 +181,22 @@ test.describe('Conduit smoke', () => {
     }, [firstId, secondId, thirdId])).toEqual([3, 2, 1]);
   });
 
+  test('context toolbar more menu uses shared menu icons and dividers', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 920, 680);
+    const [firstId] = await getNodeIds(page);
+
+    await page.evaluate(id => selectNode(id), firstId);
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="More actions"]')?.click();
+    });
+
+    await expect(page.locator('#context-toolbar .context-toolbar-menu .app-menu-item-icon svg')).toHaveCount(5);
+    await expect(page.locator('#context-toolbar .context-toolbar-menu .app-menu-divider')).toHaveCount(2);
+  });
+
   test('node layer controls can move a node backward and to the back', async ({ page }) => {
     await bootFresh(page);
 

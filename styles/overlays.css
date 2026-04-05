@@ -1,5 +1,6 @@
   /* ── TOPBAR DROPDOWNS ── */
   .tb-dropdown { position: relative; }
+  .app-menu,
   .tb-dropdown-menu {
     position: absolute; top: calc(100% + 6px); left: 0;
     background: var(--surface); border: 1px solid var(--border2);
@@ -10,6 +11,7 @@
   }
   .tb-dropdown-menu.align-right { left: auto; right: 0; }
   .tb-dropdown[data-open] .tb-dropdown-menu { display: flex; }
+  .app-menu-item,
   .tb-dropdown-item {
     display: flex; align-items: center; gap: 9px;
     padding: 7px 10px; border-radius: 5px;
@@ -20,11 +22,17 @@
     transition: background 0.1s, color 0.1s;
     white-space: nowrap;
   }
+  .app-menu-item:hover,
   .tb-dropdown-item:hover { background: var(--surface-hover); color: var(--text); }
+  .app-menu-item.primary,
   .tb-dropdown-item.primary { color: var(--accent); }
+  .app-menu-item.primary:hover,
   .tb-dropdown-item.primary:hover { background: var(--accent-soft); }
+  .app-menu-item.danger,
   .tb-dropdown-item.danger { color: var(--danger); }
+  .app-menu-item.danger:hover,
   .tb-dropdown-item.danger:hover { background: var(--danger-soft); }
+  .app-menu-label,
   .tb-dropdown-label {
     padding: 7px 10px 5px;
     color: var(--text3);
@@ -104,8 +112,27 @@
     box-sizing: border-box;
   }
   .draft-name-input:focus { border-color: var(--accent); }
+  .app-menu-divider,
   .tb-dropdown-sep {
     height: 1px; background: var(--border); margin: 3px 6px;
+  }
+  .app-menu-item-icon {
+    width: 14px;
+    height: 14px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: currentColor;
+  }
+  .app-menu-item-icon svg {
+    width: 12px;
+    height: 12px;
+    display: block;
+  }
+  .app-menu-item-label {
+    min-width: 0;
+    flex: 1;
   }
   .tb-btn.dropdown-trigger svg.caret {
     margin-left: -2px; opacity: 0.5;
@@ -513,42 +540,26 @@
   top: calc(100% + 6px);
   right: 0;
   display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 112px;
-  padding: 4px;
-  border-radius: 9px;
-  border: 1px solid var(--border2);
-  background: var(--surface);
-  box-shadow: var(--shadow-floating);
+  min-width: 208px;
 }
-.context-toolbar-menu-item {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
+.context-toolbar-menu .app-menu-item {
   min-height: 28px;
   padding: 6px 9px;
   border-radius: 6px;
   border: 1px solid transparent;
-  background: transparent;
-  color: var(--text2);
-  font-family: 'Inter', sans-serif;
   font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
   transition: all 0.12s;
-  text-align: left;
 }
-.context-toolbar-menu-item:hover {
+.context-toolbar-menu .app-menu-item:hover {
   background: var(--surface-hover);
   border-color: var(--border2);
   color: var(--text);
 }
-.context-toolbar-menu-item:disabled {
+.context-toolbar-menu .app-menu-item:disabled {
   opacity: 0.42;
   cursor: default;
 }
-.context-toolbar-menu-item:disabled:hover {
+.context-toolbar-menu .app-menu-item:disabled:hover {
   background: transparent;
   border-color: transparent;
   color: inherit;
