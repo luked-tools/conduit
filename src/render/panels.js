@@ -389,7 +389,7 @@ function renderPropsPanel() {
       const connBtn = document.createElement('button');
       connBtn.className = 'prop-btn accent';
       connBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;width:100%;';
-connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="2.5" cy="6" r="1.5" fill="currentColor"/><circle cx="9.5" cy="6" r="1.5" fill="currentColor"/><line x1="4" y1="6" x2="8" y2="6" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2 1.2"/></svg> Quick connect from this node…';
+connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="2.5" cy="6" r="1.5" fill="currentColor"/><circle cx="9.5" cy="6" r="1.5" fill="currentColor"/><line x1="4" y1="6" x2="8" y2="6" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2 1.2"/></svg> Quick connect from this node...';
       connBtn.addEventListener('click', () => {
         selectNode(n.id);
         startQuickConnectMode(n.id);
@@ -850,6 +850,7 @@ function updateStatusBar() {
   }, 0);
   document.getElementById('sb-io').textContent = `â‡… ${totalIO} I/O`;
 }
+
 
 
 
