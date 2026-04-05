@@ -133,12 +133,14 @@ test.describe('Conduit smoke', () => {
     await addNode(page, 'external', 940, 700);
     const [firstId, secondId] = await getNodeIds(page);
 
-    await page.evaluate(id => selectNode(id), firstId);
-    await expect(page.locator('#context-toolbar')).toHaveClass(/visible/);
-    await expect(page.locator('#context-toolbar')).toContainText('Forward');
-    await page.evaluate(() => {
-      document.querySelector('#context-toolbar button[title="Move forward"]')?.click();
-    });
+  await page.evaluate(id => selectNode(id), firstId);
+  await expect(page.locator('#context-toolbar')).toHaveClass(/visible/);
+  await expect(page.locator('#context-toolbar')).toContainText('Forward');
+  await expect(page.locator('#context-toolbar')).toContainText('Style');
+  await expect(page.locator('#context-toolbar')).not.toContainText('Duplicate');
+  await page.evaluate(() => {
+    document.querySelector('#context-toolbar button[title="Move forward"]')?.click();
+  });
 
     await expect.poll(async () => page.evaluate(ids => {
       const first = state.nodes.find(node => node.id === ids.firstId);
@@ -156,14 +158,15 @@ test.describe('Conduit smoke', () => {
     const [firstId, secondId, thirdId] = await getNodeIds(page);
 
     await page.evaluate(id => selectNode(id), firstId);
-    await page.evaluate(() => {
-      document.querySelector('#context-toolbar button[title="More actions"]')?.click();
-    });
-    await expect(page.locator('#context-toolbar .context-toolbar-menu')).toBeVisible();
-    await page.evaluate(() => {
-      [...document.querySelectorAll('#context-toolbar .context-toolbar-menu-item')]
-        .find(btn => btn.textContent.trim() === 'To front')?.click();
-    });
+  await page.evaluate(() => {
+    document.querySelector('#context-toolbar button[title="More actions"]')?.click();
+  });
+  await expect(page.locator('#context-toolbar .context-toolbar-menu')).toBeVisible();
+  await expect(page.locator('#context-toolbar .context-toolbar-menu')).toContainText('Duplicate');
+  await page.evaluate(() => {
+    [...document.querySelectorAll('#context-toolbar .context-toolbar-menu-item')]
+      .find(btn => btn.textContent.trim() === 'To front')?.click();
+  });
 
     await expect.poll(async () => page.evaluate(ids => {
       return ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
@@ -176,12 +179,33 @@ test.describe('Conduit smoke', () => {
         .find(btn => btn.textContent.trim() === 'To back')?.click();
     });
 
-    await expect.poll(async () => page.evaluate(ids => {
-      return ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
-    }, [firstId, secondId, thirdId])).toEqual([3, 2, 1]);
+  await expect.poll(async () => page.evaluate(ids => {
+    return ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
+  }, [firstId, secondId, thirdId])).toEqual([3, 2, 1]);
+});
+
+test('context toolbar can toggle style brush from the primary row', async ({ page }) => {
+  await bootFresh(page);
+
+  await addNode(page, 'internal', 860, 620);
+  const [nodeId] = await getNodeIds(page);
+
+  await page.evaluate(id => selectNode(id), nodeId);
+  await page.evaluate(() => {
+    document.querySelector('#context-toolbar button[title="Start style brush"]')?.click();
   });
 
-  test('context toolbar more menu uses shared menu icons and dividers', async ({ page }) => {
+  await expect(page.locator('#style-brush-banner')).toHaveClass(/active/);
+  await expect(page.locator('#context-toolbar button[title="Cancel style brush"]')).toBeVisible();
+
+  await page.evaluate(() => {
+    document.querySelector('#context-toolbar button[title="Cancel style brush"]')?.click();
+  });
+
+  await expect(page.locator('#style-brush-banner')).not.toHaveClass(/active/);
+});
+
+test('context toolbar more menu uses shared menu icons and dividers', async ({ page }) => {
     await bootFresh(page);
 
     await addNode(page, 'internal', 860, 620);
@@ -193,7 +217,7 @@ test.describe('Conduit smoke', () => {
       document.querySelector('#context-toolbar button[title="More actions"]')?.click();
     });
 
-    await expect(page.locator('#context-toolbar .context-toolbar-menu .app-menu-item-icon svg')).toHaveCount(5);
+  await expect(page.locator('#context-toolbar .context-toolbar-menu .app-menu-item-icon svg')).toHaveCount(6);
     await expect(page.locator('#context-toolbar .context-toolbar-menu .app-menu-divider')).toHaveCount(2);
   });
 
