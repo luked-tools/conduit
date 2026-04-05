@@ -23,6 +23,13 @@ function selectNode(id) {
   if (typeof updateContextToolbar === 'function') updateContextToolbar();
 }
 
+function getSelectedArrowLayerZ() {
+  const topNodeLayer = state.nodes.reduce((max, node, index) => {
+    return Math.max(max, getNodeLayerValue(node, index));
+  }, 3);
+  return String(topNodeLayer + 10);
+}
+
 function selectArrow(id) {
   if (_nodeLayerTargetMode) cancelNodeLayerTargetMode();
   if (typeof _contextToolbarMenuOpen !== 'undefined') _contextToolbarMenuOpen = false;
@@ -52,7 +59,7 @@ function selectArrow(id) {
       toEl.dataset.hidePorts = [...ports].join(' ');
     }
   }
-  arrowSVG.style.zIndex = '4';
+  arrowSVG.style.zIndex = getSelectedArrowLayerZ();
   renderArrows();
   renderSidebar();
   if (typeof renderLayersPanel === 'function') renderLayersPanel();
