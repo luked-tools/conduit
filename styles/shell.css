@@ -308,6 +308,30 @@
 
   /* Properties panel */
   .prop-row { margin-bottom: var(--space-4); }
+  .prop-group {
+    margin-bottom: var(--space-5);
+    padding: 9px 10px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--surface) 90%, transparent);
+  }
+  .prop-group:last-child { margin-bottom: 0; }
+  .prop-group-title {
+    margin-bottom: 8px;
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .prop-group-body > .prop-row,
+  .prop-group-body > .prop-btn,
+  .prop-group-body > .prop-section-body,
+  .prop-group-body > .prop-section-head {
+    position: relative;
+  }
+  .prop-group-body > .prop-row:last-child { margin-bottom: 0; }
   .prop-label {
     font-family: 'Inter', sans-serif;
     font-size: 9.5px; font-weight: 600; letter-spacing: 0.04em;

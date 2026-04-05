@@ -61,6 +61,23 @@ function createPropSectionHeader(labelText, badgeText, sectionKey, bodyEl) {
   return header;
 }
 
+function appendPropGroup(host, title) {
+  const group = document.createElement('div');
+  group.className = 'prop-group';
+
+  const heading = document.createElement('div');
+  heading.className = 'prop-group-title';
+  heading.textContent = title;
+  group.appendChild(heading);
+
+  const body = document.createElement('div');
+  body.className = 'prop-group-body';
+  group.appendChild(body);
+
+  host.appendChild(group);
+  return body;
+}
+
 function renderSidebar() {
   const visibleNodes = state.nodes.filter(n => n.type !== 'boundary');
   document.getElementById('node-count').textContent = visibleNodes.length;
@@ -116,6 +133,10 @@ function renderPropsPanel() {
     if (!n) return;
 
     const isBoundary = n.type === 'boundary';
+    const identityBody = appendPropGroup(body, 'Identity');
+    const appearanceBody = appendPropGroup(body, 'Appearance');
+    const structureBody = !isBoundary ? appendPropGroup(body, 'Structure') : null;
+    const arrangeBody = appendPropGroup(body, 'Arrange');
     const fields = [
       {label:'Tag / ID', key:'tag', type:'text', placeholder:'e.g. ERP-01'},
       {label: isBoundary ? 'Label' : 'Title', key:'title', type:'textarea', placeholder: isBoundary ? 'Boundary label' : 'System name'},
@@ -141,12 +162,12 @@ function renderPropsPanel() {
       inp.placeholder = f.placeholder || '';
       inp.addEventListener('input', () => { n[f.key] = inp.value; renderNodes(); renderArrows(); });
       row.appendChild(inp);
-      body.appendChild(row);
+      identityBody.appendChild(row);
     });
 
     // Text colour controls for boundary nodes (no Content Style panel for them)
     if (n.type === 'boundary') {
-      function makeBoundaryColorRow(labelText, field, defaultVar) {
+      function makeBoundaryColorRow(host, labelText, field, defaultVar) {
         const row = document.createElement('div'); row.className = 'prop-row';
         const lbl = document.createElement('div'); lbl.className='prop-label'; lbl.textContent=labelText;
         row.appendChild(lbl);
@@ -165,14 +186,14 @@ function renderPropsPanel() {
         });
         inline.appendChild(inp); inline.appendChild(rst);
         row.appendChild(inline);
-        body.appendChild(row);
+        host.appendChild(row);
       }
-      makeBoundaryColorRow('Label colour',       'textColor',     '--text3');
-      makeBoundaryColorRow('Description colour', 'subtitleColor', '--text3');
+      makeBoundaryColorRow(appearanceBody, 'Label colour',       'textColor',     '--text3');
+      makeBoundaryColorRow(appearanceBody, 'Description colour', 'subtitleColor', '--text3');
     }
 
     // Type
-    addPropRow(body, 'Node type', () => {
+    addPropRow(identityBody, 'Node type', () => {
       const sel = document.createElement('select');
       sel.className = 'prop-select';
       ['internal','external','boundary'].forEach(t => {
@@ -184,10 +205,6 @@ function renderPropsPanel() {
       sel.addEventListener('change', () => { pushUndo(); n.type = sel.value; renderNodes(); });
       return sel;
     });
-
-    const typeDivider = document.createElement('div');
-    typeDivider.className = 'prop-divider';
-    body.appendChild(typeDivider);
 
     // Color
     const colorRow = document.createElement('div');
@@ -214,7 +231,7 @@ function renderPropsPanel() {
     });
     colorInline.appendChild(colorInp); colorInline.appendChild(colorReset);
     colorRow.appendChild(colorInline);
-    body.appendChild(colorRow);
+    appearanceBody.appendChild(colorRow);
     // Opacity slider
     const opRow = document.createElement('div'); opRow.className='prop-row';
     const opLbl = document.createElement('div'); opLbl.className='prop-label';
@@ -235,7 +252,7 @@ function renderPropsPanel() {
     }
     opSlider.addEventListener('input', () => { updateSliderPct(opSlider); updateNodeBg(); });
     opRow.appendChild(opSlider);
-    body.appendChild(opRow);
+    appearanceBody.appendChild(opRow);
 
 
 
@@ -250,7 +267,7 @@ function renderPropsPanel() {
         if (_apNodeId === n.id) { closeAppearancePanel(); }
         else { openAppearancePanel(n.id); }
       });
-      body.appendChild(apBtn);
+      appearanceBody.appendChild(apBtn);
     }
 
     // Style brush button
@@ -263,11 +280,7 @@ function renderPropsPanel() {
       if (_brushActive) { cancelStyleBrush(); }
       else { startStyleBrush(n.id); }
     });
-    body.appendChild(brushBtn);
-
-    const functionsDivider = document.createElement('div');
-    functionsDivider.className = 'prop-divider';
-    body.appendChild(functionsDivider);
+    appearanceBody.appendChild(brushBtn);
 
     // Functions — compact summary + open modal button
     if (n.type !== 'boundary') {
@@ -347,7 +360,7 @@ function renderPropsPanel() {
       fnBody.appendChild(editFnBtn);
 
       fnSection.appendChild(fnBody);
-      body.appendChild(fnSection);
+      structureBody.appendChild(fnSection);
     }
 
     // Connections — compact summary above the action button
@@ -423,18 +436,15 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       });
       connBody.appendChild(connBtn);
       connSection.appendChild(connBody);
-      body.appendChild(connSection);
+      structureBody.appendChild(connSection);
     }
 
-    const actionDivider = document.createElement('div');
-    actionDivider.className = 'prop-divider';
-    body.appendChild(actionDivider);
-
+    const layerPos = getNodeLayerPosition(n.id);
     const layerRow = document.createElement('div');
     layerRow.className = 'prop-row';
     const layerBody = document.createElement('div');
     layerBody.className = 'prop-section-body';
-    const layerHeader = createPropSectionHeader('Layer order', 'Arrange', 'layering', layerBody);
+    const layerHeader = createPropSectionHeader('Layer order', `Layer ${layerPos.index + 1} of ${layerPos.count}`, 'layering', layerBody);
     layerRow.appendChild(layerHeader);
     const layerGrid = document.createElement('div');
     layerGrid.style.cssText = 'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;';
@@ -483,7 +493,7 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
     });
     layerBody.appendChild(layerGrid);
     layerRow.appendChild(layerBody);
-    body.appendChild(layerRow);
+    arrangeBody.appendChild(layerRow);
 
     // Duplicate
     const dupBtn = document.createElement('button');

@@ -244,6 +244,8 @@ The sidebar is the product's operational control tower.
 - Support fast scanning with small labels, visible grouping, and compact form controls.
 - Use collapsible groups when content grows.
 - Empty states should tell the user what to select or do next.
+- Group related property controls with subtle framed sections rather than heavy filled cards.
+- In-sidebar groups should rely primarily on spacing, headings, and light borders; avoid dense grey fills that feel heavier than Theme or Layers.
 
 ### 7.3 Floating Panels
 

@@ -391,6 +391,15 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator('#sidebar .sb-section').nth(3).locator('.sb-body')).toHaveClass(/hidden/);
   });
 
+  test('selected node properties are grouped into identity appearance structure and arrange', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await page.locator('.node.internal').first().click();
+
+    await expect(page.locator('#props-body .prop-group-title')).toHaveText(['Identity', 'Appearance', 'Structure', 'Arrange']);
+  });
+
   test('newly added nodes and pasted nodes land on the top layer', async ({ page }) => {
     await bootFresh(page);
 
