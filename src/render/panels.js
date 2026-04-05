@@ -1,5 +1,7 @@
 // Render and properties panel helpers extracted from main.js
 let _nodeListFilter = '';
+const WELCOME_SEEN_KEY = 'conduit_welcome_seen_v1';
+let _showWelcomeCard = false;
 
 function setNodeListFilter(value) {
   _nodeListFilter = (value || '').trim().toLowerCase();
@@ -16,11 +18,38 @@ function render() {
   if (typeof updateContextToolbar === 'function') updateContextToolbar();
 }
 
+function initWelcomeCardState() {
+  try {
+    _showWelcomeCard = !localStorage.getItem(WELCOME_SEEN_KEY);
+  } catch (e) {
+    _showWelcomeCard = true;
+  }
+  updateWelcomeCard();
+}
+
+function dismissWelcomeCard() {
+  _showWelcomeCard = false;
+  try {
+    localStorage.setItem(WELCOME_SEEN_KEY, '1');
+  } catch (e) {}
+  updateWelcomeCard();
+}
+
+function updateWelcomeCard() {
+  const empty = document.getElementById('canvas-empty');
+  const welcome = document.getElementById('canvas-welcome-card');
+  if (!empty || !welcome) return;
+  const shouldShow = _showWelcomeCard && state.nodes.length === 0;
+  empty.classList.toggle('welcome-visible', shouldShow);
+  welcome.classList.toggle('visible', shouldShow);
+}
+
 function updateEmptyState() {
   const el = document.getElementById('canvas-empty');
   if (!el) return;
   const hasNodes = state.nodes.length > 0;
   el.classList.toggle('visible', !hasNodes);
+  updateWelcomeCard();
 }
 
 function createPropSectionHeader(labelText, badgeText, sectionKey, bodyEl) {

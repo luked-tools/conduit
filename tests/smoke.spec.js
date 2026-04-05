@@ -76,7 +76,19 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator('#canvas-wrap')).toBeVisible();
     await expect(page.locator('#sidebar')).toBeVisible();
     await expect(page.locator('.node')).toHaveCount(0);
+    await expect(page.locator('#canvas-welcome-card')).toHaveClass(/visible/);
     expect(pageErrors).toEqual([]);
+  });
+
+  test('first-launch welcome card dismisses and stays hidden after reload', async ({ page }) => {
+    await bootFresh(page);
+
+    await expect(page.locator('#canvas-welcome-card')).toHaveClass(/visible/);
+    await page.getByRole('button', { name: 'Dismiss quick start' }).click();
+    await expect(page.locator('#canvas-welcome-card')).not.toHaveClass(/visible/);
+
+    await page.reload();
+    await expect(page.locator('#canvas-welcome-card')).not.toHaveClass(/visible/);
   });
 
   test('can add a node from app helpers', async ({ page }) => {

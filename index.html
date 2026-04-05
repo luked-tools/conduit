@@ -281,6 +281,40 @@
 <button class="canvas-empty-btn" onclick="loadSampleIntoCurrentDraft()">Load sample</button>
         </div>
       </div>
+      <div id="canvas-welcome-card" aria-live="polite">
+        <div class="canvas-welcome-header">
+          <div class="canvas-welcome-kicker">First launch</div>
+          <button class="canvas-welcome-dismiss" onclick="dismissWelcomeCard()" aria-label="Dismiss quick start">×</button>
+        </div>
+        <div class="canvas-welcome-title">Quick start</div>
+          <div class="canvas-welcome-sub">Learn the core features, and jump straight in.</div>
+        <div class="canvas-welcome-tips">
+          <div class="canvas-welcome-tip">
+            <span class="canvas-welcome-tip-index">1</span>
+            <div>
+                <div class="canvas-welcome-tip-title">Add nodes from the Palette</div>
+                <div class="canvas-welcome-tip-copy">Start with internal systems, external entities, or a boundary box.</div>
+            </div>
+          </div>
+          <div class="canvas-welcome-tip">
+            <span class="canvas-welcome-tip-index">2</span>
+            <div>
+              <div class="canvas-welcome-tip-title">Connect by dragging from node ports</div>
+              <div class="canvas-welcome-tip-copy">Use the selected toolbar for quick connect, layering, rename, and style actions.</div>
+            </div>
+          </div>
+          <div class="canvas-welcome-tip">
+            <span class="canvas-welcome-tip-index">3</span>
+            <div>
+                <div class="canvas-welcome-tip-title">Open details when you need more control</div>
+                <div class="canvas-welcome-tip-copy">Use the sidebar for fast edits, then open panels or modals for functions, layers, theme, and deeper detail.</div>
+              </div>
+            </div>
+        </div>
+        <div class="canvas-welcome-actions">
+          <button class="canvas-empty-btn" onclick="dismissWelcomeCard()">Got it</button>
+        </div>
+      </div>
     </div>
 
     <!-- Zoom -->

@@ -52,6 +52,13 @@ Show the minimum needed for fast action, then reveal depth on demand.
 
 This pattern already exists in the document panel, property sections, appearance panel, and function editor flows and should remain the default.
 
+First-launch guidance should follow the same rule:
+
+- use one lightweight welcome surface, not a step-by-step tour
+- keep the canvas visible while teaching the first moves
+- explain only the core actions needed to start
+- make dismissal immediate and persistent
+
 ### 3.4 Direct Manipulation Wins
 
 If a task can be done by dragging, selecting, editing inline, or acting directly on an object, prefer that over distant controls.
