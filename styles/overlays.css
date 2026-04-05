@@ -538,6 +538,7 @@
 .context-toolbar-menu {
   position: absolute;
   top: calc(100% + 6px);
+  left: auto;
   right: 0;
   display: flex;
   min-width: 184px;
