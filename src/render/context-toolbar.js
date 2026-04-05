@@ -37,7 +37,7 @@ function getContextToolbarAnchor() {
 
 function shouldShowContextToolbar() {
   if (!selectedNode && !selectedArrow) return false;
-  if (wireActive || epDragActive || draggingNode || resizingNode || panDragging || _inlineNodeEditor || _nodeLayerTargetMode) return false;
+  if (wireActive || epDragActive || draggingNode || resizingNode || panDragging || _inlineNodeEditor || _nodeLayerTargetMode || _quickConnectMode) return false;
   return true;
 }
 
@@ -89,6 +89,12 @@ function renderContextToolbar() {
       label: 'Rename',
       icon: '✎',
       onClick: () => startInlineNodeEdit(nodeId)
+    }));
+    toolbar.appendChild(makeContextToolbarButton({
+      title: 'Quick connect to another node',
+      label: 'Connect',
+      icon: '→',
+      onClick: () => startQuickConnectMode(nodeId)
     }));
     toolbar.appendChild(makeContextToolbarButton({
       title: 'Move backward',

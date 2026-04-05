@@ -162,6 +162,10 @@ function createNodeEl(n) {
           applyNodeLayerTarget(n.id);
           return;
         }
+        if (_quickConnectMode) {
+          applyQuickConnectTarget(n.id);
+          return;
+        }
         if (selectedArrow && cp.classList.contains('arrow-endpoint-port')) {
           startEndpointDrag(selectedArrow, n.id, pos, e);
         } else {
@@ -207,6 +211,11 @@ function createNodeEl(n) {
     if (_nodeLayerTargetMode) {
       e.stopPropagation();
       if (n.id !== _nodeLayerTargetMode.sourceId) applyNodeLayerTarget(n.id);
+      return;
+    }
+    if (_quickConnectMode) {
+      e.stopPropagation();
+      if (n.id !== _quickConnectMode.sourceId) applyQuickConnectTarget(n.id);
       return;
     }
     selectNode(n.id);

@@ -197,6 +197,48 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator('#context-toolbar .context-toolbar-menu .app-menu-divider')).toHaveCount(2);
   });
 
+  test('context toolbar can quick connect a node to another node', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 980, 700);
+    const [sourceId, targetId] = await getNodeIds(page);
+
+    await page.evaluate(id => selectNode(id), sourceId);
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="Quick connect to another node"]')?.click();
+    });
+
+    await expect(page.locator('#quick-connect-banner')).toHaveClass(/active/);
+    await expect(page.locator('#context-toolbar')).not.toHaveClass(/visible/);
+
+    await page.locator(`#node-${targetId}`).click();
+
+    await expect(page.locator('#quick-connect-banner')).not.toHaveClass(/active/);
+    await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(1);
+    await expect.poll(async () => page.evaluate(() => {
+      const arrow = state.arrows[0];
+      return arrow ? { from: arrow.from, to: arrow.to, direction: arrow.direction, lineStyle: arrow.lineStyle } : null;
+    })).toEqual({ from: sourceId, to: targetId, direction: 'directed', lineStyle: 'curved' });
+  });
+
+  test('quick connect mode cancels on escape', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    const [sourceId] = await getNodeIds(page);
+
+    await page.evaluate(id => selectNode(id), sourceId);
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="Quick connect to another node"]')?.click();
+    });
+
+    await expect(page.locator('#quick-connect-banner')).toHaveClass(/active/);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#quick-connect-banner')).not.toHaveClass(/active/);
+    await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(0);
+  });
+
   test('node layer controls can move a node backward and to the back', async ({ page }) => {
     await bootFresh(page);
 
@@ -503,6 +545,21 @@ test.describe('Conduit smoke', () => {
     }, targetId)).toBe(true);
 
     await expect(page.locator(`#layers-panel .layers-row[data-kind="node"][data-id="${targetId}"]`)).toHaveClass(/selected/);
+  });
+
+  test('layers panel updates immediately when a selected node fill color changes', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await page.locator('#layers-toggle-btn').click();
+    await page.locator('.node.internal').first().click();
+
+    await page.locator('.prop-row input[type="color"]').first().evaluate((el, value) => {
+      el.value = value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }, '#ff3366');
+
+    await expect.poll(async () => page.locator('#layers-panel .layers-row.selected .layers-node-preview svg rect').first().getAttribute('fill')).toContain('#ff3366');
   });
 
   test('undo and redo restore node changes', async ({ page }) => {
@@ -1130,27 +1187,6 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect(page.locator('.node-quick-edit-panel')).toHaveCount(0);
   });
 
-  test('can create a connection from the connection modal', async ({ page }) => {
-    await bootFresh(page);
-
-    await addNode(page, 'internal', 860, 620);
-    await addNode(page, 'external', 1180, 620);
-
-    await page.locator('#connect-mode-btn').click();
-    await expect(page.locator('#conn-modal-overlay')).toHaveClass(/open/);
-
-    await page.locator('#conn-from-display').click();
-    await page.locator('#conn-from-list .conn-node-option').first().click();
-
-    await page.locator('#conn-to-display').click();
-    await page.locator('#conn-to-list .conn-node-option').nth(1).click();
-
-    await page.locator('#conn-label-input').fill('Orders feed');
-    await page.locator('#conn-create-btn').click();
-
-    await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(1);
-    await expect.poll(async () => page.evaluate(() => state.arrows[0].label)).toBe('Orders feed');
-  });
 
   test('theme preset survives reload', async ({ page }) => {
     await bootFresh(page);
@@ -1473,9 +1509,11 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect(page.locator('#nm-notes-area')).toHaveValue(payload.state.nodes[0].notes);
 
     await page.locator('#nm-close').click();
-    await page.locator('#connect-mode-btn').click();
-    await page.locator('#conn-from-display').click();
-    await expect(page.locator('#conn-from-list .conn-node-option').first()).toContainText(payload.state.nodes[0].title);
+    await page.locator('.node.internal').first().click();
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="Quick connect to another node"]')?.click();
+    });
+    await expect(page.locator('#quick-connect-banner')).toContainText('Quick connect');
   });
 
   test('invalid JSON import shows the canvas danger banner', async ({ page }, testInfo) => {

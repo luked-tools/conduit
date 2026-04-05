@@ -53,10 +53,6 @@
     <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M11 6.5A4.5 4.5 0 1 0 6.5 11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><polyline points="11,3.5 11,6.5 8,6.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
     Redo
   </button>
-  <button class="tb-btn" id="connect-mode-btn" onclick="openConnectModal(null)" title="Create a new connection between nodes">
-    <svg width="14" height="14" viewBox="0 0 14 14"><circle cx="2.5" cy="7" r="1.5" fill="currentColor"/><circle cx="11.5" cy="7" r="1.5" fill="currentColor"/><line x1="4" y1="7" x2="10" y2="7" stroke="currentColor" stroke-width="1.5" stroke-dasharray="2 1.5"/></svg>
-    Connect
-  </button>
   <div class="right">
     <div id="active-draft-chip" title="Active draft">Untitled draft</div>
     <div class="tb-sep"></div>
@@ -301,6 +297,11 @@
       <span id="layer-target-text">Layer order - click a node</span>
       <button id="layer-target-cancel" onclick="cancelNodeLayerTargetMode()">&#10005; Cancel</button>
     </div>
+    <div id="quick-connect-banner">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="3" cy="7" r="1.5" fill="currentColor"/><circle cx="11" cy="7" r="1.5" fill="currentColor"/><path d="M5 7h4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><path d="M7.8 4.7 10.1 7 7.8 9.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span id="quick-connect-text">Quick connect — click a node</span>
+      <button id="quick-connect-cancel" onclick="cancelQuickConnectMode()">&#10005; Cancel</button>
+    </div>
     <div id="canvas-notice-banner" role="status" aria-live="polite">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1.5 12.2 11a1 1 0 0 1-.88 1.5H2.68A1 1 0 0 1 1.8 11L7 1.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M7 4.4v3.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="7" cy="9.9" r=".7" fill="currentColor"/></svg>
       <span id="canvas-notice-text"></span>
@@ -338,138 +339,6 @@
   </div>
 </div>
 
-<!-- CONNECTION MODAL -->
-<div id="conn-modal-overlay">
-  <div id="conn-modal">
-    <div id="conn-modal-header">
-      <div class="conn-modal-icon">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <circle cx="3" cy="8" r="2" fill="var(--accent)"/>
-          <circle cx="13" cy="8" r="2" fill="var(--accent)"/>
-          <line x1="5" y1="8" x2="11" y2="8" stroke="var(--accent)" stroke-width="1.5" stroke-dasharray="2 1.5"/>
-        </svg>
-      </div>
-      <div>
-        <div id="conn-modal-title">New Connection</div>
-        <div id="conn-modal-sub">Link two nodes with a directional arrow</div>
-      </div>
-      <button id="conn-modal-close" onclick="closeConnectModal()">×</button>
-    </div>
-    <div id="conn-modal-body">
-
-      <!-- Node pickers — inline dropdown -->
-      <div class="conn-node-row">
-        <div class="conn-node-col">
-          <div class="conn-node-label">
-            <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="var(--accent)"/></svg>
-            From node
-          </div>
-          <div id="conn-from-display" class="conn-node-picker" onclick="openNodePicker('from')">
-            <div class="conn-node-picker-content"><div class="conn-node-picker-hint">Click to select…</div></div>
-            <div class="conn-node-picker-caret">▾</div>
-            <div class="conn-node-dropdown">
-              <input class="conn-node-dropdown-search" id="conn-from-search" type="text" placeholder="Search…" onclick="event.stopPropagation()">
-              <div class="conn-node-dropdown-list" id="conn-from-list"></div>
-            </div>
-          </div>
-        </div>
-        <div class="conn-swap-col" style="padding-top:22px;">
-          <button class="conn-swap-btn" onclick="swapConnNodes()" title="Swap from / to">⇄</button>
-        </div>
-        <div class="conn-node-col">
-          <div class="conn-node-label">
-            <svg width="8" height="8" viewBox="0 0 8 8"><circle cx="4" cy="4" r="3" fill="var(--accent2)"/></svg>
-            To node
-          </div>
-          <div id="conn-to-display" class="conn-node-picker" onclick="openNodePicker('to')">
-            <div class="conn-node-picker-content"><div class="conn-node-picker-hint">Click to select…</div></div>
-            <div class="conn-node-picker-caret">▾</div>
-            <div class="conn-node-dropdown">
-              <input class="conn-node-dropdown-search" id="conn-to-search" type="text" placeholder="Search…" onclick="event.stopPropagation()">
-              <div class="conn-node-dropdown-list" id="conn-to-list"></div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Legacy search wrap (kept for JS compat, hidden) -->
-      <div id="conn-picker-wrap" style="display:none;">
-        <input id="conn-node-search" type="text">
-        <div id="conn-node-list"></div>
-        <div id="conn-picker-label"></div>
-      </div>
-
-      <!-- Direction -->
-      <div class="conn-section-label">Direction</div>
-      <div class="conn-dir-row">
-        <div class="conn-dir-btn active" data-dir="directed" onclick="setConnDir('directed')">
-          <div class="conn-dir-icon">→</div>
-          <div class="conn-dir-name">Directed</div>
-        </div>
-        <div class="conn-dir-btn" data-dir="bidirectional" onclick="setConnDir('bidirectional')">
-          <div class="conn-dir-icon">↔</div>
-          <div class="conn-dir-name">Bidirectional</div>
-        </div>
-        <div class="conn-dir-btn" data-dir="undirected" onclick="setConnDir('undirected')">
-          <div class="conn-dir-icon">──</div>
-          <div class="conn-dir-name">Undirected</div>
-        </div>
-      </div>
-
-      <!-- Port selectors -->
-      <div class="conn-port-row">
-        <div class="conn-port-col">
-          <div class="conn-port-label">From port</div>
-          <div class="conn-port-grid" id="conn-from-ports">
-            <div class="conn-port-btn" data-port="n" onclick="setConnPort('from','n')">↑ Top</div>
-            <div class="conn-port-btn" data-port="e" onclick="setConnPort('from','e')">→ Right</div>
-            <div class="conn-port-btn active" data-port="auto" onclick="setConnPort('from','auto')">⊕ Auto</div>
-            <div class="conn-port-btn" data-port="s" onclick="setConnPort('from','s')">↓ Bottom</div>
-            <div class="conn-port-btn" data-port="w" onclick="setConnPort('from','w')">← Left</div>
-          </div>
-        </div>
-        <div class="conn-port-col">
-          <div class="conn-port-label">To port</div>
-          <div class="conn-port-grid" id="conn-to-ports">
-            <div class="conn-port-btn" data-port="n" onclick="setConnPort('to','n')">↑ Top</div>
-            <div class="conn-port-btn" data-port="e" onclick="setConnPort('to','e')">→ Right</div>
-            <div class="conn-port-btn active" data-port="auto" onclick="setConnPort('to','auto')">⊕ Auto</div>
-            <div class="conn-port-btn" data-port="s" onclick="setConnPort('to','s')">↓ Bottom</div>
-            <div class="conn-port-btn" data-port="w" onclick="setConnPort('to','w')">← Left</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Label -->
-      <div class="conn-section-label">Data flow label <span style="font-weight:400;letter-spacing:0;text-transform:none;font-family:'IBM Plex Sans',sans-serif;font-size:9px;color:var(--text3);">— optional</span></div>
-      <div class="conn-label-row">
-        <input id="conn-label-input" class="conn-label-input" type="text" placeholder="e.g. Sales order / forecast">
-      </div>
-
-      <!-- Live preview -->
-      <div class="conn-preview" id="conn-preview">
-        <div id="conn-preview-from" class="conn-preview-from" style="opacity:0.35">From</div>
-        <div class="conn-preview-arrow">
-          <div class="conn-preview-line" id="conn-preview-line">──→</div>
-          <div class="conn-preview-label" id="conn-preview-lbl"></div>
-        </div>
-        <div id="conn-preview-to" class="conn-preview-to" style="opacity:0.35">To</div>
-      </div>
-
-      <!-- Existing connections (shown when fromNode selected) -->
-      <div id="conn-existing-wrap" style="display:none;">
-        <div class="conn-section-label" style="margin-bottom:8px;">Existing connections from this node</div>
-        <div id="conn-existing-list"></div>
-      </div>
-
-    </div>
-    <div id="conn-modal-footer">
-      <span class="conn-error" id="conn-error"></span>
-      <button class="tb-btn" onclick="closeConnectModal()">Cancel</button>
-      <button class="conn-create-btn" id="conn-create-btn" onclick="createConnection()">Create Connection</button>
-    </div>
-  </div>
-</div>
 
 <!-- FUNCTION EDITOR MODAL -->
 <div id="fn-modal-overlay">
@@ -655,8 +524,9 @@
 <script src="src/features/html-export.js"></script>
 <script src="src/interactions/viewport.js"></script>
 <script src="src/features/function-editor.js"></script>
-<script src="src/features/connection-modal.js"></script>
 <script src="src/render/panels.js"></script>
 <script src="src/main.js"></script>
 </body>
 </html>
+
+

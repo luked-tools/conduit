@@ -183,6 +183,7 @@ function renderPropsPanel() {
         n.type === 'external' ? '--node-external' : '--node-internal'
       ).trim().replace(/^#([0-9a-f]{6})[0-9a-f]{0,2}$/i,'#$1') || '#ffffff';
       opacitySlider.value=255; updateSliderPct(opacitySlider); renderNodes();
+      if (typeof renderLayersPanel === 'function') renderLayersPanel();
     });
     colorInline.appendChild(colorInp); colorInline.appendChild(colorReset);
     colorRow.appendChild(colorInline);
@@ -203,6 +204,7 @@ function renderPropsPanel() {
       n.colorOpacity = parseInt(opSlider.value);
       opLbl.textContent = 'Fill opacity — ' + Math.round(n.colorOpacity/255*100) + '%';
       renderNodes();
+      if (typeof renderLayersPanel === 'function') renderLayersPanel();
     }
     opSlider.addEventListener('input', () => { updateSliderPct(opSlider); updateNodeBg(); });
     opRow.appendChild(opSlider);
@@ -387,8 +389,11 @@ function renderPropsPanel() {
       const connBtn = document.createElement('button');
       connBtn.className = 'prop-btn accent';
       connBtn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;width:100%;';
-      connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="2.5" cy="6" r="1.5" fill="currentColor"/><circle cx="9.5" cy="6" r="1.5" fill="currentColor"/><line x1="4" y1="6" x2="8" y2="6" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2 1.2"/></svg> New connection…';
-      connBtn.addEventListener('click', () => openConnectModal(n.id));
+connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="2.5" cy="6" r="1.5" fill="currentColor"/><circle cx="9.5" cy="6" r="1.5" fill="currentColor"/><line x1="4" y1="6" x2="8" y2="6" stroke="currentColor" stroke-width="1.3" stroke-dasharray="2 1.2"/></svg> Quick connect from this node...';
+      connBtn.addEventListener('click', () => {
+        selectNode(n.id);
+        startQuickConnectMode(n.id);
+      });
       connBody.appendChild(connBtn);
       connSection.appendChild(connBody);
       body.appendChild(connSection);
@@ -845,3 +850,10 @@ function updateStatusBar() {
   }, 0);
   document.getElementById('sb-io').textContent = `⇅ ${totalIO} I/O`;
 }
+
+
+
+
+
+
+
