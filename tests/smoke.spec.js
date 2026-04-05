@@ -91,7 +91,7 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator('#canvas-welcome-card')).not.toHaveClass(/visible/);
   });
 
-  test('help modal opens with quick start and product background', async ({ page }) => {
+  test('help modal opens with tabs and product background', async ({ page }) => {
     await bootFresh(page);
 
     await page.getByRole('button', { name: 'Dismiss quick start' }).click();
@@ -100,8 +100,12 @@ test.describe('Conduit smoke', () => {
     await page.getByRole('button', { name: 'Help' }).click();
     await expect(page.locator('#modal-overlay')).toHaveClass(/open/);
     await expect(page.locator('#modal-title')).toHaveText('Help');
-    await expect(page.locator('#modal-body')).toContainText('Quick Start');
-    await expect(page.locator('#modal-body')).toContainText('About Conduit');
+    await expect(page.locator('.help-modal-tab')).toHaveCount(3);
+    await expect(page.locator('.help-modal-panel.active')).toContainText('Quick Start');
+    await page.locator('.help-modal-tab', { hasText: 'Workflows' }).click();
+    await expect(page.locator('.help-modal-panel.active')).toContainText('interactive HTML');
+    await page.locator('.help-modal-tab', { hasText: 'About' }).click();
+    await expect(page.locator('.help-modal-panel.active')).toContainText('interactive exports');
   });
 
   test('can add a node from app helpers', async ({ page }) => {

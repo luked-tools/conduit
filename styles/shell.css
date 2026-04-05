@@ -947,15 +947,49 @@
   .modal h3 { font-size: 14px; font-weight: 600; margin-bottom: var(--space-7); color: var(--text); }
   .modal-btns { display: flex; gap: var(--space-3); margin-top: var(--space-8); justify-content: flex-end; }
   .help-modal-body {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 520px;
+    }
+  .help-modal-tabs {
+    display: inline-flex;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--surface2) 88%, transparent);
+    align-self: flex-start;
   }
+  .help-modal-tab {
+    min-height: 28px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .help-modal-tab:hover {
+    background: var(--surface-hover);
+    border-color: var(--border2);
+    color: var(--text);
+  }
+  .help-modal-tab.active {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--accent3);
+  }
+  .help-modal-panel { display: none; }
+  .help-modal-panel.active { display: block; }
   .help-modal-section {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     padding: 11px 12px;
     border: 1px solid var(--border);
     border-radius: 9px;
@@ -1015,10 +1049,10 @@
     color: var(--text2);
   }
   .help-modal-meta {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
-  }
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
   .help-modal-meta > div {
     display: flex;
     flex-direction: column;
@@ -1036,10 +1070,23 @@
     color: var(--text3);
   }
   .help-modal-meta strong {
-    font-size: 10.5px;
-    line-height: 1.45;
-    color: var(--text);
-    font-weight: 600;
+      font-size: 10.5px;
+      line-height: 1.45;
+      color: var(--text);
+      font-weight: 600;
+    }
+  @media (max-width: 640px) {
+    .help-modal-tabs {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    .help-modal-tab {
+      justify-content: center;
+    }
+    .help-modal-meta {
+      grid-template-columns: 1fr;
+    }
   }
 
   /* Tooltips */
