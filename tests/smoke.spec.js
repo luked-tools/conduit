@@ -531,6 +531,21 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator(`#layers-panel .layers-row[data-kind="node"][data-id="${targetId}"]`)).toHaveClass(/selected/);
   });
 
+  test('layers panel updates immediately when a selected node fill color changes', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await page.locator('#layers-toggle-btn').click();
+    await page.locator('.node.internal').first().click();
+
+    await page.locator('.prop-row input[type="color"]').first().evaluate((el, value) => {
+      el.value = value;
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    }, '#ff3366');
+
+    await expect.poll(async () => page.locator('#layers-panel .layers-row.selected .layers-node-preview svg rect').first().getAttribute('fill')).toContain('#ff3366');
+  });
+
   test('undo and redo restore node changes', async ({ page }) => {
     await bootFresh(page);
 

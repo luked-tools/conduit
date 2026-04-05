@@ -183,6 +183,7 @@ function renderPropsPanel() {
         n.type === 'external' ? '--node-external' : '--node-internal'
       ).trim().replace(/^#([0-9a-f]{6})[0-9a-f]{0,2}$/i,'#$1') || '#ffffff';
       opacitySlider.value=255; updateSliderPct(opacitySlider); renderNodes();
+      if (typeof renderLayersPanel === 'function') renderLayersPanel();
     });
     colorInline.appendChild(colorInp); colorInline.appendChild(colorReset);
     colorRow.appendChild(colorInline);
@@ -203,6 +204,7 @@ function renderPropsPanel() {
       n.colorOpacity = parseInt(opSlider.value);
       opLbl.textContent = 'Fill opacity — ' + Math.round(n.colorOpacity/255*100) + '%';
       renderNodes();
+      if (typeof renderLayersPanel === 'function') renderLayersPanel();
     }
     opSlider.addEventListener('input', () => { updateSliderPct(opSlider); updateNodeBg(); });
     opRow.appendChild(opSlider);
@@ -848,4 +850,9 @@ function updateStatusBar() {
   }, 0);
   document.getElementById('sb-io').textContent = `⇅ ${totalIO} I/O`;
 }
+
+
+
+
+
 
