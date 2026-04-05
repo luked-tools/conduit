@@ -111,6 +111,38 @@
     text-transform: uppercase;
     color: var(--text3);
   }
+  .layers-panel-filter {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px;
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--surface2) 88%, transparent);
+    flex-shrink: 0;
+  }
+  .layers-filter-btn {
+    min-height: 22px;
+    padding: 3px 8px;
+    border: 1px solid transparent;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .layers-filter-btn:hover {
+    color: var(--text);
+    background: var(--surface-hover);
+  }
+  .layers-filter-btn.active {
+    color: var(--accent3);
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
   #layers-panel-close {
     width: 24px;
     height: 24px;
@@ -169,6 +201,7 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
+    min-height: 0;
   }
   .layers-empty {
     padding: 10px 12px;

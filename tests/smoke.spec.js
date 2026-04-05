@@ -431,6 +431,64 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator('#context-toolbar')).toContainText('Forward');
   });
 
+  test('layers panel filter can switch between nodes and connections', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 840, 620);
+    await addNode(page, 'external', 1120, 620);
+    const [fromId, toId] = await getNodeIds(page);
+    await dragBetween(
+      page,
+      `#node-${fromId} .conn-point[data-pos="e"]`,
+      `#node-${toId} .conn-point[data-pos="w"]`
+    );
+
+    await page.locator('#layers-toggle-btn').click();
+    await expect(page.locator('#layers-panel')).toHaveClass(/open/);
+
+    await page.locator('#layers-panel-filter .layers-filter-btn[data-filter="nodes"]').click();
+    await expect(page.locator('#layers-panel .layers-section[data-section="nodes"]')).toBeVisible();
+    await expect(page.locator('#layers-panel .layers-section[data-section="connections"]')).toHaveCount(0);
+
+    await page.locator('#layers-panel-filter .layers-filter-btn[data-filter="connections"]').click();
+    await expect(page.locator('#layers-panel .layers-section[data-section="connections"]')).toBeVisible();
+    await expect(page.locator('#layers-panel .layers-section[data-section="nodes"]')).toHaveCount(0);
+
+    await page.locator('#layers-panel-filter .layers-filter-btn[data-filter="all"]').click();
+    await expect(page.locator('#layers-panel .layers-section[data-section="nodes"]')).toBeVisible();
+    await expect(page.locator('#layers-panel .layers-section[data-section="connections"]')).toBeVisible();
+  });
+
+  test('layers panel scrolls selected item into view', async ({ page }) => {
+    await bootFresh(page);
+
+    for (let i = 0; i < 30; i += 1) {
+      await addNode(page, 'internal', 820 + (i % 3) * 120, 560 + i * 28);
+    }
+    const ids = await getNodeIds(page);
+    const targetId = ids[ids.length - 1];
+
+    await page.locator('#layers-toggle-btn').click();
+    await expect(page.locator('#layers-panel')).toHaveClass(/open/);
+    await page.evaluate(() => {
+      const body = document.getElementById('layers-panel-body');
+      if (body) body.scrollTop = 0;
+    });
+
+    await page.evaluate(id => selectNode(id), targetId);
+
+    await expect.poll(async () => page.evaluate(id => {
+      const body = document.getElementById('layers-panel-body');
+      const row = document.querySelector(`#layers-panel .layers-row[data-kind="node"][data-id="${id}"]`);
+      if (!body || !row) return false;
+      const bodyRect = body.getBoundingClientRect();
+      const rowRect = row.getBoundingClientRect();
+      return rowRect.top >= bodyRect.top && rowRect.bottom <= bodyRect.bottom;
+    }, targetId)).toBe(true);
+
+    await expect(page.locator(`#layers-panel .layers-row[data-kind="node"][data-id="${targetId}"]`)).toHaveClass(/selected/);
+  });
+
   test('undo and redo restore node changes', async ({ page }) => {
     await bootFresh(page);
 

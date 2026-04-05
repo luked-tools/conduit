@@ -1,5 +1,6 @@
 let _layersPanelOpen = false;
 let _layersPanelDragState = null;
+let _layersPanelFilter = 'all';
 
 function toggleLayersPanel(force) {
   const next = typeof force === 'boolean' ? force : !_layersPanelOpen;
@@ -20,6 +21,26 @@ function closeLayersPanel() {
   toggleLayersPanel(false);
 }
 
+function setLayersPanelFilter(filter) {
+  const next = ['all', 'nodes', 'connections'].includes(filter) ? filter : 'all';
+  if (_layersPanelFilter === next) return;
+  _layersPanelFilter = next;
+  if (_layersPanelOpen) renderLayersPanel();
+}
+
+function updateLayersPanelFilterIndicator() {
+  const filter = document.getElementById('layers-panel-filter');
+  if (!filter) return;
+  const indicator = filter.querySelector('.layers-filter-indicator');
+  const activeBtn = filter.querySelector('.layers-filter-btn.active');
+  if (!indicator || !activeBtn) return;
+
+  const left = activeBtn.offsetLeft;
+  const width = activeBtn.offsetWidth;
+  indicator.style.width = `${width}px`;
+  indicator.style.transform = `translateX(${left}px)`;
+}
+
 function clearLayersDropIndicators() {
   document.querySelectorAll('.layers-row.drag-before, .layers-row.drag-after, .layers-row.dragging').forEach(el => {
     el.classList.remove('drag-before', 'drag-after', 'dragging');
@@ -29,6 +50,29 @@ function clearLayersDropIndicators() {
 function finishLayersDrag() {
   _layersPanelDragState = null;
   clearLayersDropIndicators();
+}
+
+function scrollLayersPanelSelectionIntoView() {
+  const body = document.getElementById('layers-panel-body');
+  if (!body || !_layersPanelOpen) return;
+  const selected = body.querySelector('.layers-row.selected');
+  if (!selected) return;
+  requestAnimationFrame(() => {
+    selected.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  });
+}
+
+function handleLayersPanelAutoScroll(clientY) {
+  const body = document.getElementById('layers-panel-body');
+  if (!body || !_layersPanelDragState) return;
+  const rect = body.getBoundingClientRect();
+  const threshold = 36;
+  const step = 16;
+  if (clientY < rect.top + threshold) {
+    body.scrollTop -= step;
+  } else if (clientY > rect.bottom - threshold) {
+    body.scrollTop += step;
+  }
 }
 
 function getLayerActionIcon(action) {
@@ -236,6 +280,7 @@ function makeLayersRow({ kind, id, nodeType = '', previewMarkup = '', title, met
 function renderLayersSection(body, title, badge, emptyText, rows) {
   const section = document.createElement('div');
   section.className = 'layers-section';
+  section.dataset.section = title.toLowerCase().includes('connection') ? 'connections' : 'nodes';
 
   const header = document.createElement('div');
   header.className = 'layers-section-header';
@@ -244,6 +289,13 @@ function renderLayersSection(body, title, badge, emptyText, rows) {
 
   const list = document.createElement('div');
   list.className = 'layers-list';
+  list.addEventListener('dragover', e => {
+    handleLayersPanelAutoScroll(e.clientY);
+    if (!_layersPanelDragState) return;
+    e.preventDefault();
+    const row = e.target.closest('.layers-row');
+    if (!row) clearLayersDropIndicators();
+  });
   if (!rows.length) {
     const empty = document.createElement('div');
     empty.className = 'layers-empty';
@@ -260,9 +312,47 @@ function renderLayersSection(body, title, badge, emptyText, rows) {
 function renderLayersPanel() {
   const panel = document.getElementById('layers-panel');
   const body = document.getElementById('layers-panel-body');
+  const header = document.getElementById('layers-panel-header');
   if (!panel || !body || !_layersPanelOpen) return;
 
+  if (header) {
+    let filter = document.getElementById('layers-panel-filter');
+    if (!filter) {
+      filter = document.createElement('div');
+      filter.id = 'layers-panel-filter';
+      filter.className = 'layers-panel-filter';
+      filter.setAttribute('role', 'tablist');
+      const indicator = document.createElement('div');
+      indicator.className = 'layers-filter-indicator';
+      filter.appendChild(indicator);
+      [
+        ['all', 'All'],
+        ['nodes', 'Nodes'],
+        ['connections', 'Connections']
+      ].forEach(([value, label]) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'layers-filter-btn';
+        btn.dataset.filter = value;
+        btn.textContent = label;
+        btn.addEventListener('click', () => setLayersPanelFilter(value));
+        filter.appendChild(btn);
+      });
+      header.appendChild(filter);
+    }
+    filter.querySelectorAll('.layers-filter-btn').forEach(btn => {
+      const active = btn.dataset.filter === _layersPanelFilter;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+    requestAnimationFrame(updateLayersPanelFilterIndicator);
+  }
+
   body.innerHTML = '';
+  body.dataset.filter = _layersPanelFilter;
+  body.ondragover = e => {
+    handleLayersPanelAutoScroll(e.clientY);
+  };
 
   const nodeRows = getSortedNodeLayerEntries().slice().reverse().map(entry => {
     const node = entry.node;
@@ -313,6 +403,12 @@ function renderLayersPanel() {
     });
   });
 
-  renderLayersSection(body, 'Node Layers', `${state.nodes.length}`, 'No nodes yet', nodeRows);
-  renderLayersSection(body, 'Connection Layers', `${state.arrows.length}`, 'No connections yet', arrowRows);
+  if (_layersPanelFilter !== 'connections') {
+    renderLayersSection(body, 'Node Layers', `${state.nodes.length}`, 'No nodes yet', nodeRows);
+  }
+  if (_layersPanelFilter !== 'nodes') {
+    renderLayersSection(body, 'Connection Layers', `${state.arrows.length}`, 'No connections yet', arrowRows);
+  }
+
+  scrollLayersPanelSelectionIntoView();
 }
