@@ -280,6 +280,14 @@ Rules:
 - Icon-only buttons require a tooltip or a very obvious nearby label.
 - Disabled buttons should still look intentional, not broken.
 
+Segmented controls:
+
+- Use segmented controls for small, mutually exclusive view or mode switches.
+- Prefer a shared container with a sliding active selector over styling each option as an unrelated button.
+- The active segment should move, not blink between disconnected fills.
+- Labels in segmented controls should stay short and scannable.
+- This pattern is appropriate for compact switches such as direction, mode, or scoped panel filters.
+
 ### 7.6 Inputs
 
 - Use clear labels for all structured form inputs.

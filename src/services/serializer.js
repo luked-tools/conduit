@@ -21,6 +21,12 @@ function applyDiagramPayload(data) {
   state = data?.state ? JSON.parse(JSON.stringify(data.state)) : { nodes: [], arrows: [] };
   if (!Array.isArray(state.nodes)) state.nodes = [];
   if (!Array.isArray(state.arrows)) state.arrows = [];
+  if (state.nodes.some(node => typeof node?.z !== 'number' || !Number.isFinite(node.z))) {
+    normalizeNodeLayers(getSortedNodeLayerEntries());
+  }
+  if (state.arrows.some(arrow => typeof arrow?.z !== 'number' || !Number.isFinite(arrow.z))) {
+    normalizeArrowLayers(getSortedArrowLayerEntries());
+  }
   const ti = document.getElementById('diagram-title-input');
   const si = document.getElementById('diagram-subtitle-input');
   if (ti) ti.value = data?.title || '';

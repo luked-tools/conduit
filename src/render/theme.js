@@ -260,6 +260,9 @@ function buildThemeRows(containerId, rows) {
     lbl.textContent = row.label;
     div.appendChild(lbl);
 
+    const controls = document.createElement('div');
+    controls.className = 'theme-row-controls';
+
     // Hex text input
     const hexInp = document.createElement('input');
     hexInp.type = 'text';
@@ -294,8 +297,9 @@ function buildThemeRows(containerId, rows) {
     });
     swatch.appendChild(picker);
 
-    div.appendChild(hexInp);
-    div.appendChild(swatch);
+    controls.appendChild(hexInp);
+    controls.appendChild(swatch);
+    div.appendChild(controls);
     el.appendChild(div);
   });
 }

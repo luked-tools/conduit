@@ -25,6 +25,12 @@ async function getNodeIds(page) {
   return page.evaluate(() => state.nodes.map(node => node.id));
 }
 
+async function openLayerOrderSection(page) {
+  const frontButton = page.getByRole('button', { name: 'To front' }).first();
+  if (await frontButton.isVisible().catch(() => false)) return;
+  await page.locator('.prop-section-head', { hasText: 'Layer order' }).click();
+}
+
 async function dragBetween(page, fromSelector, toSelector) {
   const from = page.locator(fromSelector);
   const to = page.locator(toSelector);
@@ -97,6 +103,7 @@ test.describe('Conduit smoke', () => {
     }, { firstId, secondId })).toEqual([1, 2]);
 
     await page.evaluate(id => selectNode(id), firstId);
+    await openLayerOrderSection(page);
     await page.getByRole('button', { name: 'To front' }).click();
 
     await expect.poll(async () => page.evaluate(ids => {
@@ -187,6 +194,7 @@ test.describe('Conduit smoke', () => {
     }, [firstId, secondId, thirdId])).toEqual([1, 2, 3]);
 
     await page.evaluate(id => selectNode(id), thirdId);
+    await openLayerOrderSection(page);
     await page.getByRole('button', { name: 'Backward' }).click();
 
     await expect.poll(async () => page.evaluate(ids => {
@@ -209,6 +217,7 @@ test.describe('Conduit smoke', () => {
     const [firstId, secondId, thirdId] = await getNodeIds(page);
 
     await page.evaluate(id => selectNode(id), firstId);
+    await openLayerOrderSection(page);
     await page.getByRole('button', { name: 'In front of...' }).click();
 
     await expect(page.locator('#layer-target-banner')).toHaveClass(/active/);
@@ -273,6 +282,7 @@ test.describe('Conduit smoke', () => {
     }, overlapPoint)).toBe(`node-${topId}`);
 
     await page.evaluate(id => selectNode(id), bottomId);
+    await openLayerOrderSection(page);
     await page.getByRole('button', { name: 'To front' }).click();
 
     await expect.poll(async () => page.evaluate(({ x, y }) => {
@@ -319,6 +329,7 @@ test.describe('Conduit smoke', () => {
     const [firstId, secondId] = await getNodeIds(page);
 
     await page.evaluate(id => selectNode(id), firstId);
+    await openLayerOrderSection(page);
     await page.getByRole('button', { name: 'To front' }).click();
 
     const exportPayload = await page.evaluate(() => buildExportHTML({
@@ -351,6 +362,131 @@ test.describe('Conduit smoke', () => {
 
     await exportPage.close();
     fs.unlinkSync(exportPath);
+  });
+
+  test('layers panel can drag reorder node layers', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 840, 620);
+    await addNode(page, 'external', 920, 680);
+    await addNode(page, 'internal', 1000, 740);
+    const [firstId, secondId, thirdId] = await getNodeIds(page);
+
+    await page.locator('#layers-toggle-btn').click();
+    await expect(page.locator('#layers-panel')).toHaveClass(/open/);
+
+    const firstHandle = page.locator(`#layers-panel .layers-row[data-kind="node"][data-id="${firstId}"] .layers-drag-handle`);
+    const thirdRow = page.locator(`#layers-panel .layers-row[data-kind="node"][data-id="${thirdId}"]`);
+    await firstHandle.dragTo(thirdRow, { targetPosition: { x: 20, y: 2 } });
+
+    await expect.poll(async () => page.evaluate(ids => {
+      return ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
+    }, [firstId, secondId, thirdId])).toEqual([3, 1, 2]);
+  });
+
+  test('layers panel can drag reorder connection layers', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 760, 520);
+    await addNode(page, 'external', 1160, 520);
+    await addNode(page, 'internal', 760, 820);
+    await addNode(page, 'external', 1160, 820);
+    const [topLeftId, topRightId, bottomLeftId, bottomRightId] = await getNodeIds(page);
+
+    await dragBetween(
+      page,
+      `#node-${topLeftId} .conn-point[data-pos="e"]`,
+      `#node-${bottomRightId} .conn-point[data-pos="w"]`
+    );
+    await dragBetween(
+      page,
+      `#node-${bottomLeftId} .conn-point[data-pos="e"]`,
+      `#node-${topRightId} .conn-point[data-pos="w"]`
+    );
+    const [firstArrowId, secondArrowId] = await page.evaluate(() => state.arrows.map(arrow => arrow.id));
+
+    await page.locator('#layers-toggle-btn').click();
+    await expect(page.locator('#layers-panel')).toHaveClass(/open/);
+
+    const firstHandle = page.locator(`#layers-panel .layers-row[data-kind="arrow"][data-id="${firstArrowId}"] .layers-drag-handle`);
+    const secondRow = page.locator(`#layers-panel .layers-row[data-kind="arrow"][data-id="${secondArrowId}"]`);
+    await firstHandle.dragTo(secondRow, { targetPosition: { x: 20, y: 2 } });
+
+    await expect.poll(async () => page.evaluate(ids => {
+      return ids.map(id => state.arrows.find(arrow => arrow.id === id)?.z ?? null);
+    }, [firstArrowId, secondArrowId])).toEqual([2, 1]);
+  });
+
+  test('context toolbar stays visible while layers panel is open', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 900, 650);
+    const [nodeId] = await getNodeIds(page);
+
+    await page.evaluate(id => selectNode(id), nodeId);
+    await page.locator('#layers-toggle-btn').click();
+
+    await expect(page.locator('#layers-panel')).toHaveClass(/open/);
+    await expect(page.locator('#context-toolbar')).toHaveClass(/visible/);
+    await expect(page.locator('#context-toolbar')).toContainText('Forward');
+  });
+
+  test('layers panel filter can switch between nodes and connections', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 840, 620);
+    await addNode(page, 'external', 1120, 620);
+    const [fromId, toId] = await getNodeIds(page);
+    await dragBetween(
+      page,
+      `#node-${fromId} .conn-point[data-pos="e"]`,
+      `#node-${toId} .conn-point[data-pos="w"]`
+    );
+
+    await page.locator('#layers-toggle-btn').click();
+    await expect(page.locator('#layers-panel')).toHaveClass(/open/);
+
+    await page.locator('#layers-panel-filter .layers-filter-btn[data-filter="nodes"]').click();
+    await expect(page.locator('#layers-panel .layers-section[data-section="nodes"]')).toBeVisible();
+    await expect(page.locator('#layers-panel .layers-section[data-section="connections"]')).toHaveCount(0);
+
+    await page.locator('#layers-panel-filter .layers-filter-btn[data-filter="connections"]').click();
+    await expect(page.locator('#layers-panel .layers-section[data-section="connections"]')).toBeVisible();
+    await expect(page.locator('#layers-panel .layers-section[data-section="nodes"]')).toHaveCount(0);
+
+    await page.locator('#layers-panel-filter .layers-filter-btn[data-filter="all"]').click();
+    await expect(page.locator('#layers-panel .layers-section[data-section="nodes"]')).toBeVisible();
+    await expect(page.locator('#layers-panel .layers-section[data-section="connections"]')).toBeVisible();
+  });
+
+  test('layers panel scrolls selected item into view', async ({ page }) => {
+    await bootFresh(page);
+
+    for (let i = 0; i < 30; i += 1) {
+      await addNode(page, 'internal', 820 + (i % 3) * 120, 560 + i * 28);
+    }
+    const ids = await getNodeIds(page);
+    const targetId = ids[ids.length - 1];
+
+    await page.locator('#layers-toggle-btn').click();
+    await expect(page.locator('#layers-panel')).toHaveClass(/open/);
+    await page.evaluate(() => {
+      const body = document.getElementById('layers-panel-body');
+      if (body) body.scrollTop = 0;
+    });
+
+    await page.evaluate(id => selectNode(id), targetId);
+
+    await expect.poll(async () => page.evaluate(id => {
+      const body = document.getElementById('layers-panel-body');
+      const row = document.querySelector(`#layers-panel .layers-row[data-kind="node"][data-id="${id}"]`);
+      if (!body || !row) return false;
+      const bodyRect = body.getBoundingClientRect();
+      const rowRect = row.getBoundingClientRect();
+      return rowRect.top >= bodyRect.top && rowRect.bottom <= bodyRect.bottom;
+    }, targetId)).toBe(true);
+
+    await expect(page.locator(`#layers-panel .layers-row[data-kind="node"][data-id="${targetId}"]`)).toHaveClass(/selected/);
   });
 
   test('undo and redo restore node changes', async ({ page }) => {
@@ -433,6 +569,20 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator('#document-panel-preview-subtitle')).toHaveText(SAMPLE_SUBTITLE);
   });
 
+  test('sample load normalizes layer numbering in the layers panel', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      loadSampleIntoCurrentDraft();
+    });
+    await page.locator('#layers-toggle-btn').click();
+
+    const panelText = await page.locator('#layers-panel-body').textContent();
+    expect(panelText).not.toContain('Layer 100');
+    expect(panelText).not.toContain('Layer 200');
+    expect(panelText).toContain('Layer 1');
+  });
+
   test('can create a connection by dragging between node ports', async ({ page }) => {
     await bootFresh(page);
 
@@ -449,6 +599,17 @@ test.describe('Conduit smoke', () => {
     await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(1);
     await expect.poll(async () => page.evaluate(() => state.arrows[0].from)).toBe(fromId);
     await expect.poll(async () => page.evaluate(() => state.arrows[0].to)).toBe(toId);
+  });
+
+  test('sample arrow labels remain selectable inside the boundary area', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      loadSampleIntoCurrentDraft();
+    });
+
+    await page.locator('#arrow-svg text', { hasText: 'Engineering sync' }).click();
+    await expect.poll(async () => page.evaluate(() => selectedArrow)).toBe('a4');
   });
 
   test('context toolbar appears for selected connection and can move it forward', async ({ page }) => {
@@ -918,7 +1079,7 @@ test.describe('Conduit smoke', () => {
 
     await page.locator(`#node-${nodeId}`).click();
     await page.evaluate(() => {
-      document.querySelector('#context-toolbar button[title="Quick edit title and description"]')?.click();
+document.querySelector('#context-toolbar button[title="Rename title and description"]')?.click();
     });
 
     await expect(page.locator('.node-quick-edit-panel')).toBeVisible();
@@ -939,14 +1100,14 @@ test.describe('Conduit smoke', () => {
 
     await page.locator(`#node-${nodeId}`).click();
     await page.evaluate(() => {
-      document.querySelector('#context-toolbar button[title="Quick edit title and description"]')?.click();
+document.querySelector('#context-toolbar button[title="Rename title and description"]')?.click();
     });
     await expect(page.locator('.node-quick-edit-panel')).toBeVisible();
     await page.locator('.node-quick-edit-field.title').press('Escape');
     await expect(page.locator('.node-quick-edit-panel')).toHaveCount(0);
 
     await page.evaluate(() => {
-      document.querySelector('#context-toolbar button[title="Quick edit title and description"]')?.click();
+document.querySelector('#context-toolbar button[title="Rename title and description"]')?.click();
     });
     await expect(page.locator('.node-quick-edit-panel')).toBeVisible();
     await page.locator('#topbar').click({ position: { x: 20, y: 20 } });

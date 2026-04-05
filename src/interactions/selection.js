@@ -19,7 +19,15 @@ function selectNode(id) {
   }
   renderArrows();
   renderSidebar();
+  if (typeof renderLayersPanel === 'function') renderLayersPanel();
   if (typeof updateContextToolbar === 'function') updateContextToolbar();
+}
+
+function getSelectedArrowLayerZ() {
+  const topNodeLayer = state.nodes.reduce((max, node, index) => {
+    return Math.max(max, getNodeLayerValue(node, index));
+  }, 3);
+  return String(topNodeLayer + 10);
 }
 
 function selectArrow(id) {
@@ -51,9 +59,10 @@ function selectArrow(id) {
       toEl.dataset.hidePorts = [...ports].join(' ');
     }
   }
-  arrowSVG.style.zIndex = '4';
+  arrowSVG.style.zIndex = getSelectedArrowLayerZ();
   renderArrows();
   renderSidebar();
+  if (typeof renderLayersPanel === 'function') renderLayersPanel();
   if (typeof updateContextToolbar === 'function') updateContextToolbar();
 }
 
@@ -73,5 +82,6 @@ function deselect(e) {
   arrowSVG.style.zIndex = '2';
   renderArrows();
   renderSidebar();
+  if (typeof renderLayersPanel === 'function') renderLayersPanel();
   if (typeof updateContextToolbar === 'function') updateContextToolbar();
 }

@@ -8,6 +8,11 @@ function openAppearancePanel(nodeId) {
   _apNodeId = nodeId;
   buildAppearancePanel(nodeId);
   document.getElementById('appearance-panel').classList.add('open');
+  const closeBtn = document.getElementById('ap-close');
+  if (closeBtn) {
+    closeBtn.removeAttribute('title');
+    closeBtn.setAttribute('aria-label', 'Close content style panel');
+  }
   // Highlight the open button
   document.querySelectorAll('.ap-open-btn').forEach(b => b.classList.toggle('active', b.dataset.node === nodeId));
 }
@@ -35,59 +40,75 @@ function buildAppearancePanel(nodeId) {
   const dfltIOBr  = cs.getPropertyValue('--io-output-border').trim();
   const dfltIOTx  = cs.getPropertyValue('--io-output-text').trim();
 
-  function makeRow(labelText, field, defaultVal) {
+  function makeSection(title) {
+    const section = document.createElement('div');
+    section.className = 'ap-section';
+    const hdr = document.createElement('div');
+    hdr.className = 'ap-section-label';
+    hdr.textContent = title;
+    section.appendChild(hdr);
+    body.appendChild(section);
+    return section;
+  }
+
+  function makeRow(section, labelText, field, defaultVal) {
     const row = document.createElement('div');
     row.className = 'ap-row';
     const lbl = document.createElement('span');
     lbl.className = 'ap-row-label';
     lbl.textContent = labelText;
+    const swatch = document.createElement('div');
+    swatch.className = 'ap-swatch';
     const inp = document.createElement('input');
     inp.type = 'color';
     inp.className = 'ap-color';
     inp.value = toHex6(n[field] || defaultVal);
-    inp.title = labelText;
+    inp.setAttribute('aria-label', labelText);
+    swatch.style.background = inp.value;
     inp.addEventListener('input', () => {
       pushUndoDebounced();
       n[field] = inp.value;
+      swatch.style.background = inp.value;
       renderNodes();
+      if (typeof renderLayersPanel === 'function') renderLayersPanel();
       saveToLocalStorage();
     });
     const rst = document.createElement('button');
     rst.className = 'ap-reset';
-    rst.title = 'Reset';
+    rst.setAttribute('aria-label', `Reset ${labelText}`);
     rst.textContent = '↺';
     rst.addEventListener('click', () => {
       pushUndo();
       n[field] = '';
       inp.value = toHex6(defaultVal);
+      swatch.style.background = inp.value;
       renderNodes();
+      if (typeof renderLayersPanel === 'function') renderLayersPanel();
       saveToLocalStorage();
     });
-    row.appendChild(lbl); row.appendChild(inp); row.appendChild(rst);
-    body.appendChild(row);
+    swatch.appendChild(inp);
+    row.appendChild(lbl); row.appendChild(swatch); row.appendChild(rst);
+    section.appendChild(row);
   }
 
   // ── Text section ──
-  const tHdr = document.createElement('div'); tHdr.className = 'ap-section-label'; tHdr.textContent = 'Text';
-  body.appendChild(tHdr);
-  makeRow('Tag',              'tagColor',    dfltText3);
-  makeRow('Title',            'textColor',   dfltText);
-  makeRow('Subtitle',         'subtitleColor', dfltText2);
-  makeRow('Functions label',  'fnLabelColor', dfltText3);
-  makeRow('Function items',   'fnTextColor',  dfltText2);
+  const textSection = makeSection('Text');
+  makeRow(textSection, 'Tag',              'tagColor',      dfltText3);
+  makeRow(textSection, 'Title',            'textColor',     dfltText);
+  makeRow(textSection, 'Subtitle',         'subtitleColor', dfltText2);
+  makeRow(textSection, 'Functions label',  'fnLabelColor',  dfltText3);
+  makeRow(textSection, 'Function items',   'fnTextColor',   dfltText2);
 
   // ── IO Pills section ──
-  const pHdr = document.createElement('div'); pHdr.className = 'ap-section-label'; pHdr.textContent = 'Input pills';
-  body.appendChild(pHdr);
-  makeRow('Background', 'ioInputBg',    dfltIIBg);
-  makeRow('Border',     'ioInputBorder', dfltIIBr);
-  makeRow('Text',       'ioInputText',  dfltIITx);
+  const inputSection = makeSection('Input pills');
+  makeRow(inputSection, 'Background', 'ioInputBg',     dfltIIBg);
+  makeRow(inputSection, 'Border',     'ioInputBorder', dfltIIBr);
+  makeRow(inputSection, 'Text',       'ioInputText',   dfltIITx);
 
-  const oHdr = document.createElement('div'); oHdr.className = 'ap-section-label'; oHdr.textContent = 'Output pills';
-  body.appendChild(oHdr);
-  makeRow('Background', 'ioOutputBg',    dfltIOBg);
-  makeRow('Border',     'ioOutputBorder', dfltIOBr);
-  makeRow('Text',       'ioOutputText',  dfltIOTx);
+  const outputSection = makeSection('Output pills');
+  makeRow(outputSection, 'Background', 'ioOutputBg',     dfltIOBg);
+  makeRow(outputSection, 'Border',     'ioOutputBorder', dfltIOBr);
+  makeRow(outputSection, 'Text',       'ioOutputText',   dfltIOTx);
 }
 
 function toHex6(val) {

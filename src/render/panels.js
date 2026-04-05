@@ -4,6 +4,7 @@ function render() {
   renderNodes();
   renderArrows();
   renderSidebar();
+  if (typeof renderLayersPanel === 'function') renderLayersPanel();
   updateStatusBar();
   updateEmptyState();
   if (typeof updateContextToolbar === 'function') updateContextToolbar();

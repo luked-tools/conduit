@@ -128,6 +128,7 @@ function closeInlineNodeEdit({ save = false } = {}) {
         node.subtitle = nextSubtitle;
         renderNodes();
         renderSidebar();
+        if (typeof renderLayersPanel === 'function') renderLayersPanel();
         saveToLocalStorage();
         return;
       }

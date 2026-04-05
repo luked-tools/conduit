@@ -53,6 +53,7 @@ function renderContextToolbar() {
   toolbar.onmousedown = e => e.stopPropagation();
   toolbar.onmouseup = e => e.stopPropagation();
   toolbar.onclick = e => e.stopPropagation();
+  toolbar.classList.toggle('under-layers-panel', !!_layersPanelOpen);
 
   if (!shouldShowContextToolbar()) {
     _contextToolbarMenuOpen = false;
@@ -67,8 +68,8 @@ function renderContextToolbar() {
   if (selectedNode) {
     const nodeId = selectedNode;
     toolbar.appendChild(makeContextToolbarButton({
-      title: 'Quick edit title and description',
-      label: 'Edit',
+      title: 'Rename title and description',
+      label: 'Rename',
       icon: '✎',
       onClick: () => startInlineNodeEdit(nodeId)
     }));
@@ -164,6 +165,10 @@ function makeContextToolbarMenu() {
   if (selectedNode) {
     const nodeId = selectedNode;
     menu.appendChild(makeContextToolbarMenuItem({
+      label: 'Details',
+      onClick: () => openNodeModal(nodeId)
+    }));
+    menu.appendChild(makeContextToolbarMenuItem({
       label: 'To front',
       disabled: !canMoveNodeLayer(nodeId, 'front'),
       onClick: () => moveNodeLayer(nodeId, 'front')
@@ -229,6 +234,7 @@ function positionContextToolbar() {
   const wrapRect = wrap.getBoundingClientRect();
   const anchorRect = anchor.rect;
   const toolbarRect = toolbar.getBoundingClientRect();
+  const layersPanel = document.getElementById('layers-panel');
   const gap = 10;
   const minInset = 10;
 
@@ -236,7 +242,14 @@ function positionContextToolbar() {
   let top = anchorRect.top - wrapRect.top - toolbarRect.height - gap;
   if (top < minInset) top = anchorRect.bottom - wrapRect.top + gap;
 
-  left = Math.max(minInset, Math.min(left, wrapRect.width - toolbarRect.width - minInset));
+  let maxLeft = wrapRect.width - toolbarRect.width - minInset;
+  if (layersPanel && layersPanel.classList.contains('open')) {
+    const panelRect = layersPanel.getBoundingClientRect();
+    const panelLeftWithinWrap = panelRect.left - wrapRect.left;
+    maxLeft = Math.min(maxLeft, panelLeftWithinWrap - toolbarRect.width - gap);
+  }
+
+  left = Math.max(minInset, Math.min(left, maxLeft));
   top = Math.max(minInset, Math.min(top, wrapRect.height - toolbarRect.height - minInset));
 
   toolbar.style.left = `${Math.round(left)}px`;
