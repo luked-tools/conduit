@@ -1,76 +1,160 @@
   /* ── Appearance slide-out panel ── */
-  #appearance-panel {
-    position: fixed;
-    bottom: 24px;
-    top: auto;
-    height: calc((100vh - 70px) / 2);
-    left: 268px;
-    width: 220px;
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    border-left: 1px solid var(--border2);
-    display: flex; flex-direction: column;
-    z-index: 1;
-    transform: translateX(-100%) translateX(-268px);
-    transition: transform 0.35s cubic-bezier(0.16,1,0.3,1);
-    box-shadow: var(--shadow-floating);
-  }
-  #appearance-panel.open {
-    transform: translateX(0);
-  }
-  #ap-header {
-    display: flex; align-items: center; gap: var(--space-3);
-    padding: var(--space-4) var(--space-6) var(--space-3);
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
-  #ap-title {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 9px; font-weight: 600;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--text3); flex: 1;
-  }
-  #ap-close {
-    width: 22px; height: 22px; border-radius: 4px;
-    background: transparent; border: 1px solid transparent;
-    color: var(--text3); cursor: pointer; font-size: 14px;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.12s;
-  }
-  #ap-close:hover { background: var(--surface-hover); border-color: var(--border2); color: var(--text); }
-  #ap-body { flex: 1; overflow-y: auto; padding: 10px 12px; }
-  .ap-section-label {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 8.5px; font-weight: 600;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    color: var(--text3); margin-bottom: 8px; margin-top: 12px;
-  }
-  .ap-section-label:first-child { margin-top: 0; }
-  .ap-row {
-    display: flex; align-items: center; gap: 6px;
-    margin-bottom: 6px;
-  }
-  .ap-row-label {
-    font-family: 'Inter', sans-serif;
-    font-size: 10px; color: var(--text2);
-    flex: 1; min-width: 0;
-  }
-  .ap-color {
-    width: 28px; height: 22px;
-    border-radius: 4px; border: 1px solid var(--border);
-    padding: 1px 2px; cursor: pointer;
-    background: var(--surface2);
-    flex-shrink: 0;
-  }
-  .ap-reset {
-    width: 22px; height: 22px; border-radius: 4px;
-    background: transparent; border: 1px solid var(--border);
-    color: var(--text3); cursor: pointer; font-size: 11px;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.12s; flex-shrink: 0; padding: 0;
-    font-family: 'Inter', sans-serif;
-  }
-  .ap-reset:hover { border-color: var(--border2); color: var(--text); background: var(--surface2); }
+#appearance-panel {
+  position: fixed;
+  bottom: 24px;
+  top: auto;
+  height: calc((100vh - 70px) / 2);
+  left: 268px;
+  width: 220px;
+  background: color-mix(in srgb, var(--surface) 96%, var(--bg) 4%);
+  border-right: 1px solid var(--border);
+  border-left: 1px solid var(--border2);
+  border-top: 1px solid var(--border);
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
+  transform: translateX(calc(-100% + 1px));
+  transition: transform 0.46s cubic-bezier(0.22,1,0.36,1);
+  box-shadow: none;
+  overflow: hidden;
+  pointer-events: none;
+}
+#appearance-panel.open {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+#ap-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border);
+  background: color-mix(in srgb, var(--surface) 92%, var(--surface2) 8%);
+  flex-shrink: 0;
+}
+#ap-title {
+  flex: 1;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+#ap-close {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+  padding: 0;
+  font-size: 0;
+}
+#ap-close::before {
+  content: '←';
+  font-size: 13px;
+  line-height: 1;
+}
+#ap-close:hover { background: var(--surface-hover); border-color: var(--border2); color: var(--text); }
+#appearance-panel [title]:hover::after {
+  display: none;
+}
+#ap-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ap-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 10px 11px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--surface2) 6%);
+}
+.ap-section-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin: 0 0 8px;
+}
+.ap-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 0;
+  margin-bottom: 6px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+}
+.ap-section .ap-row:last-child {
+  margin-bottom: 0;
+}
+.ap-row-label {
+  font-family: 'Inter', sans-serif;
+  font-size: 10px;
+  color: var(--text2);
+  flex: 1;
+  min-width: 0;
+}
+.ap-swatch {
+  width: 28px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  flex-shrink: 0;
+  overflow: hidden;
+  position: relative;
+  transition: border-color 0.15s;
+}
+.ap-swatch:hover { border-color: var(--border2); }
+.ap-color {
+  position: absolute;
+  inset: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  cursor: pointer;
+  opacity: 0;
+  border: none;
+  padding: 0;
+  background: transparent;
+}
+.ap-reset {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text3);
+  cursor: pointer;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s;
+  flex-shrink: 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+}
+.ap-reset:hover { border-color: var(--border2); color: var(--text); background: var(--surface2); }
 
   /* Layers panel */
   #layers-panel {
