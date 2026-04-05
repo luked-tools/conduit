@@ -366,6 +366,7 @@ test.describe('Conduit smoke', () => {
       render();
     });
 
+    await page.locator('#sidebar .sb-header', { hasText: 'Nodes' }).click();
     await page.locator('#node-list-search').fill('erp');
     await expect(page.locator('#node-list .node-list-item')).toHaveCount(1);
     await expect(page.locator('#node-list .node-list-item')).toContainText('ERP');
@@ -375,6 +376,19 @@ test.describe('Conduit smoke', () => {
 
     await page.locator('#node-list-search').fill('missing');
     await expect(page.locator('#node-list .node-list-empty')).toHaveText('No matching nodes');
+  });
+
+  test('sidebar prioritizes properties and defaults nodes and legend to collapsed', async ({ page }) => {
+    await bootFresh(page);
+
+    const headers = await page.locator('#sidebar .sb-header').allTextContents();
+    expect(headers[0]).toContain('Palette');
+    expect(headers[1]).toContain('Properties');
+    expect(headers[2]).toContain('Nodes');
+    expect(headers[3]).toContain('Legend');
+
+    await expect(page.locator('#sidebar .sb-section').nth(2).locator('.sb-body')).toHaveClass(/hidden/);
+    await expect(page.locator('#sidebar .sb-section').nth(3).locator('.sb-body')).toHaveClass(/hidden/);
   });
 
   test('newly added nodes and pasted nodes land on the top layer', async ({ page }) => {
