@@ -403,16 +403,19 @@ function renderPropsPanel() {
           const name = document.createElement('div');
           name.style.cssText = 'font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
           name.textContent = other
-            ? ((other.tag ? other.tag + ' · ' : '') + (other.title || '').replace(/\n/g, ' '))
+            ? ((other.title || 'Untitled node').replace(/\n/g, ' '))
             : 'Unknown node';
           info.appendChild(name);
 
-          const meta = document.createElement('div');
-          meta.style.cssText = 'font-size:9px;color:var(--text3);font-family:"IBM Plex Mono",monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;';
-          meta.textContent = a.label
-            ? ((isBidir ? 'bidirectional' : (isOutgoing ? 'outgoing' : 'incoming')) + ' · ' + a.label)
-            : (isBidir ? 'bidirectional' : (isOutgoing ? 'outgoing' : 'incoming'));
-          info.appendChild(meta);
+          const metaParts = [];
+          if (other?.tag) metaParts.push(other.tag);
+          if (a.label) metaParts.push(a.label);
+          if (metaParts.length) {
+            const meta = document.createElement('div');
+            meta.style.cssText = 'font-size:9px;color:var(--text3);font-family:"IBM Plex Mono",monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;';
+            meta.textContent = metaParts.join(' · ');
+            info.appendChild(meta);
+          }
 
           row.appendChild(info);
           const editArrow = document.createElement('span');
