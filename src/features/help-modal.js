@@ -1,6 +1,7 @@
 function setHelpTab(tabId) {
   document.querySelectorAll('.help-modal-tab').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tabId);
+    btn.setAttribute('aria-selected', btn.dataset.tab === tabId ? 'true' : 'false');
   });
   document.querySelectorAll('.help-modal-panel').forEach(panel => {
     panel.classList.toggle('active', panel.dataset.tabPanel === tabId);
@@ -10,7 +11,7 @@ function setHelpTab(tabId) {
 function openHelpModal() {
   const body = `
     <div class="help-modal-body">
-      <div class="help-modal-tabs" role="tablist" aria-label="Help sections">
+      <div id="help-modal-tabs" role="tablist" aria-label="Help sections">
         <button class="help-modal-tab active" data-tab="quickstart" onclick="setHelpTab('quickstart')" role="tab" aria-selected="true">Quick Start</button>
         <button class="help-modal-tab" data-tab="workflows" onclick="setHelpTab('workflows')" role="tab" aria-selected="false">Workflows</button>
         <button class="help-modal-tab" data-tab="about" onclick="setHelpTab('about')" role="tab" aria-selected="false">About</button>
