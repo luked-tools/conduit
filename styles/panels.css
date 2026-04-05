@@ -112,6 +112,7 @@
     color: var(--text3);
   }
   .layers-panel-filter {
+    position: relative;
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -121,7 +122,23 @@
     background: color-mix(in srgb, var(--surface2) 88%, transparent);
     flex-shrink: 0;
   }
+  .layers-filter-indicator {
+    position: absolute;
+    top: 2px;
+    bottom: 2px;
+    left: 0;
+    width: 0;
+    border-radius: 5px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    box-sizing: border-box;
+    transform: translateX(0);
+    transition: transform 0.18s ease, width 0.18s ease;
+    pointer-events: none;
+  }
   .layers-filter-btn {
+    position: relative;
+    z-index: 1;
     min-height: 22px;
     padding: 3px 8px;
     border: 1px solid transparent;
@@ -140,8 +157,10 @@
   }
   .layers-filter-btn.active {
     color: var(--accent3);
-    background: var(--accent-soft);
-    border-color: var(--accent);
+  }
+  .layers-filter-btn.active:hover {
+    background: transparent;
+    color: var(--accent3);
   }
   #layers-panel-close {
     width: 24px;
