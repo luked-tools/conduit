@@ -18,8 +18,8 @@
   transform: translateX(calc(-100% + 1px));
   opacity: 0;
   transition:
-    transform 0.46s cubic-bezier(0.22,1,0.36,1),
-    opacity 0.18s ease,
+    transform var(--motion-panel-slow),
+    opacity var(--motion-fade),
     visibility 0s linear 0.46s;
   box-shadow: none;
   overflow: hidden;
@@ -32,8 +32,8 @@
   pointer-events: auto;
   visibility: visible;
   transition:
-    transform 0.46s cubic-bezier(0.22,1,0.36,1),
-    opacity 0.18s ease,
+    transform var(--motion-panel-slow),
+    opacity var(--motion-fade),
     visibility 0s linear 0s;
 }
 #sidebar.collapsed ~ #appearance-panel,
@@ -190,7 +190,7 @@
     flex-direction: column;
     z-index: 55;
     transform: translateX(calc(100% + 18px));
-    transition: transform 0.22s ease, box-shadow 0.18s ease;
+  transition: transform var(--motion-panel), box-shadow var(--motion-fade);
     overflow: hidden;
     backdrop-filter: blur(10px);
   }
@@ -237,7 +237,7 @@
     border: 1px solid var(--accent);
     box-sizing: border-box;
     transform: translateX(0);
-    transition: transform 0.18s ease, width 0.18s ease;
+  transition: transform var(--motion-fade), width var(--motion-fade);
     pointer-events: none;
   }
   .layers-filter-btn {

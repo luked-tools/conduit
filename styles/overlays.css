@@ -451,7 +451,7 @@
     opacity: 0;
     pointer-events: none;
     transform: translateY(4px) scale(0.98);
-    transition: opacity 0.14s ease, transform 0.14s ease;
+    transition: opacity var(--motion-fade-fast), transform var(--motion-fade);
   }
   #context-toolbar.visible {
     opacity: 1;

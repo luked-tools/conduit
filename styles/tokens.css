@@ -51,6 +51,10 @@
     --space-6: 14px;
     --space-7: 16px;
     --space-8: 20px;
+    --motion-panel: 0.32s cubic-bezier(0.22,1,0.36,1);
+    --motion-panel-slow: 0.46s cubic-bezier(0.22,1,0.36,1);
+    --motion-fade-fast: 0.14s ease;
+    --motion-fade: 0.18s ease;
     --io-input-bg: #e8f2fa;
     --io-input-border: #a8c8e8;
     --io-input-text: #2a5880;
