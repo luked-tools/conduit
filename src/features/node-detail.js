@@ -262,8 +262,12 @@ function buildNMConnections(n, panel) {
     const addConnBtn2 = document.createElement('button');
     addConnBtn2.className = 'nm-fn-add-btn';
     addConnBtn2.style.marginTop = '8px';
-    addConnBtn2.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Add connection from this node';
-    addConnBtn2.addEventListener('click', () => openConnectFromNode(n.id));
+addConnBtn2.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Quick connect from this node';
+    addConnBtn2.addEventListener('click', () => {
+      closeNodeModal();
+      selectNode(n.id);
+      startQuickConnectMode(n.id);
+    });
     panel.appendChild(addConnBtn2);
   }
 
@@ -273,8 +277,12 @@ function buildNMConnections(n, panel) {
     panel.appendChild(noConnWrap);
     const addConnBtn = document.createElement('button');
     addConnBtn.className = 'nm-fn-add-btn';
-    addConnBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Add connection from this node';
-    addConnBtn.addEventListener('click', () => openConnectFromNode(n.id));
+addConnBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><line x1="6" y1="1" x2="6" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg> Quick connect from this node';
+    addConnBtn.addEventListener('click', () => {
+      closeNodeModal();
+      selectNode(n.id);
+      startQuickConnectMode(n.id);
+    });
     panel.appendChild(addConnBtn);
   }
 }
@@ -453,3 +461,4 @@ document.addEventListener('keydown', e => {
     closeNodeModal();
   }
 });
+

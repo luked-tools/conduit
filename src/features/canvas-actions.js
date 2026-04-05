@@ -474,7 +474,6 @@ function clearCanvas() {
   pushUndo();
   cancelWire();
   closeBasicModal();
-  closeConnectModal();
   closeFnModal();
   closeNodeModal();
   if (typeof closeAppearancePanel === 'function') closeAppearancePanel();

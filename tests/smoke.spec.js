@@ -1156,27 +1156,6 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect(page.locator('.node-quick-edit-panel')).toHaveCount(0);
   });
 
-  test('can create a connection from the connection modal', async ({ page }) => {
-    await bootFresh(page);
-
-    await addNode(page, 'internal', 860, 620);
-    await addNode(page, 'external', 1180, 620);
-
-    await page.locator('#connect-mode-btn').click();
-    await expect(page.locator('#conn-modal-overlay')).toHaveClass(/open/);
-
-    await page.locator('#conn-from-display').click();
-    await page.locator('#conn-from-list .conn-node-option').first().click();
-
-    await page.locator('#conn-to-display').click();
-    await page.locator('#conn-to-list .conn-node-option').nth(1).click();
-
-    await page.locator('#conn-label-input').fill('Orders feed');
-    await page.locator('#conn-create-btn').click();
-
-    await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(1);
-    await expect.poll(async () => page.evaluate(() => state.arrows[0].label)).toBe('Orders feed');
-  });
 
   test('theme preset survives reload', async ({ page }) => {
     await bootFresh(page);
@@ -1499,9 +1478,11 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect(page.locator('#nm-notes-area')).toHaveValue(payload.state.nodes[0].notes);
 
     await page.locator('#nm-close').click();
-    await page.locator('#connect-mode-btn').click();
-    await page.locator('#conn-from-display').click();
-    await expect(page.locator('#conn-from-list .conn-node-option').first()).toContainText(payload.state.nodes[0].title);
+    await page.locator('.node.internal').first().click();
+    await page.evaluate(() => {
+      document.querySelector('#context-toolbar button[title="Quick connect to another node"]')?.click();
+    });
+    await expect(page.locator('#quick-connect-banner')).toContainText('Quick connect');
   });
 
   test('invalid JSON import shows the canvas danger banner', async ({ page }, testInfo) => {
