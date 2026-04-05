@@ -644,7 +644,7 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
     }
     const hasManualEndpointOffsets = getArrowEndOffset(a, 'from') !== null || getArrowEndOffset(a, 'to') !== null;
     const resetControlsRow = document.createElement('div');
-    resetControlsRow.style.cssText = 'display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px;';
+    resetControlsRow.className = 'ortho-reset-row';
     function setMiniResetDisabled(btn, disabled) {
       btn.disabled = disabled;
       btn.style.opacity = disabled ? '0.45' : '1';
@@ -687,7 +687,6 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       selectArrow(a.id);
     });
     resetControlsRow.appendChild(resetEndpointsBtn);
-    styleBody.appendChild(resetControlsRow);
 
     if (_isOrth) {
       // Two sliders ? one per axis. Labels depend on from-port direction.
@@ -696,13 +695,13 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       const labelA = isHorizExit ? 'Column X position' : 'Crossbar Y position';
       const labelB = isHorizExit ? 'Crossbar Y position' : 'Column X position';
 
-      [[labelA, 'bend', 'ortho-slider-bend'], [labelB, 'orthoY', 'ortho-slider-orthoY']].forEach(([lbl, prop, sid]) => {
-        const row = document.createElement('div');
-        row.className = 'prop-row';
-        const rl = document.createElement('div'); rl.className = 'prop-label'; rl.textContent = lbl;
-        row.appendChild(rl);
-        const sl = document.createElement('input'); sl.type = 'range'; sl.className = 'prop-input';
-        sl.id = sid; sl.min = -300; sl.max = 300; sl.value = Math.round(a[prop] || 0);
+        [[labelA, 'bend', 'ortho-slider-bend'], [labelB, 'orthoY', 'ortho-slider-orthoY']].forEach(([lbl, prop, sid]) => {
+          const row = document.createElement('div');
+          row.className = 'prop-row ortho-slider-row';
+          const rl = document.createElement('div'); rl.className = 'prop-label'; rl.textContent = lbl;
+          row.appendChild(rl);
+          const sl = document.createElement('input'); sl.type = 'range'; sl.className = 'prop-input';
+          sl.id = sid; sl.min = -300; sl.max = 300; sl.value = Math.round(a[prop] || 0);
         updateSliderPct(sl);
         sl.addEventListener('input', () => {
           updateSliderPct(sl);
@@ -715,10 +714,14 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
           renderArrows();
           saveToLocalStorage();
         });
-        row.appendChild(sl);
-        styleBody.appendChild(row);
-      });
-    }
+          row.appendChild(sl);
+          styleBody.appendChild(row);
+        });
+
+        styleBody.appendChild(resetControlsRow);
+      } else {
+        styleBody.appendChild(resetControlsRow);
+      }
 
     addPropRow(styleBody, 'Stroke pattern', () => {
       const row = document.createElement('div');

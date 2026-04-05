@@ -332,6 +332,15 @@
     position: relative;
   }
   .prop-group-body > .prop-row:last-child { margin-bottom: 0; }
+  .ortho-slider-row { margin-bottom: 8px; }
+  .ortho-slider-row .prop-label { margin-bottom: 2px; }
+  .ortho-slider-row .prop-input[type="range"] { margin: 0; height: 16px; }
+  .ortho-reset-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin: 2px 0 6px;
+  }
   .prop-label {
     font-family: 'Inter', sans-serif;
     font-size: 9.5px; font-weight: 600; letter-spacing: 0.04em;
