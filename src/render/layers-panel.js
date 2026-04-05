@@ -202,6 +202,16 @@ function applyLayersDrop(kind, sourceId, targetId, position) {
   return false;
 }
 
+function getNodeRowTitle(node) {
+  return (node.title || node.tag || 'Untitled node').replace(/\n/g, ' ');
+}
+
+function getNodeRowMeta(node, entry) {
+  const identifier = (node.tag || '').replace(/\n/g, ' ').trim();
+  const layerText = `Layer ${getNodeLayerValue(node, entry.index)}`;
+  return identifier ? `${identifier} · ${layerText}` : layerText;
+}
+
 function makeLayersRow({ kind, id, nodeType = '', previewMarkup = '', title, meta, selected, actions, onSelect }) {
   const row = document.createElement('div');
   row.className = 'layers-row' + (selected ? ' selected' : '');
@@ -356,17 +366,13 @@ function renderLayersPanel() {
 
   const nodeRows = getSortedNodeLayerEntries().slice().reverse().map(entry => {
     const node = entry.node;
-    const title = [node.tag, (node.title || '').replace(/\n/g, ' ')].filter(Boolean).join(' · ') || 'Untitled node';
-    const meta = node.type === 'boundary'
-      ? 'Boundary box'
-      : `${node.type === 'external' ? 'External entity' : 'Internal system'} · Layer ${getNodeLayerValue(node, entry.index)}`;
     return makeLayersRow({
       kind: 'node',
       id: node.id,
       nodeType: node.type,
       previewMarkup: getNodePreviewMarkup(node),
-      title,
-      meta,
+      title: getNodeRowTitle(node),
+      meta: getNodeRowMeta(node, entry),
       selected: selectedNode === node.id,
       onSelect: () => selectNode(node.id),
       actions: [
