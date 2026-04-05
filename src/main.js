@@ -589,8 +589,6 @@ function toggleSidebar() {
   sb.classList.toggle('collapsed');
   if (sb.classList.contains('collapsed')) closeAppearancePanel();
   updateDocumentPanelPosition();
-  requestAnimationFrame(() => updateDocumentPanelPosition());
-  setTimeout(updateDocumentPanelPosition, 220);
 }
 function toggleSection(header) {
   header.classList.toggle('open');
@@ -663,7 +661,7 @@ function setNextArrowLineStyle(style) {
 });
 window.addEventListener('resize', updateDocumentPanelPosition);
 document.getElementById('sidebar')?.addEventListener('transitionend', e => {
-  if (e.propertyName === 'width') updateDocumentPanelPosition();
+  if (e.propertyName === 'margin-left') updateDocumentPanelPosition();
 });
 
 

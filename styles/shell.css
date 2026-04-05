@@ -229,17 +229,31 @@
     width: 268px;
     min-width: 220px;
     max-width: 340px;
+    margin-left: 0;
     background: var(--surface);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     overflow-y: auto;
     flex-shrink: 0;
-    transition: width 0.2s;
+    transition: margin-left 0.34s cubic-bezier(0.22,1,0.36,1), border-color 0.18s ease;
     z-index: 2;
     position: relative;
   }
-  #sidebar.collapsed { width: 0; min-width: 0; border: none; overflow: hidden; }
+  #sidebar > * {
+    transition: opacity 0.14s ease, transform 0.24s cubic-bezier(0.22,1,0.36,1);
+    transform-origin: left center;
+  }
+  #sidebar.collapsed {
+    margin-left: -268px;
+    border-right-color: transparent;
+    overflow: hidden;
+  }
+  #sidebar.collapsed > * {
+    opacity: 0;
+    transform: translateX(-10px);
+    pointer-events: none;
+  }
   .sb-section { border-bottom: 1px solid var(--border); }
   .sb-header {
     display: flex; align-items: center; gap: var(--space-3);
