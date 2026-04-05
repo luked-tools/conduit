@@ -506,12 +506,17 @@
     transition: all 0.12s;
     white-space: nowrap;
   }
-  .context-toolbar-btn:hover {
-    background: var(--surface-hover);
-    border-color: var(--border2);
-    color: var(--text);
-  }
-  .context-toolbar-btn.danger { color: var(--danger); }
+.context-toolbar-btn:hover {
+  background: var(--surface-hover);
+  border-color: var(--border2);
+  color: var(--text);
+}
+.context-toolbar-btn.active {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent3);
+}
+.context-toolbar-btn.danger { color: var(--danger); }
   .context-toolbar-btn.danger:hover {
     background: var(--danger-soft);
     border-color: var(--danger);
@@ -525,15 +530,20 @@
     border-color: transparent;
     color: inherit;
   }
-  .context-toolbar-btn-icon {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 10px;
-  }
+.context-toolbar-btn-icon {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 10px;
+}
+.context-toolbar-btn-icon svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
 .context-toolbar-btn-label { display: inline-block; }
 .context-toolbar-menu {
   position: absolute;
@@ -553,12 +563,12 @@
   transition: all 0.12s;
 }
 .context-toolbar-menu .app-menu-item-icon {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
 }
 .context-toolbar-menu .app-menu-item-icon svg {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
 }
 .context-toolbar-menu .app-menu-divider {
   margin: 2px 6px;

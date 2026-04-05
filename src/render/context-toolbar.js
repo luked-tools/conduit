@@ -9,9 +9,11 @@ function getContextMenuIcon(name) {
     case 'back':
       return '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4.5 2.5v5.7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M2.8 6.6 4.5 8.5 6.2 6.6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M8.4 2.2h1.8M8.4 5.2h1.8M8.4 8.2h1.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>';
     case 'front-of':
-      return '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="4.2" width="3.6" height="3.6" rx="0.9" stroke="currentColor" stroke-width="1.1"/><rect x="6.9" y="2.4" width="3.6" height="3.6" rx="0.9" stroke="currentColor" stroke-width="1.1"/><path d="M5.7 5.8h.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M8.7 6.8 10 5.5 8.7 4.2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      return '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2" y="4.1" width="4.1" height="4.1" rx="0.9" stroke="currentColor" stroke-width="1" opacity="0.45"/><rect x="5.9" y="2" width="4.1" height="4.1" rx="0.9" stroke="currentColor" stroke-width="1.6"/></svg>';
     case 'behind':
-      return '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="2.4" width="3.6" height="3.6" rx="0.9" stroke="currentColor" stroke-width="1.1"/><rect x="6.9" y="4.2" width="3.6" height="3.6" rx="0.9" stroke="currentColor" stroke-width="1.1"/><path d="M5.7 5.8h.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/><path d="M7.3 4.2 6 5.5 7.3 6.8" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+      return '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2.2" y="2.2" width="4.2" height="4.2" rx="0.9" stroke="currentColor" stroke-width="1.6"/><rect x="5.2" y="3.8" width="4.2" height="4.2" rx="0.9" fill="var(--surface)" stroke="currentColor" stroke-width="1" opacity="0.85"/></svg>';
+    case 'duplicate':
+      return '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="2.2" y="2.2" width="5.3" height="5.3" rx="1" stroke="currentColor" stroke-width="1.1"/><rect x="4.5" y="4.5" width="5.3" height="5.3" rx="1" stroke="currentColor" stroke-width="1.1"/></svg>';
     default:
       return '';
   }
@@ -41,10 +43,10 @@ function shouldShowContextToolbar() {
   return true;
 }
 
-function makeContextToolbarButton({ title, label, icon, onClick, danger = false, disabled = false }) {
+function makeContextToolbarButton({ title, label, icon, onClick, danger = false, disabled = false, active = false }) {
   const btn = document.createElement('button');
   btn.type = 'button';
-  btn.className = 'context-toolbar-btn' + (danger ? ' danger' : '');
+  btn.className = 'context-toolbar-btn' + (danger ? ' danger' : '') + (active ? ' active' : '');
   btn.title = title;
   btn.disabled = !!disabled;
   btn.innerHTML = `<span class="context-toolbar-btn-icon">${icon}</span><span class="context-toolbar-btn-label">${label}</span>`;
@@ -87,37 +89,39 @@ function renderContextToolbar() {
     toolbar.appendChild(makeContextToolbarButton({
       title: 'Rename title and description',
       label: 'Rename',
-      icon: '✎',
+      icon: '&#9998;',
       onClick: () => startInlineNodeEdit(nodeId)
     }));
     toolbar.appendChild(makeContextToolbarButton({
       title: 'Quick connect to another node',
       label: 'Connect',
-      icon: '→',
+      icon: '&#8594;',
       onClick: () => startQuickConnectMode(nodeId)
+    }));
+    toolbar.appendChild(makeContextToolbarButton({
+      title: _brushActive ? 'Cancel style brush' : 'Start style brush',
+      label: 'Style',
+      icon: '<svg width="12" height="12" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M2 12l3-3 5.5-5.5a1.5 1.5 0 0 0-2.1-2.1L3 7 2 12z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M9.5 3.5l1 1" stroke="currentColor" stroke-width="1.3"/><circle cx="2.5" cy="11.5" r="1" fill="currentColor" opacity="0.7"/></svg>',
+      active: _brushActive,
+      onClick: () => {
+        if (_brushActive) cancelStyleBrush();
+        else startStyleBrush(nodeId);
+        renderContextToolbar();
+      }
     }));
     toolbar.appendChild(makeContextToolbarButton({
       title: 'Move backward',
       label: 'Back',
-      icon: '↓',
+      icon: '&#8595;',
       disabled: !canMoveNodeLayer(nodeId, 'backward'),
       onClick: () => moveNodeLayer(nodeId, 'backward')
     }));
     toolbar.appendChild(makeContextToolbarButton({
       title: 'Move forward',
       label: 'Forward',
-      icon: '↑',
+      icon: '&#8593;',
       disabled: !canMoveNodeLayer(nodeId, 'forward'),
       onClick: () => moveNodeLayer(nodeId, 'forward')
-    }));
-    toolbar.appendChild(makeContextToolbarButton({
-      title: 'Duplicate node',
-      label: 'Duplicate',
-      icon: '⧉',
-      onClick: () => {
-        copySelectedNode();
-        pasteNode();
-      }
     }));
     toolbar.appendChild(makeContextToolbarButton({
       title: 'Delete node',
@@ -132,14 +136,14 @@ function renderContextToolbar() {
     toolbar.appendChild(makeContextToolbarButton({
       title: 'Move backward',
       label: 'Back',
-      icon: '↓',
+      icon: '&#8595;',
       disabled: !canMoveArrowLayer(arrowId, 'backward'),
       onClick: () => moveArrowLayer(arrowId, 'backward')
     }));
     toolbar.appendChild(makeContextToolbarButton({
       title: 'Move forward',
       label: 'Forward',
-      icon: '↑',
+      icon: '&#8593;',
       disabled: !canMoveArrowLayer(arrowId, 'forward'),
       onClick: () => moveArrowLayer(arrowId, 'forward')
     }));
@@ -166,7 +170,7 @@ function makeContextToolbarMoreButton(type, id) {
   return makeContextToolbarButton({
     title: 'More actions',
     label: 'More',
-    icon: '⋯',
+    icon: '&#8942;',
     onClick: () => {
       const nextState = !_contextToolbarMenuOpen;
       _contextToolbarMenuOpen = nextState;
@@ -195,6 +199,15 @@ function makeContextToolbarMenu() {
       label: 'Details',
       icon: getContextMenuIcon('details'),
       onClick: runMenuAction(() => openNodeModal(nodeId))
+    }));
+    menu.appendChild(createAppMenuItem({
+      className: 'context-toolbar-menu-item',
+      label: 'Duplicate',
+      icon: getContextMenuIcon('duplicate'),
+      onClick: runMenuAction(() => {
+        copySelectedNode();
+        pasteNode();
+      })
     }));
     menu.appendChild(createAppMenuDivider('context-toolbar-menu-divider'));
     menu.appendChild(createAppMenuItem({

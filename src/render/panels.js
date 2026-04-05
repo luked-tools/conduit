@@ -1,4 +1,10 @@
 // Render and properties panel helpers extracted from main.js
+let _nodeListFilter = '';
+
+function setNodeListFilter(value) {
+  _nodeListFilter = (value || '').trim().toLowerCase();
+  renderSidebar();
+}
 
 function render() {
   renderNodes();
@@ -55,11 +61,49 @@ function createPropSectionHeader(labelText, badgeText, sectionKey, bodyEl) {
   return header;
 }
 
+function appendPropGroup(host, title) {
+  const group = document.createElement('div');
+  group.className = 'prop-group';
+
+  const heading = document.createElement('div');
+  heading.className = 'prop-group-title';
+  heading.textContent = title;
+  group.appendChild(heading);
+
+  const body = document.createElement('div');
+  body.className = 'prop-group-body';
+  group.appendChild(body);
+
+  host.appendChild(group);
+  return body;
+}
+
 function renderSidebar() {
-  document.getElementById('node-count').textContent = state.nodes.filter(n=>n.type!=='boundary').length;
+  const visibleNodes = state.nodes.filter(n => n.type !== 'boundary');
+  document.getElementById('node-count').textContent = visibleNodes.length;
+  const searchInput = document.getElementById('node-list-search');
+  if (searchInput && searchInput.value !== _nodeListFilter) searchInput.value = _nodeListFilter;
   const list = document.getElementById('node-list');
   list.innerHTML = '';
-  state.nodes.filter(n=>n.type!=='boundary').forEach(n => {
+  const filteredNodes = visibleNodes.filter(n => {
+    if (!_nodeListFilter) return true;
+    const haystack = [
+      n.tag || '',
+      n.title || '',
+      n.subtitle || '',
+      n.type || ''
+    ].join(' ').replace(/\n/g, ' ').toLowerCase();
+    return haystack.includes(_nodeListFilter);
+  });
+
+  if (filteredNodes.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'node-list-empty';
+    empty.textContent = _nodeListFilter ? 'No matching nodes' : 'No nodes yet';
+    list.appendChild(empty);
+  }
+
+  filteredNodes.forEach(n => {
     const item = document.createElement('div');
     item.className = 'node-list-item' + (selectedNode===n.id ? ' selected':'');
     const dot = document.createElement('div');
@@ -89,6 +133,10 @@ function renderPropsPanel() {
     if (!n) return;
 
     const isBoundary = n.type === 'boundary';
+    const identityBody = appendPropGroup(body, 'Identity');
+    const appearanceBody = appendPropGroup(body, 'Appearance');
+    const structureBody = !isBoundary ? appendPropGroup(body, 'Structure') : null;
+    const arrangeBody = appendPropGroup(body, 'Arrange');
     const fields = [
       {label:'Tag / ID', key:'tag', type:'text', placeholder:'e.g. ERP-01'},
       {label: isBoundary ? 'Label' : 'Title', key:'title', type:'textarea', placeholder: isBoundary ? 'Boundary label' : 'System name'},
@@ -114,12 +162,12 @@ function renderPropsPanel() {
       inp.placeholder = f.placeholder || '';
       inp.addEventListener('input', () => { n[f.key] = inp.value; renderNodes(); renderArrows(); });
       row.appendChild(inp);
-      body.appendChild(row);
+      identityBody.appendChild(row);
     });
 
     // Text colour controls for boundary nodes (no Content Style panel for them)
     if (n.type === 'boundary') {
-      function makeBoundaryColorRow(labelText, field, defaultVar) {
+      function makeBoundaryColorRow(host, labelText, field, defaultVar) {
         const row = document.createElement('div'); row.className = 'prop-row';
         const lbl = document.createElement('div'); lbl.className='prop-label'; lbl.textContent=labelText;
         row.appendChild(lbl);
@@ -138,14 +186,14 @@ function renderPropsPanel() {
         });
         inline.appendChild(inp); inline.appendChild(rst);
         row.appendChild(inline);
-        body.appendChild(row);
+        host.appendChild(row);
       }
-      makeBoundaryColorRow('Label colour',       'textColor',     '--text3');
-      makeBoundaryColorRow('Description colour', 'subtitleColor', '--text3');
+      makeBoundaryColorRow(appearanceBody, 'Label colour',       'textColor',     '--text3');
+      makeBoundaryColorRow(appearanceBody, 'Description colour', 'subtitleColor', '--text3');
     }
 
     // Type
-    addPropRow(body, 'Node type', () => {
+    addPropRow(identityBody, 'Node type', () => {
       const sel = document.createElement('select');
       sel.className = 'prop-select';
       ['internal','external','boundary'].forEach(t => {
@@ -157,10 +205,6 @@ function renderPropsPanel() {
       sel.addEventListener('change', () => { pushUndo(); n.type = sel.value; renderNodes(); });
       return sel;
     });
-
-    const typeDivider = document.createElement('div');
-    typeDivider.className = 'prop-divider';
-    body.appendChild(typeDivider);
 
     // Color
     const colorRow = document.createElement('div');
@@ -187,7 +231,7 @@ function renderPropsPanel() {
     });
     colorInline.appendChild(colorInp); colorInline.appendChild(colorReset);
     colorRow.appendChild(colorInline);
-    body.appendChild(colorRow);
+    appearanceBody.appendChild(colorRow);
     // Opacity slider
     const opRow = document.createElement('div'); opRow.className='prop-row';
     const opLbl = document.createElement('div'); opLbl.className='prop-label';
@@ -208,7 +252,7 @@ function renderPropsPanel() {
     }
     opSlider.addEventListener('input', () => { updateSliderPct(opSlider); updateNodeBg(); });
     opRow.appendChild(opSlider);
-    body.appendChild(opRow);
+    appearanceBody.appendChild(opRow);
 
 
 
@@ -223,7 +267,7 @@ function renderPropsPanel() {
         if (_apNodeId === n.id) { closeAppearancePanel(); }
         else { openAppearancePanel(n.id); }
       });
-      body.appendChild(apBtn);
+      appearanceBody.appendChild(apBtn);
     }
 
     // Style brush button
@@ -236,11 +280,7 @@ function renderPropsPanel() {
       if (_brushActive) { cancelStyleBrush(); }
       else { startStyleBrush(n.id); }
     });
-    body.appendChild(brushBtn);
-
-    const functionsDivider = document.createElement('div');
-    functionsDivider.className = 'prop-divider';
-    body.appendChild(functionsDivider);
+    appearanceBody.appendChild(brushBtn);
 
     // Functions — compact summary + open modal button
     if (n.type !== 'boundary') {
@@ -259,7 +299,7 @@ function renderPropsPanel() {
 
       // Per-function rows with visibility toggle + click-to-edit
       const fnList = document.createElement('div');
-      fnList.style.cssText = 'display:flex;flex-direction:column;gap:2px;margin-bottom:8px;';
+      fnList.style.cssText = 'display:flex;flex-direction:column;gap:2px;margin-bottom:8px;max-height:176px;overflow-y:auto;padding-right:2px;';
       const namedFns = n.functions.filter(f => (f.name||'').trim());
       if (namedFns.length === 0) {
         const empty = document.createElement('div');
@@ -320,7 +360,7 @@ function renderPropsPanel() {
       fnBody.appendChild(editFnBtn);
 
       fnSection.appendChild(fnBody);
-      body.appendChild(fnSection);
+      structureBody.appendChild(fnSection);
     }
 
     // Connections — compact summary above the action button
@@ -335,7 +375,7 @@ function renderPropsPanel() {
       connSection.appendChild(connHeader);
 
       const connList = document.createElement('div');
-      connList.style.cssText = 'display:flex;flex-direction:column;gap:2px;margin-bottom:8px;';
+      connList.style.cssText = 'display:flex;flex-direction:column;gap:2px;margin-bottom:8px;max-height:176px;overflow-y:auto;padding-right:2px;';
       if (relatedConnections.length === 0) {
         const empty = document.createElement('div');
         empty.style.cssText = 'font-size:11px;color:var(--text3);font-style:italic;padding:2px 0;';
@@ -363,16 +403,19 @@ function renderPropsPanel() {
           const name = document.createElement('div');
           name.style.cssText = 'font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
           name.textContent = other
-            ? ((other.tag ? other.tag + ' · ' : '') + (other.title || '').replace(/\n/g, ' '))
+            ? ((other.title || 'Untitled node').replace(/\n/g, ' '))
             : 'Unknown node';
           info.appendChild(name);
 
-          const meta = document.createElement('div');
-          meta.style.cssText = 'font-size:9px;color:var(--text3);font-family:"IBM Plex Mono",monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;';
-          meta.textContent = a.label
-            ? ((isBidir ? 'bidirectional' : (isOutgoing ? 'outgoing' : 'incoming')) + ' · ' + a.label)
-            : (isBidir ? 'bidirectional' : (isOutgoing ? 'outgoing' : 'incoming'));
-          info.appendChild(meta);
+          const metaParts = [];
+          if (other?.tag) metaParts.push(other.tag);
+          if (a.label) metaParts.push(a.label);
+          if (metaParts.length) {
+            const meta = document.createElement('div');
+            meta.style.cssText = 'font-size:9px;color:var(--text3);font-family:"IBM Plex Mono",monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;';
+            meta.textContent = metaParts.join(' · ');
+            info.appendChild(meta);
+          }
 
           row.appendChild(info);
           const editArrow = document.createElement('span');
@@ -396,18 +439,15 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       });
       connBody.appendChild(connBtn);
       connSection.appendChild(connBody);
-      body.appendChild(connSection);
+      structureBody.appendChild(connSection);
     }
 
-    const actionDivider = document.createElement('div');
-    actionDivider.className = 'prop-divider';
-    body.appendChild(actionDivider);
-
+    const layerPos = getNodeLayerPosition(n.id);
     const layerRow = document.createElement('div');
     layerRow.className = 'prop-row';
     const layerBody = document.createElement('div');
     layerBody.className = 'prop-section-body';
-    const layerHeader = createPropSectionHeader('Layer order', 'Arrange', 'layering', layerBody);
+    const layerHeader = createPropSectionHeader('Layer order', `Layer ${layerPos.index + 1} of ${layerPos.count}`, 'layering', layerBody);
     layerRow.appendChild(layerHeader);
     const layerGrid = document.createElement('div');
     layerGrid.style.cssText = 'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;';
@@ -456,7 +496,7 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
     });
     layerBody.appendChild(layerGrid);
     layerRow.appendChild(layerBody);
-    body.appendChild(layerRow);
+    arrangeBody.appendChild(layerRow);
 
     // Duplicate
     const dupBtn = document.createElement('button');
@@ -479,8 +519,50 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
   } else if (selectedArrow) {
     const a = state.arrows.find(x => x.id===selectedArrow);
     if (!a) return;
+    const fromNode = state.nodes.find(x => x.id === a.from);
+    const toNode = state.nodes.find(x => x.id === a.to);
+    const routeBody = appendPropGroup(body, 'Route');
+    const styleBody = appendPropGroup(body, 'Style');
+    const arrangeBody = appendPropGroup(body, 'Arrange');
 
-    addPropRow(body, 'Label', () => {
+    const routeSummary = document.createElement('div');
+    routeSummary.className = 'prop-row';
+    routeSummary.style.marginBottom = '10px';
+
+    [
+      { label: 'From', node: fromNode, dir: a.direction === 'bidirectional' ? '↔' : '→' },
+      { label: 'To', node: toNode, dir: a.direction === 'bidirectional' ? '↔' : '←' }
+    ].forEach((entry, index) => {
+      const card = document.createElement('div');
+      card.style.cssText = 'display:flex;align-items:flex-start;gap:8px;padding:7px 8px;border-radius:6px;border:1px solid var(--border);background:var(--surface);' + (index === 0 ? 'margin-bottom:6px;' : '');
+
+      const glyph = document.createElement('span');
+      glyph.style.cssText = 'flex-shrink:0;color:var(--accent3);font-family:"IBM Plex Mono",monospace;font-size:11px;line-height:1.3;padding-top:1px;';
+      glyph.textContent = entry.dir;
+      card.appendChild(glyph);
+
+      const info = document.createElement('div');
+      info.style.cssText = 'min-width:0;flex:1;';
+
+      const title = document.createElement('div');
+      title.style.cssText = 'font-size:11px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+      title.textContent = entry.node ? (entry.node.title || 'Untitled node').replace(/\n/g, ' ') : 'Unknown node';
+      info.appendChild(title);
+
+      const metaParts = [];
+      metaParts.push(entry.label);
+      if (entry.node?.tag) metaParts.push(entry.node.tag);
+      const meta = document.createElement('div');
+      meta.style.cssText = 'font-size:9px;color:var(--text3);font-family:"IBM Plex Mono",monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px;';
+      meta.textContent = metaParts.join(' · ');
+      info.appendChild(meta);
+
+      card.appendChild(info);
+      routeSummary.appendChild(card);
+    });
+    routeBody.appendChild(routeSummary);
+
+    addPropRow(routeBody, 'Label', () => {
       const ta = document.createElement('textarea');
       ta.className = 'prop-input';
       ta.rows = 2;
@@ -499,7 +581,7 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
     });
 
     // Line style
-    addPropRow(body, 'Line style', () => {
+    addPropRow(styleBody, 'Line style', () => {
       const row = document.createElement('div');
       row.className = 'line-style-row';
       const styles = [{v:'curved',l:'∿'},{v:'straight',l:'╱'},{v:'orthogonal',l:'⌐'}];
@@ -519,7 +601,7 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       return row;
     });
 
-    addPropRow(body, 'Direction', () => {
+    addPropRow(routeBody, 'Direction', () => {
       const row = document.createElement('div');
       row.className = 'dir-toggle-row';
       const opts = [{v:'directed',l:'→'},{v:'bidirectional',l:'↔'},{v:'undirected',l:'──'}];
@@ -540,8 +622,8 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
     });
 
     // From/To port
-    addPropRow(body, 'From port (source)', () => makePortSelect(a, 'fromPos', () => { renderArrows(); renderSidebar(); }));
-    addPropRow(body, 'To port (target)', () => makePortSelect(a, 'toPos', () => { renderArrows(); renderSidebar(); }));
+    addPropRow(routeBody, 'From port', () => makePortSelect(a, 'fromPos', () => { renderArrows(); renderSidebar(); }));
+    addPropRow(routeBody, 'To port', () => makePortSelect(a, 'toPos', () => { renderArrows(); renderSidebar(); }));
 
     // Bend
     const _isOrth = a.lineStyle === 'orthogonal';
@@ -558,11 +640,11 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       updateSliderPct(bendInp);
       bendInp.addEventListener('input', () => { updateSliderPct(bendInp); pushUndoDebounced(); a.bend = parseInt(bendInp.value); renderArrows(); });
       bendRow.appendChild(bendInp);
-      body.appendChild(bendRow);
+      styleBody.appendChild(bendRow);
     }
     const hasManualEndpointOffsets = getArrowEndOffset(a, 'from') !== null || getArrowEndOffset(a, 'to') !== null;
     const resetControlsRow = document.createElement('div');
-    resetControlsRow.style.cssText = 'display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px;';
+    resetControlsRow.className = 'ortho-reset-row';
     function setMiniResetDisabled(btn, disabled) {
       btn.disabled = disabled;
       btn.style.opacity = disabled ? '0.45' : '1';
@@ -605,7 +687,6 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       selectArrow(a.id);
     });
     resetControlsRow.appendChild(resetEndpointsBtn);
-    body.appendChild(resetControlsRow);
 
     if (_isOrth) {
       // Two sliders ? one per axis. Labels depend on from-port direction.
@@ -614,13 +695,13 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       const labelA = isHorizExit ? 'Column X position' : 'Crossbar Y position';
       const labelB = isHorizExit ? 'Crossbar Y position' : 'Column X position';
 
-      [[labelA, 'bend', 'ortho-slider-bend'], [labelB, 'orthoY', 'ortho-slider-orthoY']].forEach(([lbl, prop, sid]) => {
-        const row = document.createElement('div');
-        row.className = 'prop-row';
-        const rl = document.createElement('div'); rl.className = 'prop-label'; rl.textContent = lbl;
-        row.appendChild(rl);
-        const sl = document.createElement('input'); sl.type = 'range'; sl.className = 'prop-input';
-        sl.id = sid; sl.min = -300; sl.max = 300; sl.value = Math.round(a[prop] || 0);
+        [[labelA, 'bend', 'ortho-slider-bend'], [labelB, 'orthoY', 'ortho-slider-orthoY']].forEach(([lbl, prop, sid]) => {
+          const row = document.createElement('div');
+          row.className = 'prop-row ortho-slider-row';
+          const rl = document.createElement('div'); rl.className = 'prop-label'; rl.textContent = lbl;
+          row.appendChild(rl);
+          const sl = document.createElement('input'); sl.type = 'range'; sl.className = 'prop-input';
+          sl.id = sid; sl.min = -300; sl.max = 300; sl.value = Math.round(a[prop] || 0);
         updateSliderPct(sl);
         sl.addEventListener('input', () => {
           updateSliderPct(sl);
@@ -633,12 +714,16 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
           renderArrows();
           saveToLocalStorage();
         });
-        row.appendChild(sl);
-        body.appendChild(row);
-      });
-    }
+          row.appendChild(sl);
+          styleBody.appendChild(row);
+        });
 
-    addPropRow(body, 'Stroke pattern', () => {
+        styleBody.appendChild(resetControlsRow);
+      } else {
+        styleBody.appendChild(resetControlsRow);
+      }
+
+    addPropRow(styleBody, 'Stroke pattern', () => {
       const row = document.createElement('div');
       row.className = 'stroke-style-row';
       row.dataset.control = 'stroke-style';
@@ -649,19 +734,18 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
         { v: 'dashdot', l: 'Dash-dot', dash: '8 3 1.5 3' }
       ];
       const activeStyle = getArrowStrokeStyle(a);
-      options.forEach(opt => {
-        const b = document.createElement('button');
-        b.className = 'stroke-style-btn' + (activeStyle === opt.v ? ' active' : '');
-        b.title = opt.l;
-        b.innerHTML =
-          '<svg viewBox="0 0 22 8" aria-hidden="true">' +
-            '<line x1="1" y1="4" x2="21" y2="4"' + (opt.dash ? ' stroke-dasharray="' + opt.dash + '"' : '') + ' />' +
-          '</svg>' +
-          '<span class="stroke-style-btn-label">' + opt.l + '</span>';
-        b.addEventListener('click', () => {
-          pushUndo();
-          a.strokeStyle = opt.v;
-          a.dash = opt.v === 'dashed';
+        options.forEach(opt => {
+          const b = document.createElement('button');
+          b.className = 'stroke-style-btn' + (activeStyle === opt.v ? ' active' : '');
+          b.title = opt.l;
+          b.innerHTML =
+            '<svg viewBox="0 0 22 8" aria-hidden="true">' +
+              '<line x1="1" y1="4" x2="21" y2="4"' + (opt.dash ? ' stroke-dasharray="' + opt.dash + '"' : '') + ' />' +
+            '</svg>';
+          b.addEventListener('click', () => {
+            pushUndo();
+            a.strokeStyle = opt.v;
+            a.dash = opt.v === 'dashed';
           renderArrows();
           saveToLocalStorage();
           row.querySelectorAll('.stroke-style-btn').forEach(x => x.classList.remove('active'));
@@ -703,7 +787,7 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       arrowLayerGrid.appendChild(btn);
     });
     arrowLayerRow.appendChild(arrowLayerGrid);
-    body.appendChild(arrowLayerRow);
+    arrangeBody.appendChild(arrowLayerRow);
 
     // Color
     const colorRow2 = document.createElement('div');
@@ -724,7 +808,7 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
     });
     ci2Inline.appendChild(ci2); ci2Inline.appendChild(ci2Reset);
     colorRow2.appendChild(ci2Inline);
-    body.appendChild(colorRow2);
+    styleBody.appendChild(colorRow2);
 
     // ── Label section ──
     const lblSec = document.createElement('div');
@@ -785,12 +869,12 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
     lblHint.style.cssText = 'font-size:9.5px;color:var(--text3);margin-top:5px;font-family:"IBM Plex Mono",monospace;';
     lblHint.textContent = '↖ Drag to reposition · Double-click to edit inline';
     lblSec.appendChild(lblHint);
-    body.appendChild(lblSec);
+    styleBody.appendChild(lblSec);
 
     const delBtn = document.createElement('button');
     delBtn.className = 'prop-btn danger'; delBtn.textContent = '✕ Delete arrow';
     delBtn.addEventListener('click', () => deleteSelected());
-    body.appendChild(delBtn);
+    arrangeBody.appendChild(delBtn);
   }
 }
 

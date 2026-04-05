@@ -133,12 +133,14 @@ test.describe('Conduit smoke', () => {
     await addNode(page, 'external', 940, 700);
     const [firstId, secondId] = await getNodeIds(page);
 
-    await page.evaluate(id => selectNode(id), firstId);
-    await expect(page.locator('#context-toolbar')).toHaveClass(/visible/);
-    await expect(page.locator('#context-toolbar')).toContainText('Forward');
-    await page.evaluate(() => {
-      document.querySelector('#context-toolbar button[title="Move forward"]')?.click();
-    });
+  await page.evaluate(id => selectNode(id), firstId);
+  await expect(page.locator('#context-toolbar')).toHaveClass(/visible/);
+  await expect(page.locator('#context-toolbar')).toContainText('Forward');
+  await expect(page.locator('#context-toolbar')).toContainText('Style');
+  await expect(page.locator('#context-toolbar')).not.toContainText('Duplicate');
+  await page.evaluate(() => {
+    document.querySelector('#context-toolbar button[title="Move forward"]')?.click();
+  });
 
     await expect.poll(async () => page.evaluate(ids => {
       const first = state.nodes.find(node => node.id === ids.firstId);
@@ -156,14 +158,15 @@ test.describe('Conduit smoke', () => {
     const [firstId, secondId, thirdId] = await getNodeIds(page);
 
     await page.evaluate(id => selectNode(id), firstId);
-    await page.evaluate(() => {
-      document.querySelector('#context-toolbar button[title="More actions"]')?.click();
-    });
-    await expect(page.locator('#context-toolbar .context-toolbar-menu')).toBeVisible();
-    await page.evaluate(() => {
-      [...document.querySelectorAll('#context-toolbar .context-toolbar-menu-item')]
-        .find(btn => btn.textContent.trim() === 'To front')?.click();
-    });
+  await page.evaluate(() => {
+    document.querySelector('#context-toolbar button[title="More actions"]')?.click();
+  });
+  await expect(page.locator('#context-toolbar .context-toolbar-menu')).toBeVisible();
+  await expect(page.locator('#context-toolbar .context-toolbar-menu')).toContainText('Duplicate');
+  await page.evaluate(() => {
+    [...document.querySelectorAll('#context-toolbar .context-toolbar-menu-item')]
+      .find(btn => btn.textContent.trim() === 'To front')?.click();
+  });
 
     await expect.poll(async () => page.evaluate(ids => {
       return ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
@@ -176,12 +179,33 @@ test.describe('Conduit smoke', () => {
         .find(btn => btn.textContent.trim() === 'To back')?.click();
     });
 
-    await expect.poll(async () => page.evaluate(ids => {
-      return ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
-    }, [firstId, secondId, thirdId])).toEqual([3, 2, 1]);
+  await expect.poll(async () => page.evaluate(ids => {
+    return ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
+  }, [firstId, secondId, thirdId])).toEqual([3, 2, 1]);
+});
+
+test('context toolbar can toggle style brush from the primary row', async ({ page }) => {
+  await bootFresh(page);
+
+  await addNode(page, 'internal', 860, 620);
+  const [nodeId] = await getNodeIds(page);
+
+  await page.evaluate(id => selectNode(id), nodeId);
+  await page.evaluate(() => {
+    document.querySelector('#context-toolbar button[title="Start style brush"]')?.click();
   });
 
-  test('context toolbar more menu uses shared menu icons and dividers', async ({ page }) => {
+  await expect(page.locator('#style-brush-banner')).toHaveClass(/active/);
+  await expect(page.locator('#context-toolbar button[title="Cancel style brush"]')).toBeVisible();
+
+  await page.evaluate(() => {
+    document.querySelector('#context-toolbar button[title="Cancel style brush"]')?.click();
+  });
+
+  await expect(page.locator('#style-brush-banner')).not.toHaveClass(/active/);
+});
+
+test('context toolbar more menu uses shared menu icons and dividers', async ({ page }) => {
     await bootFresh(page);
 
     await addNode(page, 'internal', 860, 620);
@@ -193,7 +217,7 @@ test.describe('Conduit smoke', () => {
       document.querySelector('#context-toolbar button[title="More actions"]')?.click();
     });
 
-    await expect(page.locator('#context-toolbar .context-toolbar-menu .app-menu-item-icon svg')).toHaveCount(5);
+  await expect(page.locator('#context-toolbar .context-toolbar-menu .app-menu-item-icon svg')).toHaveCount(6);
     await expect(page.locator('#context-toolbar .context-toolbar-menu .app-menu-divider')).toHaveCount(2);
   });
 
@@ -348,6 +372,94 @@ test.describe('Conduit smoke', () => {
       const host = el?.closest('.node');
       return host?.id || null;
     }, overlapPoint)).toBe(`node-${bottomId}`);
+  });
+
+  test('nodes sidebar can search and filter the node list', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 980, 700);
+
+    await page.evaluate(() => {
+      const internal = state.nodes.find(n => n.type === 'internal');
+      const external = state.nodes.find(n => n.type === 'external');
+      internal.tag = 'ERP';
+      internal.title = 'Enterprise Planning';
+      external.tag = 'CRM';
+      external.title = 'Customer Portal';
+      render();
+    });
+
+    await page.locator('#sidebar .sb-header', { hasText: 'Nodes' }).click();
+    await page.locator('#node-list-search').fill('erp');
+    await expect(page.locator('#node-list .node-list-item')).toHaveCount(1);
+    await expect(page.locator('#node-list .node-list-item')).toContainText('ERP');
+
+    await page.locator('#node-list .node-list-item').click();
+    await expect.poll(async () => page.evaluate(() => selectedNode)).toBeTruthy();
+
+    await page.locator('#node-list-search').fill('missing');
+    await expect(page.locator('#node-list .node-list-empty')).toHaveText('No matching nodes');
+  });
+
+  test('sidebar prioritizes properties and defaults nodes and legend to collapsed', async ({ page }) => {
+    await bootFresh(page);
+
+    const headers = await page.locator('#sidebar .sb-header').allTextContents();
+    expect(headers[0]).toContain('Palette');
+    expect(headers[1]).toContain('Properties');
+    expect(headers[2]).toContain('Nodes');
+    expect(headers[3]).toContain('Legend');
+
+    await expect(page.locator('#sidebar .sb-section').nth(2).locator('.sb-body')).toHaveClass(/hidden/);
+    await expect(page.locator('#sidebar .sb-section').nth(3).locator('.sb-body')).toHaveClass(/hidden/);
+  });
+
+  test('selected node properties are grouped into identity appearance structure and arrange', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await page.locator('.node.internal').first().click();
+
+    await expect(page.locator('#props-body .prop-group-title')).toHaveText(['Identity', 'Appearance', 'Structure', 'Arrange']);
+  });
+
+test('selected connection properties are grouped and prioritize route titles over tags', async ({ page }) => {
+  await bootFresh(page);
+
+  await addNode(page, 'internal', 760, 520);
+  await addNode(page, 'external', 1020, 640);
+
+  await page.evaluate(() => {
+    state.nodes[0].tag = 'ERP';
+    state.nodes[0].title = 'Enterprise Planning';
+    state.nodes[1].tag = 'CRM';
+    state.nodes[1].title = 'Customer Portal';
+    state.arrows.push({
+      id: 'a-panel-test',
+      from: state.nodes[0].id,
+      to: state.nodes[1].id,
+      fromPos: 'e',
+      toPos: 'w',
+      direction: 'directed',
+      lineStyle: 'curved',
+      strokeStyle: 'solid',
+      bend: 0,
+      orthoY: 0,
+      labelDx: 0,
+      labelDy: 0,
+      color: getComputedStyle(document.documentElement).getPropertyValue('--arrow-color').trim() || '#c16d23'
+    });
+    render();
+  });
+
+  await page.evaluate(() => selectArrow('a-panel-test'));
+
+  await expect(page.locator('#props-body .prop-group-title')).toHaveText(['Route', 'Style', 'Arrange']);
+  await expect(page.locator('#props-body .prop-group').first()).toContainText('Enterprise Planning');
+  await expect(page.locator('#props-body .prop-group').first()).toContainText('Customer Portal');
+    await expect(page.locator('#props-body .prop-group').first()).toContainText('ERP');
+    await expect(page.locator('#props-body .prop-group').first()).toContainText('CRM');
   });
 
   test('newly added nodes and pasted nodes land on the top layer', async ({ page }) => {
