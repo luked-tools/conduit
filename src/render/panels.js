@@ -1,4 +1,10 @@
 // Render and properties panel helpers extracted from main.js
+let _nodeListFilter = '';
+
+function setNodeListFilter(value) {
+  _nodeListFilter = (value || '').trim().toLowerCase();
+  renderSidebar();
+}
 
 function render() {
   renderNodes();
@@ -56,10 +62,31 @@ function createPropSectionHeader(labelText, badgeText, sectionKey, bodyEl) {
 }
 
 function renderSidebar() {
-  document.getElementById('node-count').textContent = state.nodes.filter(n=>n.type!=='boundary').length;
+  const visibleNodes = state.nodes.filter(n => n.type !== 'boundary');
+  document.getElementById('node-count').textContent = visibleNodes.length;
+  const searchInput = document.getElementById('node-list-search');
+  if (searchInput && searchInput.value !== _nodeListFilter) searchInput.value = _nodeListFilter;
   const list = document.getElementById('node-list');
   list.innerHTML = '';
-  state.nodes.filter(n=>n.type!=='boundary').forEach(n => {
+  const filteredNodes = visibleNodes.filter(n => {
+    if (!_nodeListFilter) return true;
+    const haystack = [
+      n.tag || '',
+      n.title || '',
+      n.subtitle || '',
+      n.type || ''
+    ].join(' ').replace(/\n/g, ' ').toLowerCase();
+    return haystack.includes(_nodeListFilter);
+  });
+
+  if (filteredNodes.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'node-list-empty';
+    empty.textContent = _nodeListFilter ? 'No matching nodes' : 'No nodes yet';
+    list.appendChild(empty);
+  }
+
+  filteredNodes.forEach(n => {
     const item = document.createElement('div');
     item.className = 'node-list-item' + (selectedNode===n.id ? ' selected':'');
     const dot = document.createElement('div');

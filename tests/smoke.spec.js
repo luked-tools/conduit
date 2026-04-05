@@ -350,6 +350,33 @@ test.describe('Conduit smoke', () => {
     }, overlapPoint)).toBe(`node-${bottomId}`);
   });
 
+  test('nodes sidebar can search and filter the node list', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 980, 700);
+
+    await page.evaluate(() => {
+      const internal = state.nodes.find(n => n.type === 'internal');
+      const external = state.nodes.find(n => n.type === 'external');
+      internal.tag = 'ERP';
+      internal.title = 'Enterprise Planning';
+      external.tag = 'CRM';
+      external.title = 'Customer Portal';
+      render();
+    });
+
+    await page.locator('#node-list-search').fill('erp');
+    await expect(page.locator('#node-list .node-list-item')).toHaveCount(1);
+    await expect(page.locator('#node-list .node-list-item')).toContainText('ERP');
+
+    await page.locator('#node-list .node-list-item').click();
+    await expect.poll(async () => page.evaluate(() => selectedNode)).toBeTruthy();
+
+    await page.locator('#node-list-search').fill('missing');
+    await expect(page.locator('#node-list .node-list-empty')).toHaveText('No matching nodes');
+  });
+
   test('newly added nodes and pasted nodes land on the top layer', async ({ page }) => {
     await bootFresh(page);
 
