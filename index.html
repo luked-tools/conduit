@@ -113,6 +113,10 @@
       </div>
     </div>
     <div class="tb-sep"></div>
+    <button class="tb-btn" onclick="toggleLayersPanel()" title="Open layers panel" id="layers-toggle-btn" aria-expanded="false">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 3.5h9M2 6.5h9M2 9.5h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M9.5 1.8 11.2 3.5 9.5 5.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Layers
+    </button>
     <button class="tb-btn" onclick="toggleThemePanel()" title="Customise colours" id="theme-toggle-btn">
       <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
         <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.3"/>
@@ -239,12 +243,19 @@
   </div>
 
   <!-- CANVAS -->
-  <div id="appearance-panel">
+<div id="appearance-panel">
   <div id="ap-header">
     <span id="ap-title">Content Style</span>
     <button id="ap-close" onclick="closeAppearancePanel()" title="Close">×</button>
   </div>
   <div id="ap-body"></div>
+</div>
+<div id="layers-panel">
+  <div id="layers-panel-header">
+    <span id="layers-panel-title">Layers</span>
+    <button id="layers-panel-close" onclick="closeLayersPanel()" title="Close">×</button>
+  </div>
+  <div id="layers-panel-body"></div>
 </div>
 <div id="canvas-wrap">
     <div id="canvas">
@@ -634,6 +645,7 @@
 <script src="src/render/ui-helpers.js"></script>
 <script src="src/render/context-toolbar.js"></script>
 <script src="src/render/appearance.js"></script>
+<script src="src/render/layers-panel.js"></script>
 <script src="src/features/canvas-actions.js"></script>
 <script src="src/interactions/selection.js"></script>
 <script src="src/interactions/drag-resize.js"></script>

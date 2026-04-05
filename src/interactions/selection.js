@@ -19,6 +19,7 @@ function selectNode(id) {
   }
   renderArrows();
   renderSidebar();
+  if (typeof renderLayersPanel === 'function') renderLayersPanel();
   if (typeof updateContextToolbar === 'function') updateContextToolbar();
 }
 
@@ -54,6 +55,7 @@ function selectArrow(id) {
   arrowSVG.style.zIndex = '4';
   renderArrows();
   renderSidebar();
+  if (typeof renderLayersPanel === 'function') renderLayersPanel();
   if (typeof updateContextToolbar === 'function') updateContextToolbar();
 }
 
@@ -73,5 +75,6 @@ function deselect(e) {
   arrowSVG.style.zIndex = '2';
   renderArrows();
   renderSidebar();
+  if (typeof renderLayersPanel === 'function') renderLayersPanel();
   if (typeof updateContextToolbar === 'function') updateContextToolbar();
 }
