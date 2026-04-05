@@ -335,11 +335,14 @@
   .ortho-slider-row { margin-bottom: 8px; }
   .ortho-slider-row .prop-label { margin-bottom: 2px; }
   .ortho-slider-row .prop-input[type="range"] { margin: 0; height: 16px; }
+  .bend-row { margin-bottom: 8px; }
+  .bend-row .prop-label { margin-bottom: 2px; }
+  .bend-row .prop-input[type="range"] { margin: 0; height: 16px; }
   .ortho-reset-row {
     display: flex;
     justify-content: flex-end;
     gap: 6px;
-    margin: 2px 0 6px;
+    margin: -5px 0 10px;
   }
   .prop-label {
     font-family: 'Inter', sans-serif;
