@@ -116,16 +116,17 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 2px;
+    min-height: 20px;
+    padding: 1px;
     border: 1px solid var(--border);
-    border-radius: 7px;
+    border-radius: 6px;
     background: color-mix(in srgb, var(--surface2) 88%, transparent);
     flex-shrink: 0;
   }
   .layers-filter-indicator {
     position: absolute;
-    top: 2px;
-    bottom: 2px;
+    top: 1px;
+    bottom: 1px;
     left: 0;
     width: 0;
     border-radius: 5px;
@@ -139,14 +140,14 @@
   .layers-filter-btn {
     position: relative;
     z-index: 1;
-    min-height: 22px;
-    padding: 3px 8px;
+    min-height: 18px;
+    padding: 2px 8px;
     border: 1px solid transparent;
     border-radius: 5px;
     background: transparent;
     color: var(--text3);
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 9px;
+    font-size: 8.5px;
     line-height: 1;
     cursor: pointer;
     transition: all 0.12s;

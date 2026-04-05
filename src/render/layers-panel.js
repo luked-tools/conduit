@@ -348,7 +348,12 @@ function renderLayersPanel() {
         btn.addEventListener('click', () => setLayersPanelFilter(value));
         filter.appendChild(btn);
       });
-      header.appendChild(filter);
+      const closeBtn = document.getElementById('layers-panel-close');
+      if (closeBtn) {
+        header.insertBefore(filter, closeBtn);
+      } else {
+        header.appendChild(filter);
+      }
     }
     filter.querySelectorAll('.layers-filter-btn').forEach(btn => {
       const active = btn.dataset.filter === _layersPanelFilter;
