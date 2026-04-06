@@ -752,11 +752,12 @@ function bootApp() {
   } catch(e) {
     console.error('Conduit boot error:', e);
     try { init(); saveToLocalStorage(); } catch(e2) {}
-  }
-  updateDocumentPanelFromInputs();
-  updateDocumentPanelPosition();
-  restoreSectionState();
-  updatePaletteHighlight();
+    }
+    updateDocumentPanelFromInputs();
+    updateDocumentPanelPosition();
+    if (typeof initWelcomeCardState === 'function') initWelcomeCardState();
+    restoreSectionState();
+    updatePaletteHighlight();
   // Re-run empty state check after DOM settles
   setTimeout(updateEmptyState, 50);
 }

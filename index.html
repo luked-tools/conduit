@@ -108,11 +108,15 @@
         </button>
       </div>
     </div>
-    <div class="tb-sep"></div>
-    <button class="tb-btn" onclick="toggleLayersPanel()" title="Open layers panel" id="layers-toggle-btn" aria-expanded="false">
-      <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 3.5h9M2 6.5h9M2 9.5h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M9.5 1.8 11.2 3.5 9.5 5.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      Layers
-    </button>
+      <div class="tb-sep"></div>
+      <button class="tb-btn" onclick="openHelpModal()" title="Open quick start and product help" id="help-btn">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><circle cx="6.5" cy="6.5" r="5.2" stroke="currentColor" stroke-width="1.3"/><path d="M5.7 5.1a1.25 1.25 0 1 1 2 .98c-.45.33-.8.62-.8 1.25" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="6.5" cy="9.35" r=".7" fill="currentColor"/></svg>
+        Help
+      </button>
+      <button class="tb-btn" onclick="toggleLayersPanel()" title="Open layers panel" id="layers-toggle-btn" aria-expanded="false">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none"><path d="M2 3.5h9M2 6.5h9M2 9.5h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M9.5 1.8 11.2 3.5 9.5 5.2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Layers
+      </button>
     <button class="tb-btn" onclick="toggleThemePanel()" title="Customise colours" id="theme-toggle-btn">
       <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
         <circle cx="6.5" cy="6.5" r="5" stroke="currentColor" stroke-width="1.3"/>
@@ -279,6 +283,40 @@
         <div class="canvas-empty-btns">
           <button class="canvas-empty-btn primary" onclick="addMode('internal')">+ Add first node</button>
 <button class="canvas-empty-btn" onclick="loadSampleIntoCurrentDraft()">Load sample</button>
+        </div>
+      </div>
+      <div id="canvas-welcome-card" aria-live="polite">
+        <div class="canvas-welcome-header">
+          <div class="canvas-welcome-kicker">First launch</div>
+          <button class="canvas-welcome-dismiss" onclick="dismissWelcomeCard()" aria-label="Dismiss quick start">×</button>
+        </div>
+        <div class="canvas-welcome-title">Quick start</div>
+          <div class="canvas-welcome-sub">Learn the core features, and jump straight in.</div>
+        <div class="canvas-welcome-tips">
+          <div class="canvas-welcome-tip">
+            <span class="canvas-welcome-tip-index">1</span>
+            <div>
+                <div class="canvas-welcome-tip-title">Add nodes from the Palette</div>
+                <div class="canvas-welcome-tip-copy">Start with internal systems, external entities, or a boundary box.</div>
+            </div>
+          </div>
+          <div class="canvas-welcome-tip">
+            <span class="canvas-welcome-tip-index">2</span>
+            <div>
+              <div class="canvas-welcome-tip-title">Connect by dragging from node ports</div>
+              <div class="canvas-welcome-tip-copy">Use the selected toolbar for quick connect, layering, rename, and style actions.</div>
+            </div>
+          </div>
+          <div class="canvas-welcome-tip">
+            <span class="canvas-welcome-tip-index">3</span>
+            <div>
+                <div class="canvas-welcome-tip-title">Open details when you need more control</div>
+                <div class="canvas-welcome-tip-copy">Use the sidebar for fast edits, then open panels or modals for functions, layers, theme, and deeper detail.</div>
+              </div>
+            </div>
+        </div>
+        <div class="canvas-welcome-actions">
+          <button class="canvas-empty-btn" onclick="dismissWelcomeCard()">Got it</button>
         </div>
       </div>
     </div>
@@ -511,11 +549,12 @@
 <script src="src/render/theme.js"></script>
 <script src="src/render/drafts.js"></script>
 <script src="src/render/menu.js"></script>
-<script src="src/render/ui-helpers.js"></script>
-<script src="src/render/context-toolbar.js"></script>
-<script src="src/render/appearance.js"></script>
-<script src="src/render/layers-panel.js"></script>
-<script src="src/features/canvas-actions.js"></script>
+  <script src="src/render/ui-helpers.js"></script>
+  <script src="src/render/context-toolbar.js"></script>
+  <script src="src/render/appearance.js"></script>
+  <script src="src/render/layers-panel.js"></script>
+  <script src="src/features/help-modal.js"></script>
+  <script src="src/features/canvas-actions.js"></script>
 <script src="src/interactions/selection.js"></script>
 <script src="src/interactions/drag-resize.js"></script>
 <script src="src/interactions/connect-wire.js"></script>

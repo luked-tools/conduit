@@ -152,6 +152,7 @@
   }
   #canvas-empty.visible { opacity: 1; pointer-events: all; }
   .canvas-empty-box {
+    position: relative;
     border: 1.5px dashed var(--border2);
     border-radius: 12px; padding: 40px 48px;
     text-align: center; max-width: 360px;
@@ -183,6 +184,129 @@
     background: var(--accent); color: #fff; border-color: transparent;
   }
   .canvas-empty-btn.primary:hover { filter: brightness(1.1); }
+  #canvas-welcome-card {
+    position: absolute;
+    left: calc(50% + 230px);
+    top: 50%;
+    width: min(320px, calc(100vw - 32px));
+    padding: 14px 14px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface) 96%, var(--bg) 4%);
+    box-shadow: var(--shadow-soft);
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(18px, calc(-50% + 6px));
+    transition: opacity var(--motion-fade), transform var(--motion-panel);
+  }
+  #canvas-welcome-card.visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translate(0, -50%);
+  }
+  .canvas-welcome-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .canvas-welcome-kicker {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text3);
+    flex: 1;
+  }
+  .canvas-welcome-dismiss {
+    width: 24px;
+    height: 24px;
+    border-radius: 5px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text3);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.12s;
+    padding: 0;
+  }
+  .canvas-welcome-dismiss:hover {
+    background: var(--surface-hover);
+    border-color: var(--border2);
+    color: var(--text);
+  }
+  .canvas-welcome-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 5px;
+    letter-spacing: -0.02em;
+  }
+  .canvas-welcome-sub {
+    font-size: 11px;
+    line-height: 1.55;
+    color: var(--text2);
+    margin-bottom: 12px;
+  }
+  .canvas-welcome-tips {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .canvas-welcome-tip {
+    display: grid;
+    grid-template-columns: 20px 1fr;
+    gap: 8px;
+    align-items: flex-start;
+    padding: 8px 9px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--surface) 94%, var(--surface2) 6%);
+  }
+  .canvas-welcome-tip-index {
+    width: 20px;
+    height: 20px;
+    border-radius: 999px;
+    background: var(--accent-soft);
+    color: var(--accent3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .canvas-welcome-tip-title {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .canvas-welcome-tip-copy {
+    font-size: 10px;
+    line-height: 1.5;
+    color: var(--text2);
+  }
+  .canvas-welcome-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+  }
+  @media (max-width: 980px) {
+    #canvas-welcome-card {
+      position: static;
+      width: min(360px, calc(100vw - 32px));
+      margin-top: 14px;
+      transform: translateY(6px);
+    }
+    #canvas-welcome-card.visible {
+      transform: translateY(0);
+    }
+  }
 
 
   /* .node-detail-dot removed — merged into .node-info-hint.has-detail */

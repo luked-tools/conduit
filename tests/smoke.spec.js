@@ -76,7 +76,36 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator('#canvas-wrap')).toBeVisible();
     await expect(page.locator('#sidebar')).toBeVisible();
     await expect(page.locator('.node')).toHaveCount(0);
+    await expect(page.locator('#canvas-welcome-card')).toHaveClass(/visible/);
     expect(pageErrors).toEqual([]);
+  });
+
+  test('first-launch welcome card dismisses and stays hidden after reload', async ({ page }) => {
+    await bootFresh(page);
+
+    await expect(page.locator('#canvas-welcome-card')).toHaveClass(/visible/);
+    await page.getByRole('button', { name: 'Dismiss quick start' }).click();
+    await expect(page.locator('#canvas-welcome-card')).not.toHaveClass(/visible/);
+
+    await page.reload();
+    await expect(page.locator('#canvas-welcome-card')).not.toHaveClass(/visible/);
+  });
+
+  test('help modal opens with tabs and product background', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.getByRole('button', { name: 'Dismiss quick start' }).click();
+    await expect(page.locator('#canvas-welcome-card')).not.toHaveClass(/visible/);
+
+    await page.getByRole('button', { name: 'Help' }).click();
+    await expect(page.locator('#modal-overlay')).toHaveClass(/open/);
+    await expect(page.locator('#modal-title')).toHaveText('Help');
+    await expect(page.locator('.help-modal-tab')).toHaveCount(3);
+    await expect(page.locator('.help-modal-panel.active')).toContainText('Quick Start');
+    await page.locator('.help-modal-tab', { hasText: 'Workflows' }).click();
+    await expect(page.locator('.help-modal-panel.active')).toContainText('interactive HTML');
+    await page.locator('.help-modal-tab', { hasText: 'About' }).click();
+    await expect(page.locator('.help-modal-panel.active')).toContainText('interactive exports');
   });
 
   test('can add a node from app helpers', async ({ page }) => {

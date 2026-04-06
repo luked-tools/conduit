@@ -52,6 +52,18 @@ Show the minimum needed for fast action, then reveal depth on demand.
 
 This pattern already exists in the document panel, property sections, appearance panel, and function editor flows and should remain the default.
 
+First-launch guidance should follow the same rule:
+
+- use one lightweight welcome surface, not a step-by-step tour
+- keep the canvas visible while teaching the first moves
+- explain only the core actions needed to start
+- make dismissal immediate and persistent
+
+Help surfaces should extend that same model:
+
+- use one calm reference modal for quick-start, workflow guidance, and product background
+- keep copy concise and action-oriented
+
 ### 3.4 Direct Manipulation Wins
 
 If a task can be done by dragging, selecting, editing inline, or acting directly on an object, prefer that over distant controls.
@@ -289,6 +301,14 @@ Segmented controls:
 - The active segment should move, not blink between disconnected fills.
 - Labels in segmented controls should stay short and scannable.
 - This pattern is appropriate for compact switches such as direction, mode, or scoped panel filters.
+
+Content tabs:
+
+- Use content tabs when switching between distinct sections of content within the same panel or modal.
+- Content tabs should use the same underline-based pattern as the node detail modal.
+- The active tab should be indicated by text emphasis and a bottom border, not a segmented pill container.
+- This pattern is appropriate for deeper reference/edit surfaces such as node detail and Help.
+- Do not introduce new tab styles unless the interaction model is genuinely different.
 
 ### 7.6 Inputs
 
