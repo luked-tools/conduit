@@ -47,6 +47,7 @@ function deleteSelected() {
     state.arrows = state.arrows.filter(a => a.id !== selectedArrow);
     selectedArrow = null;
   }
+  rebuildCanvasOrderFromLegacyLayers();
   render();
 }
 
@@ -76,6 +77,7 @@ function pasteNode() {
   }
   state.nodes.push(copy);
   normalizeNodeLayers();
+  rebuildCanvasOrderFromLegacyLayers();
   render();
   selectNode(id);
   _clipboardNode = JSON.parse(JSON.stringify(copy));

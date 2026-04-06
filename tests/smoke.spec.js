@@ -143,8 +143,8 @@ test.describe('Conduit smoke', () => {
 
     await expect.poll(async () => page.evaluate(id => {
       const el = document.getElementById(`node-${id}`);
-      return el ? getComputedStyle(el).zIndex : null;
-    }, firstId)).toBe('2');
+      return el ? Number(getComputedStyle(el).zIndex) : null;
+    }, firstId)).toBeGreaterThan(2);
 
     await page.reload();
 
@@ -153,6 +153,60 @@ test.describe('Conduit smoke', () => {
       const second = state.nodes.find(node => node.id === ids.secondId);
       return [first?.z ?? null, second?.z ?? null];
     }, { firstId, secondId })).toEqual([2, 1]);
+  });
+
+  test('canvasOrder metadata is created and persisted across reload', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 1180, 620);
+    const [fromId, toId] = await getNodeIds(page);
+
+    await dragBetween(
+      page,
+      `#node-${fromId} .conn-point[data-pos="e"]`,
+      `#node-${toId} .conn-point[data-pos="w"]`
+    );
+
+    const initialOrder = await page.evaluate(() =>
+      (state.canvasOrder || []).map(entry => `${entry.kind}:${entry.id}`)
+    );
+
+    expect(initialOrder.length).toBe(3);
+    expect(initialOrder.filter(key => key.startsWith('arrow:')).length).toBe(1);
+    expect(initialOrder.filter(key => key.startsWith('node:')).length).toBe(2);
+
+    await page.reload();
+
+    await expect.poll(async () => page.evaluate(() =>
+      (state.canvasOrder || []).map(entry => `${entry.kind}:${entry.id}`)
+    )).toEqual(initialOrder);
+  });
+
+  test('moving a connection updates unified canvasOrder across object types', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 1180, 620);
+    const [fromId, toId] = await getNodeIds(page);
+
+    await dragBetween(
+      page,
+      `#node-${fromId} .conn-point[data-pos="e"]`,
+      `#node-${toId} .conn-point[data-pos="w"]`
+    );
+    const arrowId = await page.evaluate(() => state.arrows[0].id);
+
+    await page.evaluate(() => deselect());
+    await page.evaluate(() => moveArrowLayer(state.arrows[0].id, 'front'));
+
+    await expect.poll(async () => page.evaluate(() =>
+      (state.canvasOrder || []).map(entry => `${entry.kind}:${entry.id}`)
+    )).toEqual([
+      `node:${fromId}`,
+      `node:${toId}`,
+      `arrow:${arrowId}`
+    ]);
   });
 
   test('context toolbar appears for selected node and can move it forward', async ({ page }) => {
@@ -401,6 +455,74 @@ test('context toolbar more menu uses shared menu icons and dividers', async ({ p
       const host = el?.closest('.node');
       return host?.id || null;
     }, overlapPoint)).toBe(`node-${bottomId}`);
+  });
+
+  test('boundaries stay below connections while cards remain above them', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'boundary', 820, 560);
+    await addNode(page, 'boundary', 960, 560);
+    await addNode(page, 'internal', 760, 620);
+    await addNode(page, 'external', 1220, 620);
+
+    const ids = await getNodeIds(page);
+    const [firstBoundaryId, secondBoundaryId, fromId, toId] = ids;
+
+    await dragBetween(
+      page,
+      `#node-${fromId} .conn-point[data-pos="e"]`,
+      `#node-${toId} .conn-point[data-pos="w"]`
+    );
+
+    await page.evaluate(id => {
+      selectNode(id);
+      moveNodeLayer(id, 'back');
+    }, firstBoundaryId);
+
+    await expect.poll(async () => page.evaluate(({ firstBoundaryId, secondBoundaryId }) => {
+      const arrowZ = Number(getComputedStyle(document.getElementById('arrow-svg')).zIndex || 0);
+      const firstBoundaryZ = Number(getComputedStyle(document.getElementById(`node-${firstBoundaryId}`)).zIndex || 0);
+      const secondBoundaryZ = Number(getComputedStyle(document.getElementById(`node-${secondBoundaryId}`)).zIndex || 0);
+      return {
+        arrowZ,
+        firstBoundaryBelowArrow: firstBoundaryZ < arrowZ,
+        secondBoundaryBelowArrow: secondBoundaryZ < arrowZ
+      };
+    }, { firstBoundaryId, secondBoundaryId })).toEqual({
+      arrowZ: 2,
+      firstBoundaryBelowArrow: true,
+      secondBoundaryBelowArrow: true
+    });
+  });
+
+  test('selected connections temporarily rise above cards for editing', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 820, 620);
+    await addNode(page, 'external', 1140, 620);
+    const [fromId, toId] = await getNodeIds(page);
+
+    await dragBetween(
+      page,
+      `#node-${fromId} .conn-point[data-pos="e"]`,
+      `#node-${toId} .conn-point[data-pos="w"]`
+    );
+
+    await page.evaluate(() => deselect());
+
+    await expect.poll(async () => page.evaluate(({ fromId }) => {
+      const arrowZ = Number(getComputedStyle(document.getElementById('arrow-svg')).zIndex || 0);
+      const nodeZ = Number(getComputedStyle(document.getElementById(`node-${fromId}`)).zIndex || 0);
+      return { arrowZ, nodeZ, arrowBelowNode: arrowZ < nodeZ };
+    }, { fromId })).toEqual({ arrowZ: 2, nodeZ: 1001, arrowBelowNode: true });
+
+    await page.evaluate(() => selectArrow(state.arrows[0].id));
+
+    await expect.poll(async () => page.evaluate(({ fromId }) => {
+      const arrowZ = Number(getComputedStyle(document.getElementById('arrow-svg')).zIndex || 0);
+      const nodeZ = Number(getComputedStyle(document.getElementById(`node-${fromId}`)).zIndex || 0);
+      return { arrowAboveNode: arrowZ > nodeZ };
+    }, { fromId })).toEqual({ arrowAboveNode: true });
   });
 
   test('nodes sidebar can search and filter the node list', async ({ page }) => {

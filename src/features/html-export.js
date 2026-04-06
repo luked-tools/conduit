@@ -246,7 +246,7 @@ function buildExportHTML(opts) {
         + `</div>`;
     }
 
-    const zStyle = `z-index:${getNodeLayerValue(n, entry.index)};`;
+    const zStyle = `z-index:${getRenderedNodeLayerValue(n, entry.index)};`;
     const clickAttr = (n.type !== 'boundary' && hasDetail) ? `onclick='openDetail(${JSON.stringify(String(n.id))})' style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${zStyle}${colorStyle}cursor:pointer;"` : `style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${zStyle}${colorStyle}"`;
     nodeHtml += `<div class="node ${nodeType}" ${clickAttr}>${innerHtml}${detailBtn}</div>`;
   });

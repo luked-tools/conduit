@@ -5,6 +5,7 @@
 let state = {
   nodes: [],   // {id, type, tag, title, subtitle, x, y, w, h, color, textColor}
   arrows: [],  // {id, from, to, fromPos, toPos, direction, label, labelOffsetX, labelOffsetY, color, dash, bend}
+  canvasOrder: [],
 };
 let scale = 1;
 let panX = 0, panY = 0;
@@ -69,6 +70,7 @@ function loadSample() {
   ];
   normalizeNodeLayers(getSortedNodeLayerEntries());
   normalizeArrowLayers(getSortedArrowLayerEntries());
+  rebuildCanvasOrderFromLegacyLayers();
   setDiagramCounters(10, 20);
 }
 

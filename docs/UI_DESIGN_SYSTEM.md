@@ -88,7 +88,8 @@ Conduit is a structured mapping tool, not a freeform illustration canvas. Layeri
 
 Rules:
 
-- Nodes and boundary boxes sit above connectors in normal viewing.
+- Content nodes sit above connectors in normal viewing.
+- Boundary boxes sit below connectors in normal viewing so crossings remain readable.
 - Connectors can be ordered relative to other connectors.
 - Nodes can be ordered relative to other nodes and boundaries.
 - Connectors do not inherit the layer of either endpoint node.
@@ -97,7 +98,7 @@ Rules:
 Rationale:
 
 - Node content must remain readable in dense diagrams.
-- Boundaries should continue to frame systems rather than be visually cut through by lines.
+- Boundaries should frame systems without hiding connection paths at crossings.
 - Users should not have to reason about which endpoint "wins" a connector's layer when two connected nodes sit on different layers.
 - Temporary editing elevation is acceptable when it improves manipulation clarity, but it should not redefine the normal reading order of the diagram.
 
@@ -123,7 +124,7 @@ Rule:
 
 Additional layering rule:
 
-- Canvas objects are arranged in two predictable families: node-family objects and connector-family objects. Ordering within a family is adjustable; the node family remains visually above the connector family except during temporary connector editing states.
+- Canvas objects are arranged in three predictable families: boundary boxes, connector-family objects, and content nodes. Ordering within each family is adjustable; content nodes remain visually above connectors, and connectors remain visually above boundaries except during temporary connector editing states.
 
 ## 5. Visual Foundations
 

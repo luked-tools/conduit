@@ -154,6 +154,7 @@ function completeWire() {
     color: '', dash: false, bend: 0
   });
   normalizeArrowLayers();
+  rebuildCanvasOrderFromLegacyLayers();
   cancelWire();
   render();
   selectArrow(id);
