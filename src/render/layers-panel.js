@@ -182,27 +182,18 @@ function makeLayersDragHandle(kind, id) {
   return handle;
 }
 
-function applyLayersDrop(kind, sourceId, targetId, position) {
-  if (!sourceId || !targetId || sourceId === targetId) return false;
-  if (kind === 'node') {
-    const display = getSortedNodeLayerEntries().slice().reverse();
-    const sourceIndex = display.findIndex(entry => entry.node.id === sourceId);
-    const targetIndex = display.findIndex(entry => entry.node.id === targetId);
-    if (sourceIndex < 0 || targetIndex < 0) return false;
-    const nextIndex = position === 'after' ? targetIndex + 1 : targetIndex;
-    const normalizedIndex = sourceIndex < nextIndex ? nextIndex - 1 : nextIndex;
-    return moveNodeLayerToDisplayIndex(sourceId, normalizedIndex);
-  }
-  if (kind === 'arrow') {
-    const display = getSortedArrowLayerEntries().slice().reverse();
-    const sourceIndex = display.findIndex(entry => entry.arrow.id === sourceId);
-    const targetIndex = display.findIndex(entry => entry.arrow.id === targetId);
-    if (sourceIndex < 0 || targetIndex < 0) return false;
-    const nextIndex = position === 'after' ? targetIndex + 1 : targetIndex;
-    const normalizedIndex = sourceIndex < nextIndex ? nextIndex - 1 : nextIndex;
-    return moveArrowLayerToDisplayIndex(sourceId, normalizedIndex);
-  }
-  return false;
+function applyLayersDrop(sourceKind, sourceId, targetKind, targetId, position) {
+  if (!sourceId || !targetId) return false;
+  if (sourceKind === targetKind && sourceId === targetId) return false;
+  pushUndo();
+  const moved = moveCanvasLayerRelative(sourceKind, sourceId, targetKind, targetId, position);
+  if (!moved) return false;
+  render();
+  if (sourceKind === 'node') selectNode(sourceId);
+  else if (sourceKind === 'arrow') selectArrow(sourceId);
+  saveToLocalStorage();
+  setStatusModeMessage('Layer order updated', { fade: true, autoClearMs: 1500 });
+  return true;
 }
 
 function getNodeRowTitle(node) {
@@ -210,14 +201,14 @@ function getNodeRowTitle(node) {
 }
 
 function getNodeDisplayLayerNumber(nodeId) {
-  const ordered = getSortedNodeLayerEntries();
-  const index = ordered.findIndex(entry => entry.node.id === nodeId);
+  const ordered = getCanvasLayerEntries();
+  const index = ordered.findIndex(entry => entry.kind === 'node' && entry.id === nodeId);
   return index >= 0 ? index + 1 : null;
 }
 
 function getArrowDisplayLayerNumber(arrowId) {
-  const ordered = getSortedArrowLayerEntries();
-  const index = ordered.findIndex(entry => entry.arrow.id === arrowId);
+  const ordered = getCanvasLayerEntries();
+  const index = ordered.findIndex(entry => entry.kind === 'arrow' && entry.id === arrowId);
   return index >= 0 ? index + 1 : null;
 }
 
@@ -275,7 +266,8 @@ function makeLayersRow({ kind, id, nodeType = '', previewMarkup = '', title, met
   actions.forEach(actionWrap.appendChild.bind(actionWrap));
 
   row.addEventListener('dragover', e => {
-    if (!_layersPanelDragState || _layersPanelDragState.kind !== kind || _layersPanelDragState.id === id) return;
+    if (!_layersPanelDragState) return;
+    if (_layersPanelDragState.kind === kind && _layersPanelDragState.id === id) return;
     e.preventDefault();
     const rect = row.getBoundingClientRect();
     const midpoint = rect.top + rect.height / 2;
@@ -289,11 +281,12 @@ function makeLayersRow({ kind, id, nodeType = '', previewMarkup = '', title, met
     }
   });
   row.addEventListener('drop', e => {
-    if (!_layersPanelDragState || _layersPanelDragState.kind !== kind || _layersPanelDragState.id === id) return;
+    if (!_layersPanelDragState) return;
+    if (_layersPanelDragState.kind === kind && _layersPanelDragState.id === id) return;
     e.preventDefault();
     const rect = row.getBoundingClientRect();
     const position = e.clientY >= rect.top + rect.height / 2 ? 'after' : 'before';
-    applyLayersDrop(kind, _layersPanelDragState.id, id, position);
+    applyLayersDrop(_layersPanelDragState.kind, _layersPanelDragState.id, kind, id, position);
     finishLayersDrag();
   });
 
@@ -384,8 +377,12 @@ function renderLayersPanel() {
     handleLayersPanelAutoScroll(e.clientY);
   };
 
-  const nodeRows = getSortedNodeLayerEntries().slice().reverse().map(entry => {
-    const node = entry.node;
+  const nodeRows = getCanvasLayerEntries()
+    .filter(entry => entry.kind === 'node')
+    .slice()
+    .reverse()
+    .map(entry => {
+    const node = entry.object;
     return makeLayersRow({
       kind: 'node',
       id: node.id,
@@ -404,8 +401,12 @@ function renderLayersPanel() {
     });
   });
 
-  const arrowRows = getSortedArrowLayerEntries().slice().reverse().map(entry => {
-    const arrow = entry.arrow;
+  const arrowRows = getCanvasLayerEntries()
+    .filter(entry => entry.kind === 'arrow')
+    .slice()
+    .reverse()
+    .map(entry => {
+    const arrow = entry.object;
     const fromNode = state.nodes.find(n => n.id === arrow.from);
     const toNode = state.nodes.find(n => n.id === arrow.to);
     const fromName = fromNode ? (fromNode.tag || fromNode.title || arrow.from).replace(/\n/g, ' ') : arrow.from;
@@ -430,10 +431,12 @@ function renderLayersPanel() {
     });
   });
 
-  if (_layersPanelFilter !== 'connections') {
+  if (_layersPanelFilter === 'all') {
     renderLayersSection(body, 'Node Layers', `${state.nodes.length}`, 'No nodes yet', nodeRows);
-  }
-  if (_layersPanelFilter !== 'nodes') {
+    renderLayersSection(body, 'Connection Layers', `${state.arrows.length}`, 'No connections yet', arrowRows);
+  } else if (_layersPanelFilter !== 'connections') {
+    renderLayersSection(body, 'Node Layers', `${state.nodes.length}`, 'No nodes yet', nodeRows);
+  } else if (_layersPanelFilter !== 'nodes') {
     renderLayersSection(body, 'Connection Layers', `${state.arrows.length}`, 'No connections yet', arrowRows);
   }
 

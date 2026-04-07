@@ -47,7 +47,9 @@ function deleteSelected() {
     state.arrows = state.arrows.filter(a => a.id !== selectedArrow);
     selectedArrow = null;
   }
+  normalizeCanvasOrder();
   render();
+  saveToLocalStorage();
 }
 
 function copySelectedNode() {
@@ -76,7 +78,9 @@ function pasteNode() {
   }
   state.nodes.push(copy);
   normalizeNodeLayers();
+  appendCanvasOrderEntry('node', id);
   render();
   selectNode(id);
   _clipboardNode = JSON.parse(JSON.stringify(copy));
+  saveToLocalStorage();
 }

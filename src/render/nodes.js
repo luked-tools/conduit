@@ -6,10 +6,9 @@ function renderNodes() {
   getSortedNodeLayerEntries().forEach(entry => {
     const n = entry.node;
     const el = createNodeEl(n);
-    el.style.zIndex = String(getNodeLayerValue(n, entry.index));
+    el.style.zIndex = String(getRenderedNodeLayerValue(n, entry.index));
     canvas.appendChild(el);
   });
-  saveToLocalStorage();
 }
 
 function createNodeEl(n) {

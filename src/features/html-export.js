@@ -92,7 +92,7 @@ function buildExportHTML(opts) {
   }
 
 
-  let svgArrows = `<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;overflow:visible;pointer-events:none;z-index:2;" width="${W}" height="${H}"><defs id="edefs"></defs>`;
+  let svgArrows = '';
 
   // Port stagger - mirrors canvas renderArrows logic exactly
   const ePortGroups = {};
@@ -121,38 +121,31 @@ function buildExportHTML(opts) {
     return { x: base.x + perp.x * offset, y: base.y + perp.y * offset };
   }
 
-  // Build per-arrow marker defs string
-  let eDefsHtml = '';
   function makeExportMarker(id, color, forStart) {
     return `<marker id="${id}" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="${forStart?'auto-start-reverse':'auto'}"><path d="M0,0 L0,6 L8,3 z" fill="${color}"/></marker>`;
   }
   const exportArrowColor = cs.getPropertyValue('--arrow-color').trim() || '#ff8c42';
 
+  // Each arrow gets its own SVG so it can participate in the unified canvas z-index stacking.
+  // A single shared SVG would always render as one flat layer, ignoring per-arrow layer order.
   getSortedArrowLayerEntries().forEach(entry => {
     const a = entry.arrow;
     const fn = nodes.find(x=>x.id===a.from), tn = nodes.find(x=>x.id===a.to);
     if(!fn||!tn) return;
     const color = a.color || exportArrowColor;
-    eDefsHtml += makeExportMarker('emf-'+a.id, color, false);
-    eDefsHtml += makeExportMarker('emb-'+a.id, color, true);
-  });
-  svgArrows = svgArrows.replace('<defs id="edefs"></defs>', `<defs>${eDefsHtml}</defs>`);
-
-  getSortedArrowLayerEntries().forEach(entry => {
-    const a = entry.arrow;
-    const fn = nodes.find(x=>x.id===a.from), tn = nodes.find(x=>x.id===a.to);
-    if(!fn||!tn) return;
     const p1=staggeredPortXYE(fn,a.fromPos||'e',a.id,'from',getArrowEndOffset(a, 'from')),
           p2=staggeredPortXYE(tn,a.toPos||'w',a.id,'to',getArrowEndOffset(a, 'to'));
-    const {d:d2, lx:_elx, ly:_ely, cx1, cy1, cx2, cy2} =
+    const {d:d2, lx:_elx, ly:_ely} =
       buildArrowPath(p1, p2, a.fromPos||'e', a.toPos||'w', a.bend||0, a.lineStyle||'curved', minX, minY, a.orthoY||0);
-    const color = a.color || exportArrowColor;
     let mEnd='', mStart='';
     if(a.direction==='directed'){mEnd=`marker-end="url(#emf-${a.id})"`;}
     else if(a.direction==='bidirectional'){mEnd=`marker-end="url(#emf-${a.id})"`;mStart=`marker-start="url(#emb-${a.id})"`;}
     const dashArray = getExportArrowDasharray(a);
     const dash = dashArray ? `stroke-dasharray="${dashArray}"` : '';
-    svgArrows+=`<path d="${d2}" fill="none" stroke="${color}" stroke-width="1.5" ${mEnd} ${mStart} ${dash}/>`;
+    const arrowZ = getRenderedArrowLayerValue(a);
+    let arrowSvg = `<svg xmlns="http://www.w3.org/2000/svg" style="position:absolute;top:0;left:0;overflow:visible;pointer-events:none;z-index:${arrowZ};" width="${W}" height="${H}">`;
+    arrowSvg += `<defs>${makeExportMarker('emf-'+a.id, color, false)}${makeExportMarker('emb-'+a.id, color, true)}</defs>`;
+    arrowSvg += `<path d="${d2}" fill="none" stroke="${color}" stroke-width="1.5" ${mEnd} ${mStart} ${dash}/>`;
     if(a.label){
       const lx=_elx+(a.labelOffsetX||0);
       const ly=_ely+(a.labelOffsetY||0);
@@ -164,12 +157,13 @@ function buildExportHTML(opts) {
       const eFill=a.labelColor||'#9aa0b8';
       const eFW=a.labelBold?'600':'400';
       const eFS=a.labelItalic?'italic':'normal';
-      svgArrows+=`<rect x="${lx-eMaxW/2-5}" y="${ly-eTotalH/2-5}" width="${eMaxW+10}" height="${eTotalH+8}" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="1"/>`;
+      arrowSvg+=`<rect x="${lx-eMaxW/2-5}" y="${ly-eTotalH/2-5}" width="${eMaxW+10}" height="${eTotalH+8}" rx="4" fill="var(--surface)" stroke="var(--border)" stroke-width="1"/>`;
       const tspans=eLines.map((l,i)=>`<tspan x="${lx}" dy="${i===0?0:eLineH}">${l}</tspan>`).join('');
-      svgArrows+=`<text x="${lx}" y="${ly-(eLines.length-1)*eLineH/2}" fill="${eFill}" font-size="${eFontSize}" font-weight="${eFW}" font-style="${eFS}" font-family="IBM Plex Sans,sans-serif" text-anchor="middle" dominant-baseline="middle">${tspans}</text>`;
+      arrowSvg+=`<text x="${lx}" y="${ly-(eLines.length-1)*eLineH/2}" fill="${eFill}" font-size="${eFontSize}" font-weight="${eFW}" font-style="${eFS}" font-family="IBM Plex Sans,sans-serif" text-anchor="middle" dominant-baseline="middle">${tspans}</text>`;
     }
+    arrowSvg += '</svg>';
+    svgArrows += arrowSvg;
   });
-  svgArrows += '</svg>';
 
   // Build per-node detail data for the exported panel (always captured regardless of opts)
   const nodeDetailData = {};
@@ -246,7 +240,7 @@ function buildExportHTML(opts) {
         + `</div>`;
     }
 
-    const zStyle = `z-index:${getNodeLayerValue(n, entry.index)};`;
+    const zStyle = `z-index:${getRenderedNodeLayerValue(n, entry.index)};`;
     const clickAttr = (n.type !== 'boundary' && hasDetail) ? `onclick='openDetail(${JSON.stringify(String(n.id))})' style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${zStyle}${colorStyle}cursor:pointer;"` : `style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${zStyle}${colorStyle}"`;
     nodeHtml += `<div class="node ${nodeType}" ${clickAttr}>${innerHtml}${detailBtn}</div>`;
   });

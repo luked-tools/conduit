@@ -154,9 +154,11 @@ function completeWire() {
     color: '', dash: false, bend: 0
   });
   normalizeArrowLayers();
+  appendCanvasOrderEntry('arrow', id);
   cancelWire();
   render();
   selectArrow(id);
+  saveToLocalStorage();
 }
 
 function startEndpointDrag(arrowId, nodeId, pos, e, forcedEnd) {

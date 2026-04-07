@@ -27,9 +27,10 @@ function getContextToolbarAnchor() {
   }
 
   if (selectedArrow) {
-    const arrowGroup = arrowSVG?.querySelector(`[data-arrow-id="${selectedArrow}"]`);
-    if (!arrowGroup) return null;
-    const rect = arrowGroup.getBoundingClientRect();
+    const arrowObject = document.querySelector(`.arrow-object[data-arrow-id="${selectedArrow}"]`);
+    if (!arrowObject) return null;
+    const anchorEl = arrowObject.querySelector('.arrow-path') || arrowObject;
+    const rect = anchorEl.getBoundingClientRect();
     if (!rect || (!rect.width && !rect.height)) return null;
     return { rect };
   }

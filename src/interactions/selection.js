@@ -4,7 +4,7 @@ function selectNode(id) {
   if (typeof _contextToolbarMenuOpen !== 'undefined') _contextToolbarMenuOpen = false;
   selectedNode = id;
   selectedArrow = null;
-  arrowSVG.style.zIndex = '2';
+  arrowSVG.style.zIndex = String(getArrowRenderBaseZ());
   document.querySelectorAll('.node').forEach(e => {
     e.classList.remove('selected');
     e.classList.remove('arrow-endpoint');
@@ -25,10 +25,10 @@ function selectNode(id) {
 }
 
 function getSelectedArrowLayerZ() {
-  const topNodeLayer = state.nodes.reduce((max, node, index) => {
-    return Math.max(max, getNodeLayerValue(node, index));
-  }, 3);
-  return String(topNodeLayer + 10);
+  const topCanvasLayer = getCanvasLayerEntries().reduce((max, entry) => {
+    return Math.max(max, entry.index + 1);
+  }, 1);
+  return String(topCanvasLayer + 10);
 }
 
 function selectArrow(id) {
@@ -82,7 +82,7 @@ function deselect(e) {
     e.removeAttribute('data-hide-ports');
   });
   document.querySelectorAll('.conn-point.arrow-endpoint-port').forEach(cp => cp.classList.remove('arrow-endpoint-port'));
-  arrowSVG.style.zIndex = '2';
+  arrowSVG.style.zIndex = String(getArrowRenderBaseZ());
   renderArrows();
   renderSidebar();
   if (typeof renderLayersPanel === 'function') renderLayersPanel();
