@@ -87,6 +87,15 @@ function rebuildCanvasOrderFromLegacyLayers() {
   return state.canvasOrder;
 }
 
+function appendCanvasOrderEntry(kind, id) {
+  if (!isValidCanvasOrderKind(kind) || !id) return false;
+  normalizeCanvasOrder();
+  state.canvasOrder = (state.canvasOrder || []).filter(entry => !(entry.kind === kind && entry.id === id));
+  state.canvasOrder.push(makeCanvasOrderEntry(kind, id));
+  syncLegacyLayerValuesFromCanvasOrder();
+  return true;
+}
+
 function getCanvasLayerEntries() {
   normalizeCanvasOrder();
   return state.canvasOrder.map((entry, index) => ({
@@ -349,7 +358,7 @@ function applyQuickConnectTarget(targetId) {
     bend: 0
   });
   normalizeArrowLayers();
-  rebuildCanvasOrderFromLegacyLayers();
+  appendCanvasOrderEntry('arrow', id);
   cancelQuickConnectMode();
   render();
   selectArrow(id);
@@ -493,9 +502,10 @@ function addMode(type) {
     color: '', textColor: '', functions: []
   });
   normalizeNodeLayers();
-  rebuildCanvasOrderFromLegacyLayers();
+  appendCanvasOrderEntry('node', id);
   render();
   selectNode(id);
+  saveToLocalStorage();
 }
 
 function addModeAt(type, canvasX, canvasY) {
@@ -513,9 +523,10 @@ function addModeAt(type, canvasX, canvasY) {
     x, y, w, h, color: '', textColor: '', functions: []
   });
   normalizeNodeLayers();
-  rebuildCanvasOrderFromLegacyLayers();
+  appendCanvasOrderEntry('node', id);
   render();
   selectNode(id);
+  saveToLocalStorage();
 }
 
 function setStatusModeMessage(text = '', { fade = false, autoClearMs = 0, color = '' } = {}) {

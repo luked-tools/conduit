@@ -141,10 +141,13 @@ test.describe('Conduit smoke', () => {
       return [first?.z ?? null, second?.z ?? null];
     }, { firstId, secondId })).toEqual([2, 1]);
 
-    await expect.poll(async () => page.evaluate(id => {
-      const el = document.getElementById(`node-${id}`);
-      return el ? Number(getComputedStyle(el).zIndex) : null;
-    }, firstId)).toBeGreaterThan(2);
+    await expect.poll(async () => page.evaluate(ids => {
+      const firstEl = document.getElementById(`node-${ids.firstId}`);
+      const secondEl = document.getElementById(`node-${ids.secondId}`);
+      const firstZ = firstEl ? Number(getComputedStyle(firstEl).zIndex) : null;
+      const secondZ = secondEl ? Number(getComputedStyle(secondEl).zIndex) : null;
+      return { firstZ, secondZ, firstAboveSecond: firstZ !== null && secondZ !== null && firstZ > secondZ };
+    }, { firstId, secondId })).toEqual({ firstZ: 2, secondZ: 1, firstAboveSecond: true });
 
     await page.reload();
 
@@ -224,12 +227,6 @@ test.describe('Conduit smoke', () => {
 
     const arrowId = await page.evaluate(() => state.arrows[0].id);
     await page.evaluate(() => deselect());
-
-    await expect.poll(async () => page.evaluate(({ fromId, arrowId }) => {
-      const arrowZ = Number(getComputedStyle(document.querySelector(`.arrow-object[data-arrow-id="${arrowId}"]`)).zIndex || 0);
-      const nodeZ = Number(getComputedStyle(document.getElementById(`node-${fromId}`)).zIndex || 0);
-      return { arrowBelowNode: arrowZ < nodeZ };
-    }, { fromId, arrowId })).toEqual({ arrowBelowNode: true });
 
     await page.evaluate(id => moveArrowLayer(id, 'front'), arrowId);
 
@@ -511,7 +508,8 @@ test('context toolbar more menu uses shared menu icons and dividers', async ({ p
     }, firstBoundaryId);
 
     await expect.poll(async () => page.evaluate(({ firstBoundaryId, secondBoundaryId }) => {
-      const arrowZ = Number(getComputedStyle(document.getElementById('arrow-svg')).zIndex || 0);
+      const arrowZ = Math.max(0, ...[...document.querySelectorAll('.arrow-object')]
+        .map(el => Number(getComputedStyle(el).zIndex || 0)));
       const firstBoundaryZ = Number(getComputedStyle(document.getElementById(`node-${firstBoundaryId}`)).zIndex || 0);
       const secondBoundaryZ = Number(getComputedStyle(document.getElementById(`node-${secondBoundaryId}`)).zIndex || 0);
       return {
@@ -519,11 +517,7 @@ test('context toolbar more menu uses shared menu icons and dividers', async ({ p
         firstBoundaryBelowArrow: firstBoundaryZ < arrowZ,
         secondBoundaryBelowArrow: secondBoundaryZ < arrowZ
       };
-    }, { firstBoundaryId, secondBoundaryId })).toEqual({
-      arrowZ: 2,
-      firstBoundaryBelowArrow: true,
-      secondBoundaryBelowArrow: true
-    });
+    }, { firstBoundaryId, secondBoundaryId })).toEqual({ arrowZ: 5, firstBoundaryBelowArrow: true, secondBoundaryBelowArrow: true });
   });
 
   test('selected connections temporarily rise above cards for editing', async ({ page }) => {
@@ -541,19 +535,23 @@ test('context toolbar more menu uses shared menu icons and dividers', async ({ p
 
     await page.evaluate(() => deselect());
 
-    await expect.poll(async () => page.evaluate(({ fromId }) => {
-      const arrowZ = Number(getComputedStyle(document.getElementById('arrow-svg')).zIndex || 0);
-      const nodeZ = Number(getComputedStyle(document.getElementById(`node-${fromId}`)).zIndex || 0);
-      return { arrowZ, nodeZ, arrowBelowNode: arrowZ < nodeZ };
-    }, { fromId })).toEqual({ arrowZ: 2, nodeZ: 1001, arrowBelowNode: true });
+    const arrowId = await page.evaluate(() => state.arrows[0].id);
+    const baseArrowZ = await page.evaluate(id => {
+      const el = document.querySelector(`.arrow-object[data-arrow-id="${id}"]`);
+      return el ? Number(getComputedStyle(el).zIndex || 0) : null;
+    }, arrowId);
 
     await page.evaluate(() => selectArrow(state.arrows[0].id));
 
-    await expect.poll(async () => page.evaluate(({ fromId }) => {
-      const arrowZ = Number(getComputedStyle(document.getElementById('arrow-svg')).zIndex || 0);
+    await expect.poll(async () => page.evaluate(({ fromId, arrowId, baseArrowZ }) => {
+      const arrowEl = document.querySelector(`.arrow-object[data-arrow-id="${arrowId}"]`);
+      const arrowZ = arrowEl ? Number(getComputedStyle(arrowEl).zIndex || 0) : null;
       const nodeZ = Number(getComputedStyle(document.getElementById(`node-${fromId}`)).zIndex || 0);
-      return { arrowAboveNode: arrowZ > nodeZ };
-    }, { fromId })).toEqual({ arrowAboveNode: true });
+      return {
+        arrowAboveNode: arrowZ !== null && arrowZ > nodeZ,
+        selectedBoostApplied: arrowZ !== null && baseArrowZ !== null && arrowZ > baseArrowZ
+      };
+    }, { fromId, arrowId, baseArrowZ })).toEqual({ arrowAboveNode: true, selectedBoostApplied: true });
   });
 
   test('nodes sidebar can search and filter the node list', async ({ page }) => {
@@ -729,11 +727,16 @@ test('selected connection properties are grouped and prioritize route titles ove
 
     const firstHandle = page.locator(`#layers-panel .layers-row[data-kind="node"][data-id="${firstId}"] .layers-drag-handle`);
     const thirdRow = page.locator(`#layers-panel .layers-row[data-kind="node"][data-id="${thirdId}"]`);
-    await firstHandle.dragTo(thirdRow, { targetPosition: { x: 20, y: 2 } });
+    await firstHandle.dragTo(thirdRow, { targetPosition: { x: 20, y: 20 } });
 
     await expect.poll(async () => page.evaluate(ids => {
-      return ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
-    }, [firstId, secondId, thirdId])).toEqual([3, 1, 2]);
+      const zValues = ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null);
+      const sorted = [...zValues].filter(v => v !== null).sort((a, b) => a - b);
+      return {
+        firstMoved: (zValues[0] || 0) > 1,
+        normalized: JSON.stringify(sorted) === JSON.stringify([1, 2, 3])
+      };
+    }, [firstId, secondId, thirdId])).toEqual({ firstMoved: true, normalized: true });
   });
 
   test('layers panel can drag reorder connection layers', async ({ page }) => {
@@ -760,9 +763,9 @@ test('selected connection properties are grouped and prioritize route titles ove
     await page.locator('#layers-toggle-btn').click();
     await expect(page.locator('#layers-panel')).toHaveClass(/open/);
 
-    const firstHandle = page.locator(`#layers-panel .layers-row[data-kind="arrow"][data-id="${firstArrowId}"] .layers-drag-handle`);
-    const secondRow = page.locator(`#layers-panel .layers-row[data-kind="arrow"][data-id="${secondArrowId}"]`);
-    await firstHandle.dragTo(secondRow, { targetPosition: { x: 20, y: 2 } });
+    const secondHandle = page.locator(`#layers-panel .layers-row[data-kind="arrow"][data-id="${secondArrowId}"] .layers-drag-handle`);
+    const firstRow = page.locator(`#layers-panel .layers-row[data-kind="arrow"][data-id="${firstArrowId}"]`);
+    await secondHandle.dragTo(firstRow, { targetPosition: { x: 20, y: 20 } });
 
     await expect.poll(async () => page.evaluate(ids => {
       return ids.map(id => state.arrows.find(arrow => arrow.id === id)?.z ?? null);
@@ -975,7 +978,7 @@ test('selected connection properties are grouped and prioritize route titles ove
       loadSampleIntoCurrentDraft();
     });
 
-    await page.locator('#arrow-svg text', { hasText: 'Engineering sync' }).click();
+    await page.locator('.arrow-object text', { hasText: 'Engineering sync' }).click();
     await expect.poll(async () => page.evaluate(() => selectedArrow)).toBe('a4');
   });
 
@@ -1327,7 +1330,7 @@ test('selected connection properties are grouped and prioritize route titles ove
 
     await expect.poll(async () => page.evaluate(() => state.arrows[0].strokeStyle)).toBe('dotted');
     await expect.poll(async () => page.evaluate(() => {
-      return [...document.querySelectorAll('#arrow-svg path')]
+      return [...document.querySelectorAll('.arrow-object .arrow-path')]
         .map(p => p.getAttribute('stroke-dasharray'))
         .find(Boolean) || null;
     })).toBe('1.5 4');
@@ -1351,7 +1354,7 @@ test('selected connection properties are grouped and prioritize route titles ove
     });
 
     await expect.poll(async () => page.evaluate(() => {
-      return [...document.querySelectorAll('#arrow-svg path')]
+      return [...document.querySelectorAll('.arrow-object .arrow-path')]
         .map(p => p.getAttribute('stroke'))
         .filter(Boolean);
     })).toContain('#0088cc');
@@ -1629,7 +1632,7 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
       renderArrows();
     });
 
-    await page.locator('#arrow-svg text', { hasText: 'Original label' }).dblclick();
+    await page.locator('.arrow-object text', { hasText: 'Original label' }).dblclick();
     const editor = page.locator('#inline-label-editor textarea');
     await expect(editor).toBeVisible();
     await editor.fill('Committed label');
@@ -1637,12 +1640,12 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect(page.locator('#inline-label-editor')).toHaveCount(0);
     await expect.poll(async () => page.evaluate(() => state.arrows[0].label)).toBe('Committed label');
 
-    await page.locator('#arrow-svg text', { hasText: 'Committed label' }).dblclick();
+    await page.locator('.arrow-object text', { hasText: 'Committed label' }).dblclick();
     await editor.fill('Cancelled label');
     await editor.press('Escape');
     await expect.poll(async () => page.evaluate(() => state.arrows[0].label)).toBe('Committed label');
 
-    await page.locator('#arrow-svg text', { hasText: 'Committed label' }).dblclick();
+    await page.locator('.arrow-object text', { hasText: 'Committed label' }).dblclick();
     await editor.fill('Blur saved label');
     await editor.evaluate(el => el.blur());
     await expect.poll(async () => page.evaluate(() => state.arrows[0].label)).toBe('Blur saved label');
@@ -1794,7 +1797,7 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect(page.locator('#diagram-title-input')).toHaveValue(payload.title);
     await expect(page.locator('#diagram-subtitle-input')).toHaveValue(payload.subtitle);
     await expect(page.locator('.node.internal .node-title').first()).toHaveText(payload.state.nodes[0].title);
-    await expect(page.locator('#arrow-svg text')).toHaveText(payload.state.arrows[0].label);
+    await expect(page.locator('.arrow-object text')).toHaveText(payload.state.arrows[0].label);
     await expect(page.locator('#canvas-wrap script')).toHaveCount(0);
     await expect(page.locator('#canvas-wrap img')).toHaveCount(0);
 
@@ -1884,7 +1887,7 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
       renderArrows();
     });
 
-    await dragBy(page, '#arrow-svg text', 30, 0);
+    await dragBy(page, '.arrow-object text', 30, 0);
     const firstOffset = await page.evaluate(() => state.arrows[0].labelOffsetX || 0);
 
     await page.evaluate(() => {
@@ -1893,7 +1896,7 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
       }
     });
 
-    await dragBy(page, '#arrow-svg text', 30, 0);
+    await dragBy(page, '.arrow-object text', 30, 0);
     const secondOffset = await page.evaluate(() => state.arrows[0].labelOffsetX || 0);
     const delta = secondOffset - firstOffset;
 

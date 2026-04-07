@@ -9,7 +9,6 @@ function renderNodes() {
     el.style.zIndex = String(getRenderedNodeLayerValue(n, entry.index));
     canvas.appendChild(el);
   });
-  saveToLocalStorage();
 }
 
 function createNodeEl(n) {

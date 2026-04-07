@@ -263,4 +263,3 @@ function renderArrows() {
   });
 }
 
-if (typeof render === 'function') render();

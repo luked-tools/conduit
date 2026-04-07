@@ -12,7 +12,6 @@ function createBlankDiagramPayload() {
   return {
     version: 1,
     title: 'System Map',
-    subtitle: 'Manufacturing Execution · L3 / L4',
     subtitle: 'Processes, platforms, and data flows',
     state: { nodes: [], arrows: [], canvasOrder: [] }
   };

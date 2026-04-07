@@ -431,53 +431,9 @@ function renderLayersPanel() {
     });
   });
 
-  const allRows = getCanvasLayerEntries().slice().reverse().map(entry => {
-    if (entry.kind === 'node') {
-      const node = entry.object;
-      return makeLayersRow({
-        kind: 'node',
-        id: node.id,
-        nodeType: node.type,
-        previewMarkup: getNodePreviewMarkup(node),
-        title: getNodeRowTitle(node),
-        meta: getNodeRowMeta(node, entry),
-        selected: selectedNode === node.id,
-        onSelect: () => selectNode(node.id),
-        actions: [
-          makeLayersActionButton({ title: 'To back', action: 'back', disabled: !canMoveNodeLayer(node.id, 'back'), onClick: () => moveNodeLayer(node.id, 'back') }),
-          makeLayersActionButton({ title: 'Backward', action: 'backward', disabled: !canMoveNodeLayer(node.id, 'backward'), onClick: () => moveNodeLayer(node.id, 'backward') }),
-          makeLayersActionButton({ title: 'Forward', action: 'forward', disabled: !canMoveNodeLayer(node.id, 'forward'), onClick: () => moveNodeLayer(node.id, 'forward') }),
-          makeLayersActionButton({ title: 'To front', action: 'front', disabled: !canMoveNodeLayer(node.id, 'front'), onClick: () => moveNodeLayer(node.id, 'front') })
-        ]
-      });
-    }
-    const arrow = entry.object;
-    const fromNode = state.nodes.find(n => n.id === arrow.from);
-    const toNode = state.nodes.find(n => n.id === arrow.to);
-    const fromName = fromNode ? (fromNode.tag || fromNode.title || arrow.from).replace(/\n/g, ' ') : arrow.from;
-    const toName = toNode ? (toNode.tag || toNode.title || arrow.to).replace(/\n/g, ' ') : arrow.to;
-    const title = `${fromName} → ${toName}`;
-    const layerText = `Layer ${getArrowDisplayLayerNumber(arrow.id) || (entry.index + 1)}`;
-    const meta = arrow.label ? `${arrow.label} · ${layerText}` : layerText;
-    return makeLayersRow({
-      kind: 'arrow',
-      id: arrow.id,
-      previewMarkup: getArrowPreviewMarkup(arrow),
-      title,
-      meta,
-      selected: selectedArrow === arrow.id,
-      onSelect: () => selectArrow(arrow.id),
-      actions: [
-        makeLayersActionButton({ title: 'To back', action: 'back', disabled: !canMoveArrowLayer(arrow.id, 'back'), onClick: () => moveArrowLayer(arrow.id, 'back') }),
-        makeLayersActionButton({ title: 'Backward', action: 'backward', disabled: !canMoveArrowLayer(arrow.id, 'backward'), onClick: () => moveArrowLayer(arrow.id, 'backward') }),
-        makeLayersActionButton({ title: 'Forward', action: 'forward', disabled: !canMoveArrowLayer(arrow.id, 'forward'), onClick: () => moveArrowLayer(arrow.id, 'forward') }),
-        makeLayersActionButton({ title: 'To front', action: 'front', disabled: !canMoveArrowLayer(arrow.id, 'front'), onClick: () => moveArrowLayer(arrow.id, 'front') })
-      ]
-    });
-  });
-
   if (_layersPanelFilter === 'all') {
-    renderLayersSection(body, 'Canvas Layers', `${allRows.length}`, 'No canvas objects yet', allRows);
+    renderLayersSection(body, 'Node Layers', `${state.nodes.length}`, 'No nodes yet', nodeRows);
+    renderLayersSection(body, 'Connection Layers', `${state.arrows.length}`, 'No connections yet', arrowRows);
   } else if (_layersPanelFilter !== 'connections') {
     renderLayersSection(body, 'Node Layers', `${state.nodes.length}`, 'No nodes yet', nodeRows);
   } else if (_layersPanelFilter !== 'nodes') {
