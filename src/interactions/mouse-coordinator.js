@@ -60,7 +60,7 @@ window.addEventListener('mousemove', e => {
       el.style.left = n.x + 'px';
       el.style.top = n.y + 'px';
     }
-    renderArrows();
+    scheduleRenderArrows();
     if (typeof updateContextToolbar === 'function') updateContextToolbar();
     return;
   }
@@ -95,7 +95,7 @@ window.addEventListener('mousemove', e => {
       el.style.width = n.w + 'px';
       el.style.minHeight = n.h + 'px';
     }
-    renderArrows();
+    scheduleRenderArrows();
     if (typeof updateContextToolbar === 'function') updateContextToolbar();
     return;
   }

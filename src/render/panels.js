@@ -2,6 +2,16 @@
 let _nodeListFilter = '';
 const WELCOME_SEEN_KEY = 'conduit_welcome_seen_v1';
 let _showWelcomeCard = false;
+let _arrowRenderScheduled = false;
+
+function scheduleRenderArrows() {
+  if (_arrowRenderScheduled) return;
+  _arrowRenderScheduled = true;
+  requestAnimationFrame(() => {
+    _arrowRenderScheduled = false;
+    renderArrows();
+  });
+}
 
 function setNodeListFilter(value) {
   _nodeListFilter = (value || '').trim().toLowerCase();
