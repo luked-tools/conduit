@@ -209,6 +209,37 @@ test.describe('Conduit smoke', () => {
     ]);
   });
 
+  test('moving a connection to front places it above nodes visually', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 1180, 620);
+    const [fromId, toId] = await getNodeIds(page);
+
+    await dragBetween(
+      page,
+      `#node-${fromId} .conn-point[data-pos="e"]`,
+      `#node-${toId} .conn-point[data-pos="w"]`
+    );
+
+    const arrowId = await page.evaluate(() => state.arrows[0].id);
+    await page.evaluate(() => deselect());
+
+    await expect.poll(async () => page.evaluate(({ fromId, arrowId }) => {
+      const arrowZ = Number(getComputedStyle(document.querySelector(`.arrow-object[data-arrow-id="${arrowId}"]`)).zIndex || 0);
+      const nodeZ = Number(getComputedStyle(document.getElementById(`node-${fromId}`)).zIndex || 0);
+      return { arrowBelowNode: arrowZ < nodeZ };
+    }, { fromId, arrowId })).toEqual({ arrowBelowNode: true });
+
+    await page.evaluate(id => moveArrowLayer(id, 'front'), arrowId);
+
+    await expect.poll(async () => page.evaluate(({ fromId, arrowId }) => {
+      const arrowZ = Number(getComputedStyle(document.querySelector(`.arrow-object[data-arrow-id="${arrowId}"]`)).zIndex || 0);
+      const nodeZ = Number(getComputedStyle(document.getElementById(`node-${fromId}`)).zIndex || 0);
+      return { arrowAboveNode: arrowZ > nodeZ };
+    }, { fromId, arrowId })).toEqual({ arrowAboveNode: true });
+  });
+
   test('context toolbar appears for selected node and can move it forward', async ({ page }) => {
     await bootFresh(page);
 

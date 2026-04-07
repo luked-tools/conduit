@@ -103,6 +103,11 @@ function getCanvasLayerPosition(kind, id) {
   return { index, count: ordered.length };
 }
 
+function getCanvasRenderLayerValue(kind, id) {
+  const { index } = getCanvasLayerPosition(kind, id);
+  return index >= 0 ? index + 1 : 1;
+}
+
 function canMoveCanvasLayer(kind, id, mode) {
   const { index, count } = getCanvasLayerPosition(kind, id);
   if (index < 0) return false;
@@ -192,8 +197,11 @@ function getNodeRenderBaseZ() {
 }
 
 function getRenderedNodeLayerValue(node, fallbackIndex = 0) {
-  const base = node?.type === 'boundary' ? getBoundaryRenderBaseZ() : getNodeRenderBaseZ();
-  return base + getNodeLayerValue(node, fallbackIndex);
+  return getCanvasRenderLayerValue('node', node?.id);
+}
+
+function getRenderedArrowLayerValue(arrow) {
+  return getCanvasRenderLayerValue('arrow', arrow?.id);
 }
 
 function getSortedNodeLayerEntries() {

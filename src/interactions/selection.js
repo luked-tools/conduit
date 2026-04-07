@@ -25,10 +25,10 @@ function selectNode(id) {
 }
 
 function getSelectedArrowLayerZ() {
-  const topNodeLayer = state.nodes.reduce((max, node, index) => {
-    return Math.max(max, getRenderedNodeLayerValue(node, index));
-  }, getNodeRenderBaseZ());
-  return String(topNodeLayer + 10);
+  const topCanvasLayer = getCanvasLayerEntries().reduce((max, entry) => {
+    return Math.max(max, entry.index + 1);
+  }, 1);
+  return String(topCanvasLayer + 10);
 }
 
 function selectArrow(id) {
