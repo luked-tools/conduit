@@ -355,8 +355,8 @@ test('context toolbar more menu uses shared menu icons and dividers', async ({ p
       document.querySelector('#context-toolbar button[title="More actions"]')?.click();
     });
 
-  await expect(page.locator('#context-toolbar .context-toolbar-menu .app-menu-item-icon svg')).toHaveCount(6);
-    await expect(page.locator('#context-toolbar .context-toolbar-menu .app-menu-divider')).toHaveCount(2);
+  await expect(page.locator('#context-toolbar .context-toolbar-menu .app-menu-item-icon svg')).toHaveCount(8);
+    await expect(page.locator('#context-toolbar .context-toolbar-menu .app-menu-divider')).toHaveCount(3);
   });
 
   test('context toolbar can quick connect a node to another node', async ({ page }) => {
@@ -628,7 +628,7 @@ test('context toolbar more menu uses shared menu icons and dividers', async ({ p
     await addNode(page, 'internal', 860, 620);
     await page.locator('.node.internal').first().click();
 
-    await expect(page.locator('#props-body .prop-group-title')).toHaveText(['Identity', 'Appearance', 'Structure', 'Arrange']);
+    await expect(page.locator('#props-body .prop-group-title')).toHaveText(['Identity', 'Diagram Link', 'Appearance', 'Structure', 'Arrange']);
   });
 
 test('selected connection properties are grouped and prioritize route titles over tags', async ({ page }) => {
