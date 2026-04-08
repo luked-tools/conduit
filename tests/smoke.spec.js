@@ -1670,6 +1670,88 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect(page.locator('.node')).toHaveCount(1);
   });
 
+  test('node action can link and unlink an existing diagram', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    const [firstId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Payments Service';
+      render();
+      selectNode(id);
+    }, firstId);
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await page.getByRole('button', { name: 'Back' }).click();
+
+    await addNode(page, 'external', 1180, 620);
+    const secondId = await page.evaluate(() => state.nodes[1].id);
+    await page.evaluate(id => selectNode(id), secondId);
+
+    await page.getByRole('button', { name: 'Link existing diagram' }).click();
+    await expect(page.locator('#modal-title')).toHaveText('Link diagram');
+    await page.locator('.diagram-link-option', { hasText: 'Payments Service' }).click();
+
+    await expect.poll(async () => page.evaluate(id =>
+      Boolean(state.nodes.find(node => node.id === id)?.linkedDiagramId)
+    , secondId)).toBe(true);
+    await expect(page.getByRole('button', { name: 'Open linked diagram' })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Unlink diagram' }).click();
+    await expect.poll(async () => page.evaluate(id =>
+      Boolean(state.nodes.find(node => node.id === id)?.linkedDiagramId)
+    , secondId)).toBe(false);
+    await expect(page.getByRole('button', { name: 'Link existing diagram' })).toBeVisible();
+  });
+
+  test('diagram manager can rename and delete linked diagrams', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    const [nodeId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Payments Service';
+      render();
+      selectNode(id);
+    }, nodeId);
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await page.getByRole('button', { name: 'Back' }).click();
+
+    await page.evaluate(() => openDiagramManager());
+    await expect(page.locator('#modal-title')).toHaveText('Diagrams');
+    await page.locator('.draft-row', { hasText: 'Payments Service' }).locator('.tb-btn', { hasText: 'Rename' }).click();
+    await page.locator('#diagram-name-input').fill('Payments Deep Dive');
+    await page.locator('#modal-btns button', { hasText: 'Save title' }).click();
+    await expect(page.locator('.draft-row', { hasText: 'Payments Deep Dive' })).toBeVisible();
+
+    await page.locator('.draft-row', { hasText: 'Payments Deep Dive' }).locator('.tb-btn.danger', { hasText: 'Delete' }).click();
+    await page.locator('#modal-btns button', { hasText: 'Delete diagram' }).click();
+
+    await expect.poll(async () => page.evaluate(() => getDiagramDocumentPayload().diagrams.length)).toBe(1);
+    await expect.poll(async () => page.evaluate(() => state.nodes[0].linkedDiagramId || '')).toBe('');
+  });
+
+  test('current diagram JSON export strips links to non-exported diagrams', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    const [nodeId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Payments Service';
+      render();
+      selectNode(id);
+    }, nodeId);
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await page.getByRole('button', { name: 'Back' }).click();
+
+    const payload = await page.evaluate(() => getDiagramDocumentPayload({ currentOnly: true }));
+    expect(payload.diagrams).toHaveLength(1);
+    expect(payload.activeDiagramId).toBe(payload.rootDiagramId);
+    expect(payload.diagrams[0].state.nodes[0].linkedDiagramId).toBeUndefined();
+  });
+
   test('function editor updates the node function list', async ({ page }) => {
     await bootFresh(page);
 

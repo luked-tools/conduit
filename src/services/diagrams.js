@@ -178,6 +178,13 @@ function renderDiagramNavigation() {
   }).join('<span class="diagram-crumb-sep">/</span>');
 }
 
+function getDiagramLinkCount(diagramId) {
+  const doc = ensureDiagramDocument();
+  return doc.diagrams.reduce((sum, diagram) => {
+    return sum + (diagram.state?.nodes || []).filter(node => node.linkedDiagramId === diagramId).length;
+  }, 0);
+}
+
 function navigateToDiagram(diagramId, { pushHistory = true } = {}) {
   const target = getDiagramById(diagramId);
   if (!target || target.id === activeDiagramId) {
@@ -238,6 +245,213 @@ function openLinkedDiagramForNode(nodeId) {
   const node = state.nodes.find(item => item.id === nodeId);
   if (!node?.linkedDiagramId || !getDiagramById(node.linkedDiagramId)) return false;
   return navigateToDiagram(node.linkedDiagramId);
+}
+
+function unlinkDiagramFromNode(nodeId) {
+  const node = state.nodes.find(item => item.id === nodeId);
+  if (!node?.linkedDiagramId) return false;
+  delete node.linkedDiagramId;
+  syncActiveDiagramFromCurrentState();
+  renderSidebar();
+  renderNodes();
+  if (typeof renderLayersPanel === 'function') renderLayersPanel();
+  saveToLocalStorage();
+  setStatusModeMessage('Diagram link removed', { fade: true, autoClearMs: 1500 });
+  return true;
+}
+
+function linkNodeToDiagram(nodeId, diagramId) {
+  const node = state.nodes.find(item => item.id === nodeId);
+  const diagram = getDiagramById(diagramId);
+  if (!node || !diagram || diagram.id === activeDiagramId) return false;
+  node.linkedDiagramId = diagram.id;
+  syncActiveDiagramFromCurrentState();
+  renderSidebar();
+  renderNodes();
+  saveToLocalStorage();
+  setStatusModeMessage(`Linked to "${diagram.title || 'Untitled diagram'}"`, { fade: true, autoClearMs: 1800 });
+  return true;
+}
+
+function removeLinksToDiagram(diagramId) {
+  const doc = ensureDiagramDocument();
+  doc.diagrams.forEach(diagram => {
+    (diagram.state?.nodes || []).forEach(node => {
+      if (node.linkedDiagramId === diagramId) delete node.linkedDiagramId;
+    });
+  });
+}
+
+function openDiagramNameModal({ title, initialValue, confirmLabel, onConfirm }) {
+  openBasicModal({
+    title,
+    body: `<div class="draft-modal-note">Choose a diagram title.</div><input id="diagram-name-input" class="draft-name-input" type="text" value="${escapeHtml(initialValue || '')}" placeholder="Diagram title">`,
+    buttons: [
+      { label: 'Cancel', className: 'tb-btn' },
+      {
+        label: confirmLabel,
+        className: 'tb-btn primary',
+        onClick: () => {
+          const input = document.getElementById('diagram-name-input');
+          onConfirm((input?.value || initialValue || 'Untitled diagram').trim() || 'Untitled diagram');
+        }
+      }
+    ]
+  });
+  requestAnimationFrame(() => {
+    const input = document.getElementById('diagram-name-input');
+    if (!input) return;
+    input.focus();
+    input.select();
+    input.onkeydown = e => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.querySelector('#modal-btns .tb-btn.primary')?.click();
+      }
+    };
+  });
+}
+
+function renderDiagramManagerBody() {
+  const host = document.getElementById('diagram-manager-body');
+  if (!host) return;
+  const doc = ensureDiagramDocument();
+  host.innerHTML = `<div class="draft-list">${
+    doc.diagrams.map(diagram => {
+      const nodeCount = Array.isArray(diagram.state?.nodes) ? diagram.state.nodes.length : 0;
+      const arrowCount = Array.isArray(diagram.state?.arrows) ? diagram.state.arrows.length : 0;
+      const linkCount = getDiagramLinkCount(diagram.id);
+      const isActive = diagram.id === activeDiagramId;
+      const isRoot = diagram.id === doc.rootDiagramId;
+      return `<div class="draft-row${isActive ? ' active' : ''}" data-diagram-id="${escapeHtml(diagram.id)}">
+        <div class="draft-row-main">
+          <div class="draft-row-title">
+            <span class="draft-row-title-text">${escapeHtml(diagram.title || 'Untitled diagram')}</span>
+            ${isRoot ? '<span class="draft-active-badge">Root</span>' : ''}
+            ${isActive ? '<span class="draft-active-badge">Active</span>' : ''}
+          </div>
+          <div class="draft-row-meta">${nodeCount} items · ${arrowCount} connections · ${linkCount} link${linkCount === 1 ? '' : 's'}</div>
+        </div>
+        <div class="draft-row-actions">
+          ${isActive ? '' : `<button class="tb-btn" data-action="open" data-diagram-id="${escapeHtml(diagram.id)}">Open</button>`}
+          <button class="tb-btn" data-action="rename" data-diagram-id="${escapeHtml(diagram.id)}">Rename</button>
+          ${doc.diagrams.length <= 1 ? '' : `<button class="tb-btn danger" data-action="delete" data-diagram-id="${escapeHtml(diagram.id)}">Delete</button>`}
+        </div>
+      </div>`;
+    }).join('')
+  }</div>`;
+
+  host.querySelectorAll('[data-action]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.diagramId;
+      const action = btn.dataset.action;
+      if (action === 'open') {
+        closeBasicModal();
+        navigateToDiagram(id);
+      } else if (action === 'rename') {
+        renameDiagramById(id);
+      } else if (action === 'delete') {
+        deleteDiagramById(id);
+      }
+    });
+  });
+}
+
+function openDiagramManager() {
+  syncActiveDiagramFromCurrentState();
+  openBasicModal({
+    title: 'Diagrams',
+    body: '<div class="draft-modal-note">Manage the diagrams inside this draft. Diagram operations are saved immediately and are not part of canvas undo.</div><div id="diagram-manager-body"></div>',
+    buttons: [
+      { label: 'Close', className: 'tb-btn' }
+    ]
+  });
+  renderDiagramManagerBody();
+}
+
+function renameDiagramById(diagramId) {
+  const diagram = getDiagramById(diagramId);
+  if (!diagram) return;
+  openDiagramNameModal({
+    title: 'Rename diagram',
+    initialValue: diagram.title || 'Untitled diagram',
+    confirmLabel: 'Save title',
+    onConfirm: value => {
+      diagram.title = value;
+      if (diagram.id === activeDiagramId) {
+        const titleInput = document.getElementById('diagram-title-input');
+        if (titleInput) titleInput.value = value;
+        updateDocumentPanelFromInputs();
+      }
+      saveToLocalStorage();
+      openDiagramManager();
+      renderDiagramNavigation();
+    }
+  });
+}
+
+function deleteDiagramById(diagramId) {
+  const doc = ensureDiagramDocument();
+  const diagram = getDiagramById(diagramId);
+  if (!diagram || doc.diagrams.length <= 1) return;
+  syncActiveDiagramFromCurrentState();
+  openBasicModal({
+    title: 'Delete diagram',
+    body: `<div class="draft-modal-note">Delete <b>${escapeHtml(diagram.title || 'Untitled diagram')}</b>? Links to this diagram will be removed from any nodes that reference it.</div>`,
+    buttons: [
+      { label: 'Cancel', className: 'tb-btn' },
+      {
+        label: 'Delete diagram',
+        className: 'tb-btn danger',
+        onClick: () => {
+          removeLinksToDiagram(diagramId);
+          doc.diagrams = doc.diagrams.filter(item => item.id !== diagramId);
+          if (doc.rootDiagramId === diagramId) doc.rootDiagramId = doc.diagrams[0]?.id || '';
+          diagramNavBackStack = diagramNavBackStack.filter(id => id !== diagramId);
+          diagramNavForwardStack = diagramNavForwardStack.filter(id => id !== diagramId);
+          const fallbackId = activeDiagramId === diagramId
+            ? (diagramNavBackStack.pop() || doc.rootDiagramId || doc.diagrams[0]?.id)
+            : activeDiagramId;
+          activeDiagramId = fallbackId;
+          doc.activeDiagramId = fallbackId;
+          applyDiagramRecordToCanvas(getActiveDiagramRecord());
+          clearHistoryStacks();
+          render();
+          saveToLocalStorage();
+          setStatusModeMessage('Diagram deleted', { fade: true, autoClearMs: 1600 });
+        }
+      }
+    ]
+  });
+}
+
+function openDiagramLinkPickerForNode(nodeId) {
+  const node = state.nodes.find(item => item.id === nodeId);
+  if (!node) return;
+  syncActiveDiagramFromCurrentState();
+  const candidates = ensureDiagramDocument().diagrams.filter(diagram => diagram.id !== activeDiagramId);
+  if (!candidates.length) {
+    setStatusModeMessage('No other diagrams to link yet', { fade: true, autoClearMs: 1800 });
+    return;
+  }
+  openBasicModal({
+    title: 'Link diagram',
+    body: `<div class="draft-modal-note">Choose a diagram for <b>${escapeHtml(node.title || node.tag || 'this node')}</b>.</div><div id="diagram-link-picker" class="draft-list">${
+      candidates.map(diagram => `<button class="diagram-link-option${node.linkedDiagramId === diagram.id ? ' active' : ''}" data-diagram-id="${escapeHtml(diagram.id)}">
+        <span>${escapeHtml(diagram.title || 'Untitled diagram')}</span>
+        ${node.linkedDiagramId === diagram.id ? '<span class="draft-active-badge">Linked</span>' : ''}
+      </button>`).join('')
+    }</div>`,
+    buttons: [
+      { label: 'Cancel', className: 'tb-btn' }
+    ]
+  });
+  document.querySelectorAll('#diagram-link-picker .diagram-link-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      closeBasicModal();
+      linkNodeToDiagram(nodeId, btn.dataset.diagramId);
+    });
+  });
 }
 
 function getDiagramDocumentPayload({ currentOnly = false } = {}) {

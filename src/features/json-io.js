@@ -1,11 +1,18 @@
 // JSON IMPORT / EXPORT
-function exportJSON() {
-  const data = getDiagramDocumentPayload();
+function downloadDiagramJSON(data, filename) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'conduit-diagram.json';
+  a.download = filename;
   a.click();
+}
+
+function exportJSON() {
+  downloadDiagramJSON(getDiagramDocumentPayload(), 'conduit-diagram.json');
+}
+
+function exportCurrentDiagramJSON() {
+  downloadDiagramJSON(getDiagramDocumentPayload({ currentOnly: true }), 'conduit-current-diagram.json');
 }
 
 function importFile() {
