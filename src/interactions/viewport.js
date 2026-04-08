@@ -1,4 +1,13 @@
 // VIEWPORT TRANSFORM / ZOOM
+let _viewportSaveTimer = null;
+
+function scheduleViewportSave() {
+  clearTimeout(_viewportSaveTimer);
+  _viewportSaveTimer = setTimeout(() => {
+    if (typeof saveToLocalStorage === 'function') saveToLocalStorage();
+  }, 140);
+}
+
 function applyTransform() {
   if (canvas) canvas.style.transform = `translate(${panX}px,${panY}px) scale(${scale})`;
   document.documentElement.style.setProperty('--canvas-ui-scale', String(Math.max(0.9, Math.min(1.2, 1 / scale))));
@@ -18,6 +27,7 @@ function zoom(factor, cx, cy) {
   panX = cx - (cx - panX) * (scale / oldScale);
   panY = cy - (cy - panY) * (scale / oldScale);
   applyTransform();
+  scheduleViewportSave();
 }
 
 function resetZoom() {
@@ -25,6 +35,7 @@ function resetZoom() {
   panX = 60;
   panY = 40;
   applyTransform();
+  scheduleViewportSave();
 }
 
 function fitDiagram() {
@@ -48,6 +59,7 @@ function fitDiagram() {
   panX = (vw - dw * scale) / 2 - minX * scale;
   panY = (vh - dh * scale) / 2 - minY * scale;
   applyTransform();
+  scheduleViewportSave();
 }
 
 document.getElementById('canvas-wrap')?.addEventListener('wheel', e => {

@@ -1601,6 +1601,349 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(1);
   });
 
+  test('JSON export includes a multi-diagram document shell', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+
+    const payload = await page.evaluate(() => getDiagramDocumentPayload());
+    expect(payload.version).toBe(2);
+    expect(payload.diagrams).toHaveLength(1);
+    expect(payload.activeDiagramId).toBe(payload.diagrams[0].id);
+    expect(payload.rootDiagramId).toBe(payload.diagrams[0].id);
+    expect(payload.state.nodes).toHaveLength(1);
+    expect(payload.diagrams[0].state.nodes).toHaveLength(1);
+  });
+
+  test('legacy JSON payloads migrate into a single-diagram document', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      applyDiagramPayload({
+        version: 1,
+        title: 'Legacy Map',
+        subtitle: 'Legacy subtitle',
+        state: {
+          nodes: [
+            { id: 'legacy-node', type: 'internal', tag: 'LEG', title: 'Legacy Node', subtitle: '', x: 840, y: 620, w: 180, h: 100, functions: [] }
+          ],
+          arrows: [],
+          canvasOrder: []
+        }
+      });
+      render();
+    });
+
+    await expect(page.locator('#diagram-title-input')).toHaveValue('Legacy Map');
+    await expect(page.locator('.node')).toHaveCount(1);
+    await expect.poll(async () => page.evaluate(() => getDiagramDocumentPayload().diagrams.length)).toBe(1);
+    await expect.poll(async () => page.evaluate(() => getDiagramDocumentPayload().diagrams[0].id)).toBe('diagram-main');
+  });
+
+  test('node action can create and open a blank linked diagram', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    const [nodeId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Payments Service';
+      render();
+      selectNode(id);
+    }, nodeId);
+
+    await page.locator('#context-toolbar').getByRole('button', { name: 'More' }).click();
+    await page.locator('#context-toolbar .context-toolbar-menu').getByRole('button', { name: 'Create Linked Diagram' }).click();
+
+    await expect(page.locator('#diagram-title-input')).toHaveValue('Payments Service');
+    await expect(page.locator('.node')).toHaveCount(0);
+    await expect(page.locator('#diagram-nav')).toBeVisible();
+    await expect(page.locator('#diagram-nav')).toContainText('Diagrams');
+    await expect(page.locator('#diagram-breadcrumbs')).toContainText('Payments Service');
+
+    const payload = await page.evaluate(() => getDiagramDocumentPayload());
+    expect(payload.diagrams).toHaveLength(2);
+    expect(payload.activeDiagramId).not.toBe(payload.rootDiagramId);
+    const parent = payload.diagrams.find(diagram => diagram.id === payload.rootDiagramId);
+    expect(parent.state.nodes[0].linkedDiagramId).toBe(payload.activeDiagramId);
+
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
+    await expect(page.locator('#diagram-title-input')).toHaveValue(BLANK_TITLE);
+    await expect(page.locator('.node')).toHaveCount(1);
+    await expect(page.locator('.node-diagram-link-badge')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Open linked diagram: Payments Service' })).toHaveCount(1);
+
+    await page.getByRole('button', { name: 'Open linked diagram: Payments Service' }).click();
+    await expect(page.locator('#diagram-title-input')).toHaveValue('Payments Service');
+    await page.locator('#diagram-breadcrumbs .diagram-crumb', { hasText: BLANK_TITLE }).click();
+    await expect(page.locator('#diagram-title-input')).toHaveValue(BLANK_TITLE);
+    await expect(page.getByRole('button', { name: 'Open linked diagram: Payments Service' })).toHaveCount(1);
+
+    await page.evaluate(id => selectNode(id), nodeId);
+    await page.getByRole('button', { name: 'Open linked diagram', exact: true }).click();
+    await expect(page.locator('#diagram-title-input')).toHaveValue('Payments Service');
+    await page.locator('#diagram-breadcrumbs .diagram-crumb', { hasText: BLANK_TITLE }).click();
+    await expect(page.locator('#diagram-title-input')).toHaveValue(BLANK_TITLE);
+    await expect(page.getByRole('button', { name: 'Open linked diagram: Payments Service' })).toHaveCount(1);
+  });
+
+  test('node action can link and unlink an existing diagram', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    const [firstId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Payments Service';
+      render();
+      selectNode(id);
+    }, firstId);
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
+
+    await addNode(page, 'external', 1180, 620);
+    const secondId = await page.evaluate(() => state.nodes[1].id);
+    await page.evaluate(id => selectNode(id), secondId);
+
+    await page.getByRole('button', { name: 'Link existing diagram' }).click();
+    await expect(page.locator('#modal-title')).toHaveText('Link diagram');
+    await page.locator('.diagram-link-option', { hasText: 'Payments Service' }).click();
+
+    await expect.poll(async () => page.evaluate(id =>
+      Boolean(state.nodes.find(node => node.id === id)?.linkedDiagramId)
+    , secondId)).toBe(true);
+    await expect(page.getByRole('button', { name: 'Open linked diagram', exact: true })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Unlink diagram' }).click();
+    await expect(page.locator('#modal-title')).toHaveText('Unlink diagram');
+    await expect(page.locator('#modal-body')).toContainText('will be kept');
+    await page.locator('#modal-btns button', { hasText: 'Unlink diagram' }).click();
+    await expect.poll(async () => page.evaluate(id =>
+      Boolean(state.nodes.find(node => node.id === id)?.linkedDiagramId)
+    , secondId)).toBe(false);
+    await expect(page.getByRole('button', { name: 'Link existing diagram' })).toBeVisible();
+  });
+
+  test('boundary nodes show the linked diagram chip and can open linked diagrams from canvas', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'boundary', 860, 620);
+    const [nodeId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Payments Boundary';
+      render();
+      selectNode(id);
+    }, nodeId);
+
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await expect(page.locator('#diagram-title-input')).toHaveValue('Payments Boundary');
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
+
+    await expect(page.getByRole('button', { name: 'Open linked diagram: Payments Boundary' })).toHaveCount(1);
+    await page.getByRole('button', { name: 'Open linked diagram: Payments Boundary' }).click();
+    await expect(page.locator('#diagram-title-input')).toHaveValue('Payments Boundary');
+  });
+
+  test('viewport pan and zoom persist after reload', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 1280, 920);
+
+    await page.evaluate(() => {
+      scale = 0.72;
+      panX = -240;
+      panY = -180;
+      applyTransform();
+      saveToLocalStorage();
+    });
+
+    await page.reload();
+
+    await expect.poll(async () => page.evaluate(() => ({
+      scale,
+      panX,
+      panY
+    }))).toEqual({
+      scale: 0.72,
+      panX: -240,
+      panY: -180
+    });
+  });
+
+  test('diagram manager can rename and delete linked diagrams', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    const [nodeId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Payments Service';
+      render();
+      selectNode(id);
+    }, nodeId);
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await page.getByRole('button', { name: 'Back' }).click();
+
+    await page.evaluate(() => openDiagramManager());
+    await expect(page.locator('#modal-title')).toHaveText('Diagrams');
+    await page.locator('.draft-row', { hasText: 'Payments Service' }).locator('.tb-btn', { hasText: 'Rename' }).click();
+    await page.locator('#diagram-name-input').fill('Payments Deep Dive');
+    await page.locator('#modal-btns button', { hasText: 'Save title' }).click();
+    await expect(page.locator('.draft-row', { hasText: 'Payments Deep Dive' })).toBeVisible();
+
+    await page.locator('.draft-row', { hasText: 'Payments Deep Dive' }).locator('.tb-btn.danger', { hasText: 'Delete' }).click();
+    await page.locator('#modal-btns button', { hasText: 'Delete diagram' }).click();
+
+    await expect.poll(async () => page.evaluate(() => getDiagramDocumentPayload().diagrams.length)).toBe(1);
+    await expect.poll(async () => page.evaluate(() => state.nodes[0].linkedDiagramId || '')).toBe('');
+  });
+
+  test('deleting a node with a linked diagram asks whether to keep or delete the diagram', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    const [nodeId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Payments Service';
+      render();
+      selectNode(id);
+    }, nodeId);
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await page.getByRole('button', { name: 'Back' }).click();
+
+    await page.evaluate(id => {
+      selectNode(id);
+      deleteSelected();
+    }, nodeId);
+    await expect(page.locator('#modal-title')).toHaveText('Delete linked node');
+    await page.locator('#modal-btns button', { hasText: 'Delete node only' }).click();
+    await expect.poll(async () => page.evaluate(() => getDiagramDocumentPayload().diagrams.length)).toBe(2);
+    await expect(page.locator('.node')).toHaveCount(0);
+
+    await addNode(page, 'internal', 920, 660);
+    const [replacementId] = await getNodeIds(page);
+    const childId = await page.evaluate(() => getDiagramDocumentPayload().diagrams.find(diagram => diagram.id !== getDiagramDocumentPayload().rootDiagramId).id);
+    await page.evaluate(({ replacementId, childId }) => {
+      state.nodes.find(node => node.id === replacementId).linkedDiagramId = childId;
+      render();
+      selectNode(replacementId);
+    }, { replacementId, childId });
+
+    await page.evaluate(() => deleteSelected());
+    await expect(page.locator('#modal-title')).toHaveText('Delete linked node');
+    await page.locator('#modal-btns button', { hasText: 'Delete node and diagram' }).click();
+    await expect.poll(async () => page.evaluate(() => getDiagramDocumentPayload().diagrams.length)).toBe(1);
+    await expect(page.locator('.node')).toHaveCount(0);
+  });
+
+  test('current diagram JSON export strips links to non-exported diagrams', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    const [nodeId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Payments Service';
+      render();
+      selectNode(id);
+    }, nodeId);
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await page.getByRole('button', { name: 'Back' }).click();
+
+    const payload = await page.evaluate(() => getDiagramDocumentPayload({ currentOnly: true }));
+    expect(payload.diagrams).toHaveLength(1);
+    expect(payload.activeDiagramId).toBe(payload.rootDiagramId);
+    expect(payload.diagrams[0].state.nodes[0].linkedDiagramId).toBeUndefined();
+  });
+
+  test('HTML export opens on the root diagram when editing a linked child diagram', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    const [nodeId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Root Gateway';
+      render();
+      selectNode(id);
+    }, nodeId);
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await expect(page.locator('#diagram-title-input')).toHaveValue('Root Gateway');
+    await expect(page.locator('.node')).toHaveCount(0);
+
+    const result = await page.evaluate(() => {
+      const exportResult = buildExportHTML({ showLegend: false, showGrid: false });
+      return {
+        title: exportResult.title,
+        hasRootNode: exportResult.html.includes('Root Gateway'),
+        activeCanvasNodeCount: state.nodes.length
+      };
+    });
+    expect(result.title).toBe(BLANK_TITLE);
+    expect(result.hasRootNode).toBe(true);
+    expect(result.activeCanvasNodeCount).toBe(0);
+  });
+
+  test('exported HTML can navigate linked diagrams and keep detail separate', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.locator('#diagram-title-input').fill('System Overview');
+    await page.locator('#diagram-subtitle-input').fill('Root export map');
+    await addNode(page, 'internal', 860, 620);
+    const [nodeId] = await getNodeIds(page);
+
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Root Gateway';
+      node.notes = 'Gateway notes';
+      render();
+      selectNode(id);
+    }, nodeId);
+
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await page.locator('#diagram-title-input').fill('Gateway drilldown');
+    await addNode(page, 'internal', 1040, 620);
+    await page.evaluate(() => {
+      if (state.nodes[0]) state.nodes[0].title = 'Child worker';
+      render();
+    });
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
+
+    const html = await page.evaluate(() => buildExportHTML({ showLegend: false, showGrid: false }).html);
+    const exportedPage = await page.context().newPage();
+    await exportedPage.setContent(html, { waitUntil: 'load' });
+
+    await expect(exportedPage.locator('#export-title')).toHaveText('System Overview');
+    await expect(exportedPage.locator('#export-diagram-nav')).toContainText('Diagrams');
+    await expect(exportedPage.getByRole('button', { name: 'Diagrams' })).toBeVisible();
+    await expect(exportedPage.getByRole('button', { name: /More detail/i })).toBeVisible();
+
+    await exportedPage.getByRole('button', { name: /More detail/i }).click();
+    await expect(exportedPage.locator('#detail-panel')).toHaveClass(/open/);
+    await expect(exportedPage.locator('#export-title')).toHaveText('System Overview');
+    await exportedPage.locator('#dp-close').click();
+
+    await exportedPage.getByRole('button', { name: 'Diagrams' }).click();
+    await expect(exportedPage.locator('#export-diagram-menu')).toBeVisible();
+    await exportedPage.locator('#export-diagram-menu .export-diagram-menu-item', { hasText: 'Gateway drilldown' }).click();
+    await expect(exportedPage.locator('#export-title')).toHaveText('Gateway drilldown');
+    await exportedPage.locator('#export-nav-back').click();
+    await expect(exportedPage.locator('#export-title')).toHaveText('System Overview');
+
+    await exportedPage.locator('.linked-diagram-chip').click();
+    await expect(exportedPage.locator('#export-title')).toHaveText('Gateway drilldown');
+    await expect(exportedPage.locator('.node')).toContainText('Child worker');
+    await expect(exportedPage.locator('#export-breadcrumbs')).toContainText('System Overview');
+
+    await exportedPage.locator('#export-breadcrumbs .export-crumb', { hasText: 'System Overview' }).click();
+    await expect(exportedPage.locator('#export-title')).toHaveText('System Overview');
+
+    await exportedPage.close();
+  });
+
   test('function editor updates the node function list', async ({ page }) => {
     await bootFresh(page);
 

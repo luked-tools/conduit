@@ -123,6 +123,30 @@ function createNodeEl(n) {
   }
   div.appendChild(inner);
 
+  if (n.linkedDiagramId && typeof getDiagramById === 'function') {
+    const linkedDiagram = getDiagramById(n.linkedDiagramId);
+    if (linkedDiagram) {
+      div.classList.add('has-linked-diagram');
+      const linkBadge = document.createElement('button');
+      linkBadge.type = 'button';
+      linkBadge.className = 'node-diagram-link-chip';
+      linkBadge.textContent = 'Linked diagram';
+      linkBadge.setAttribute('aria-label', `Open linked diagram: ${linkedDiagram.title || 'Untitled diagram'}`);
+      linkBadge.addEventListener('pointerdown', e => {
+        e.stopPropagation();
+      });
+      linkBadge.addEventListener('mousedown', e => {
+        e.stopPropagation();
+      });
+      linkBadge.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        openLinkedDiagramForNode(n.id);
+      });
+      div.appendChild(linkBadge);
+    }
+  }
+
   // Resize handles
   const rh = document.createElement('div');
   rh.className = 'node-resize';

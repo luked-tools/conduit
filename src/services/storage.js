@@ -97,7 +97,7 @@ function ensureDraftRecord({ id = makeDraftId(), name = '', payload = null, acti
   saveDraftIndex(sortDrafts(index));
   if (payload) {
     saveDraftPayload(id, {
-      version: 1,
+      version: DIAGRAM_DOCUMENT_VERSION,
       ...payload,
       id,
       name: draftDisplayName(meta.name)
@@ -144,7 +144,7 @@ function saveToLocalStorage() {
 
 function loadDraftIntoCanvas(id) {
   const payload = getDraftPayload(id);
-  if (!payload || !payload.state || !Array.isArray(payload.state.nodes)) return false;
+  if (!payload || (!Array.isArray(payload.diagrams) && (!payload.state || !Array.isArray(payload.state.nodes)))) return false;
   setActiveDraft(id);
   applyDiagramPayload(payload);
   clearHistoryStacks();

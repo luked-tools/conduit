@@ -1,16 +1,18 @@
 // JSON IMPORT / EXPORT
-function exportJSON() {
-  const data = {
-    version: 1,
-    title: document.getElementById('diagram-title-input').value,
-    subtitle: document.getElementById('diagram-subtitle-input').value,
-    state
-  };
+function downloadDiagramJSON(data, filename) {
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'conduit-diagram.json';
+  a.download = filename;
   a.click();
+}
+
+function exportJSON() {
+  downloadDiagramJSON(getDiagramDocumentPayload(), 'conduit-diagram.json');
+}
+
+function exportCurrentDiagramJSON() {
+  downloadDiagramJSON(getDiagramDocumentPayload({ currentOnly: true }), 'conduit-current-diagram.json');
 }
 
 function importFile() {
@@ -24,14 +26,9 @@ document.getElementById('file-input').addEventListener('change', e => {
   reader.onload = ev => {
     try {
       const data = JSON.parse(ev.target.result);
-      if (data.state) {
+      if (data.state || (Array.isArray(data.diagrams) && data.diagrams.length)) {
         const nameFromFile = (file.name || '').replace(/\.[^.]+$/, '') || data.title || 'Imported draft';
-        createDraftFromPayload({
-          version: 1,
-          title: data.title || '',
-          subtitle: data.subtitle || '',
-          state: data.state
-        }, suggestDraftName(nameFromFile), { activate: true });
+        createDraftFromPayload(createDiagramDocumentFromPayload(data), suggestDraftName(nameFromFile), { activate: true });
         saveToLocalStorage();
       } else {
         showCanvasNotice('Import failed', {

@@ -38,6 +38,13 @@ function openHelpModal() {
             <div class="help-modal-tip">
               <span class="help-modal-tip-index">3</span>
               <div>
+                <div class="help-modal-tip-title">Use linked diagrams for additional detail</div>
+                <div class="help-modal-tip-copy">Select a node, use the toolbar or the sidebar and create or connect a deeper diagram when the draft needs an extra level.</div>
+              </div>
+            </div>
+            <div class="help-modal-tip">
+              <span class="help-modal-tip-index">4</span>
+              <div>
                 <div class="help-modal-tip-title">Open detail surfaces when you need more control</div>
                 <div class="help-modal-tip-copy">Use the sidebar for fast edits, then open panels or modals for functions, layers, theme, and deeper detail.</div>
               </div>
@@ -52,8 +59,9 @@ function openHelpModal() {
           <div class="help-modal-meta">
             <div><span>Create</span><strong>Add nodes, drag to connect, or use quick connect from the selection toolbar.</strong></div>
             <div><span>Edit</span><strong>Select nodes and connectors to use the sidebar, inline rename, style brush, and layer controls.</strong></div>
+            <div><span>Drill down</span><strong>Link nodes or boundaries to child diagrams, then use the Diagrams controls and breadcrumbs to move between levels.</strong></div>
             <div><span>Review</span><strong>Use Layers, Theme, and detail panels to refine structure, presentation, and visual hierarchy.</strong></div>
-            <div><span>Share</span><strong>Export interactive HTML when you want a richer shared artifact, not just a static image.</strong></div>
+            <div><span>Share</span><strong>Export interactive HTML when you want a richer shared artifact, including linked-diagram navigation inside the export.</strong></div>
           </div>
         </section>
       </section>

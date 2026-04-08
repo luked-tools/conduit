@@ -30,11 +30,16 @@ function updateDocumentPanelFromInputs() {
 
 function updateDocumentPanelPosition() {
   const panel = document.getElementById('document-panel');
+  const nav = document.getElementById('diagram-nav');
   const sb = document.getElementById('sidebar');
   if (!panel || !sb) return;
   const sidebarWidth = sb.getBoundingClientRect().width;
   const left = sb.classList.contains('collapsed') ? 14 : (Math.round(sidebarWidth) + 14);
   panel.style.left = left + 'px';
+  if (nav) {
+    const panelWidth = panel.getBoundingClientRect().width || 300;
+    nav.style.left = (left + Math.round(panelWidth) + 10) + 'px';
+  }
 }
 
 function toggleDocumentPanel(forceOpen) {

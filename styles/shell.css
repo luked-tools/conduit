@@ -541,6 +541,89 @@
     pointer-events: none;
     overflow: visible;
   }
+  #diagram-nav {
+    position: fixed;
+    top: 56px;
+    left: 592px;
+    z-index: 58;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(8px);
+    max-width: calc(100vw - 28px);
+    transition: left var(--motion-panel), transform var(--motion-fade), box-shadow var(--motion-fade);
+  }
+  #diagram-nav[hidden] { display: none; }
+  .diagram-nav-btn,
+  .diagram-crumb {
+    min-height: 24px;
+    padding: 4px 10px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .diagram-nav-manager-btn {
+    color: var(--text);
+    border-color: var(--border);
+    background: color-mix(in srgb, var(--surface2) 88%, transparent);
+  }
+  .diagram-nav-arrow-btn {
+    min-width: 36px;
+    min-height: 28px;
+    padding: 1px 0 3px;
+    justify-content: center;
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .diagram-nav-divider {
+    width: 1px;
+    align-self: stretch;
+    min-height: 22px;
+    background: var(--border);
+    margin: 1px 2px;
+  }
+  .diagram-nav-btn:hover:not(:disabled),
+  .diagram-crumb:hover:not(:disabled) {
+    border-color: var(--border2);
+    color: var(--text);
+    background: var(--surface-hover);
+  }
+  .diagram-nav-btn:disabled,
+  .diagram-crumb:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+  #diagram-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .diagram-crumb.active {
+    color: var(--text);
+    font-weight: 600;
+    background: color-mix(in srgb, var(--surface2) 88%, transparent);
+    border-color: var(--border2);
+  }
+  .diagram-crumb-sep {
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    margin: 0 -2px;
+  }
 
   /* Nodes */
   .node {

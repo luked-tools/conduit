@@ -224,7 +224,52 @@
     color: var(--text3); opacity: 1;
   }
   .node.boundary .node-info-hint { display: none; }
-
+  .node.has-linked-diagram .node-inner {
+    padding-bottom: 32px;
+  }
+  .node.boundary.has-linked-diagram .node-inner {
+    padding-bottom: 30px;
+  }
+  .node-diagram-link-chip {
+    position: absolute;
+    left: 10px;
+    bottom: 8px;
+    min-height: 20px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    color: var(--accent3);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+    cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  }
+  .node-diagram-link-chip::before {
+    content: '';
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    background: currentColor;
+    opacity: 0.7;
+  }
+  .node-diagram-link-chip:hover,
+  .node-diagram-link-chip:focus-visible {
+    background: var(--surface-hover);
+    border-color: var(--accent3);
+    color: var(--accent3);
+    outline: none;
+  }
+  .node-diagram-link-chip:focus-visible {
+    box-shadow: 0 0 0 3px var(--accent-ring);
+  }
   #nm-footer {
     display: flex; align-items: center; gap: 8px;
     padding: 14px 24px;

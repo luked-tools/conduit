@@ -85,6 +85,12 @@
           Delete draft...
         </button>
         <div class="tb-dropdown-sep"></div>
+        <div class="tb-dropdown-label">Diagrams</div>
+        <button class="tb-dropdown-item" onclick="openDiagramManager();closeDropdowns()">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="2" width="9" height="8" rx="1.4" stroke="currentColor" stroke-width="1.2"/><path d="M4 4.5h4M4 6.5h2.5M7.5 6.5l1 1 1.5-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Open / manage diagrams...
+        </button>
+        <div class="tb-dropdown-sep"></div>
         <div class="tb-dropdown-label">Import & Save</div>
         <button class="tb-dropdown-item" onclick="importFile();closeDropdowns()">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 9v2h8V9M6 1v7M3.5 5.5L6 3l2.5 2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -93,6 +99,10 @@
         <button class="tb-dropdown-item" onclick="exportJSON();closeDropdowns()">
           <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 9v2h8V9M6 8V1M3.5 5.5L6 8l2.5-2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
           Save JSON
+        </button>
+        <button class="tb-dropdown-item" onclick="exportCurrentDiagramJSON();closeDropdowns()">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 9v2h8V9M6 8V1M3.5 5.5L6 8l2.5-2.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M3.5 2.5h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+          Save current diagram JSON
         </button>
         <div class="tb-dropdown-sep"></div>
         <div class="tb-dropdown-label">Canvas</div>
@@ -344,6 +354,14 @@
       <span id="quick-connect-text">Quick connect — click a node</span>
       <button id="quick-connect-cancel" onclick="cancelQuickConnectMode()">&#10005; Cancel</button>
     </div>
+<div id="diagram-nav" hidden>
+  <button id="diagram-nav-manager" class="diagram-nav-btn diagram-nav-manager-btn" onclick="openDiagramManager()">Diagrams</button>
+  <span class="diagram-nav-divider" aria-hidden="true"></span>
+  <button id="diagram-nav-back" class="diagram-nav-btn diagram-nav-arrow-btn" onclick="navigateDiagramBack()" aria-label="Back">←</button>
+  <button id="diagram-nav-forward" class="diagram-nav-btn diagram-nav-arrow-btn" onclick="navigateDiagramForward()" aria-label="Forward">→</button>
+  <span class="diagram-nav-divider" aria-hidden="true"></span>
+  <div id="diagram-breadcrumbs"></div>
+</div>
     <div id="canvas-notice-banner" role="status" aria-live="polite">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1.5 12.2 11a1 1 0 0 1-.88 1.5H2.68A1 1 0 0 1 1.8 11L7 1.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M7 4.4v3.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="7" cy="9.9" r=".7" fill="currentColor"/></svg>
       <span id="canvas-notice-text"></span>
@@ -367,7 +385,7 @@
   <span id="sb-io">⇅ 0 I/O</span>
   <span id="sb-zoom">⊕ 100%</span>
   <span id="sb-mode" style="color:var(--accent3);opacity:0;transition:opacity 0.5s;"></span>
-  <span style="margin-left:auto;color:var(--text3);font-size:9px;font-family:'IBM Plex Mono',monospace;opacity:0.5;">v1.3</span>
+        <span style="margin-left:auto;color:var(--text3);font-size:9px;font-family:'IBM Plex Mono',monospace;opacity:0.5;">v1.4</span>
   <span style="color:var(--text3);font-size:9px;font-family:'IBM Plex Mono',monospace;opacity:0.4;">· Created by Luke Darragh</span>
   <span id="sb-autosave" style="color:var(--accent3);font-size:9px;font-family:'IBM Plex Mono',monospace;opacity:0;transition:opacity 0.5s;letter-spacing:0.04em;">✓ saved</span>
 </div>
@@ -539,6 +557,7 @@
 <div id="palette-drag-ghost"></div>
 <script src="src/services/ids.js"></script>
 <script src="src/services/escape.js"></script>
+<script src="src/services/diagrams.js"></script>
 <script src="src/services/serializer.js"></script>
 <script src="src/services/storage.js"></script>
 <script src="src/state/history.js"></script>

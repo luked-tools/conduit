@@ -195,6 +195,8 @@ function makeContextToolbarMenu() {
 
   if (selectedNode) {
     const nodeId = selectedNode;
+    const node = state.nodes.find(item => item.id === nodeId);
+    const linkedDiagram = node?.linkedDiagramId ? getDiagramById(node.linkedDiagramId) : null;
     menu.appendChild(createAppMenuItem({
       className: 'context-toolbar-menu-item',
       label: 'Details',
@@ -225,6 +227,41 @@ function makeContextToolbarMenu() {
       disabled: !canMoveNodeLayer(nodeId, 'back'),
       onClick: runMenuAction(() => moveNodeLayer(nodeId, 'back'))
     }));
+    menu.appendChild(createAppMenuDivider('context-toolbar-menu-divider'));
+    if (linkedDiagram) {
+      menu.appendChild(createAppMenuItem({
+        className: 'context-toolbar-menu-item',
+        label: 'Open Linked Diagram',
+        icon: getContextMenuIcon('details'),
+        onClick: runMenuAction(() => openLinkedDiagramForNode(nodeId))
+      }));
+      menu.appendChild(createAppMenuItem({
+        className: 'context-toolbar-menu-item',
+        label: 'Link Existing Diagram',
+        icon: getContextMenuIcon('duplicate'),
+        onClick: runMenuAction(() => openDiagramLinkPickerForNode(nodeId))
+      }));
+      menu.appendChild(createAppMenuItem({
+        className: 'context-toolbar-menu-item',
+        label: 'Remove Linked Diagram',
+        icon: getContextMenuIcon('back'),
+        danger: true,
+        onClick: runMenuAction(() => unlinkDiagramFromNode(nodeId))
+      }));
+    } else {
+      menu.appendChild(createAppMenuItem({
+        className: 'context-toolbar-menu-item',
+        label: 'Create Linked Diagram',
+        icon: getContextMenuIcon('details'),
+        onClick: runMenuAction(() => createLinkedDiagramForNode(nodeId))
+      }));
+      menu.appendChild(createAppMenuItem({
+        className: 'context-toolbar-menu-item',
+        label: 'Link Existing Diagram',
+        icon: getContextMenuIcon('duplicate'),
+        onClick: runMenuAction(() => openDiagramLinkPickerForNode(nodeId))
+      }));
+    }
     menu.appendChild(createAppMenuDivider('context-toolbar-menu-divider'));
     menu.appendChild(createAppMenuItem({
       className: 'context-toolbar-menu-item',
