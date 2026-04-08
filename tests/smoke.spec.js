@@ -1791,6 +1791,34 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     expect(payload.diagrams[0].state.nodes[0].linkedDiagramId).toBeUndefined();
   });
 
+  test('HTML export opens on the root diagram when editing a linked child diagram', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    const [nodeId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Root Gateway';
+      render();
+      selectNode(id);
+    }, nodeId);
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await expect(page.locator('#diagram-title-input')).toHaveValue('Root Gateway');
+    await expect(page.locator('.node')).toHaveCount(0);
+
+    const result = await page.evaluate(() => {
+      const exportResult = buildExportHTML({ showLegend: false, showGrid: false });
+      return {
+        title: exportResult.title,
+        hasRootNode: exportResult.html.includes('Root Gateway'),
+        activeCanvasNodeCount: state.nodes.length
+      };
+    });
+    expect(result.title).toBe(BLANK_TITLE);
+    expect(result.hasRootNode).toBe(true);
+    expect(result.activeCanvasNodeCount).toBe(0);
+  });
+
   test('function editor updates the node function list', async ({ page }) => {
     await bootFresh(page);
 

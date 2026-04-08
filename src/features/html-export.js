@@ -1,7 +1,13 @@
 function buildExportHTML(opts) {
-  const title = document.getElementById('diagram-title-input').value;
-  const subtitle = document.getElementById('diagram-subtitle-input').value;
-  const stateJson = JSON.stringify(state);
+  const exportDoc = typeof getDiagramDocumentPayload === 'function' ? getDiagramDocumentPayload() : null;
+  const rootDiagram = exportDoc?.diagrams?.find(diagram => diagram.id === exportDoc.rootDiagramId) || null;
+  const originalState = state;
+  if (rootDiagram?.state) {
+    state = cloneDiagramData(rootDiagram.state);
+    if (typeof normalizeCanvasOrder === 'function') normalizeCanvasOrder();
+  }
+  const title = rootDiagram?.title || document.getElementById('diagram-title-input').value;
+  const subtitle = rootDiagram?.subtitle || document.getElementById('diagram-subtitle-input').value;
   const safeTitle = escapeHtml(title);
   const safeSubtitle = escapeHtml(subtitle);
 
@@ -522,6 +528,7 @@ window.addEventListener('load', resetView);
 </body>
 </html>`;
 
+  state = originalState;
   return { html, title, diagramW: W, diagramH: H };
 }
 
