@@ -542,9 +542,9 @@
     overflow: visible;
   }
   #diagram-nav {
-    position: absolute;
-    top: 12px;
-    left: 14px;
+    position: fixed;
+    top: 56px;
+    left: 592px;
     z-index: 58;
     display: flex;
     align-items: center;
@@ -555,6 +555,8 @@
     background: color-mix(in srgb, var(--surface) 92%, transparent);
     box-shadow: var(--shadow-soft);
     backdrop-filter: blur(8px);
+    max-width: calc(100vw - 28px);
+    transition: left var(--motion-panel), transform var(--motion-fade), box-shadow var(--motion-fade);
   }
   #diagram-nav[hidden] { display: none; }
   .diagram-nav-btn,
