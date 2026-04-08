@@ -36,18 +36,41 @@ document.addEventListener('keydown', e => {
   }
 });
 
-function deleteSelected() {
+function deleteSelected({ deleteLinkedDiagram = false, skipLinkedPrompt = false } = {}) {
   if (selectedNode) {
+    const nodeId = selectedNode;
+    const node = state.nodes.find(n => n.id === nodeId);
+    const linkedDiagramId = node?.linkedDiagramId;
+    const linkedDiagram = linkedDiagramId && typeof getDiagramById === 'function'
+      ? getDiagramById(linkedDiagramId)
+      : null;
+    if (!skipLinkedPrompt && linkedDiagram) {
+      openBasicModal({
+        title: 'Delete linked node',
+        body: `<div class="draft-modal-note"><b>${escapeHtml(node.title || node.tag || 'This node')}</b> links to <b>${escapeHtml(linkedDiagram.title || 'Untitled diagram')}</b>. Delete just the node, or delete the linked diagram too?</div>`,
+        buttons: [
+          { label: 'Cancel', className: 'tb-btn' },
+          { label: 'Delete node only', className: 'tb-btn', onClick: () => deleteSelected({ skipLinkedPrompt: true }) },
+          { label: 'Delete node and diagram', className: 'tb-btn danger', onClick: () => deleteSelected({ deleteLinkedDiagram: true, skipLinkedPrompt: true }) }
+        ]
+      });
+      return;
+    }
     pushUndo();
-    state.arrows = state.arrows.filter(a => a.from !== selectedNode && a.to !== selectedNode);
-    state.nodes = state.nodes.filter(n => n.id !== selectedNode);
+    state.arrows = state.arrows.filter(a => a.from !== nodeId && a.to !== nodeId);
+    state.nodes = state.nodes.filter(n => n.id !== nodeId);
     selectedNode = null;
+    normalizeCanvasOrder();
+    if (deleteLinkedDiagram && linkedDiagram) {
+      syncActiveDiagramFromCurrentState();
+      deleteDiagramRecordById(linkedDiagram.id, { fallbackId: activeDiagramId });
+    }
   } else if (selectedArrow) {
     pushUndo();
     state.arrows = state.arrows.filter(a => a.id !== selectedArrow);
     selectedArrow = null;
+    normalizeCanvasOrder();
   }
-  normalizeCanvasOrder();
   render();
   saveToLocalStorage();
 }

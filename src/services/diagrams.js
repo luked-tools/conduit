@@ -282,6 +282,34 @@ function removeLinksToDiagram(diagramId) {
   });
 }
 
+function deleteDiagramRecordById(diagramId, { fallbackId = '' } = {}) {
+  const doc = ensureDiagramDocument();
+  const diagram = getDiagramById(diagramId);
+  if (!diagram || doc.diagrams.length <= 1) return false;
+
+  removeLinksToDiagram(diagramId);
+  doc.diagrams = doc.diagrams.filter(item => item.id !== diagramId);
+  if (doc.rootDiagramId === diagramId) doc.rootDiagramId = doc.diagrams[0]?.id || '';
+  diagramNavBackStack = diagramNavBackStack.filter(id => id !== diagramId);
+  diagramNavForwardStack = diagramNavForwardStack.filter(id => id !== diagramId);
+
+  if (activeDiagramId === diagramId) {
+    const nextId = (fallbackId && getDiagramById(fallbackId) && fallbackId)
+      || diagramNavBackStack.pop()
+      || doc.rootDiagramId
+      || doc.diagrams[0]?.id
+      || '';
+    activeDiagramId = nextId;
+    doc.activeDiagramId = nextId;
+    applyDiagramRecordToCanvas(getActiveDiagramRecord());
+    clearHistoryStacks();
+  } else {
+    doc.activeDiagramId = activeDiagramId;
+    applyDiagramRecordToCanvas(getActiveDiagramRecord());
+  }
+  return true;
+}
+
 function openDiagramNameModal({ title, initialValue, confirmLabel, onConfirm }) {
   openBasicModal({
     title,
@@ -404,18 +432,7 @@ function deleteDiagramById(diagramId) {
         label: 'Delete diagram',
         className: 'tb-btn danger',
         onClick: () => {
-          removeLinksToDiagram(diagramId);
-          doc.diagrams = doc.diagrams.filter(item => item.id !== diagramId);
-          if (doc.rootDiagramId === diagramId) doc.rootDiagramId = doc.diagrams[0]?.id || '';
-          diagramNavBackStack = diagramNavBackStack.filter(id => id !== diagramId);
-          diagramNavForwardStack = diagramNavForwardStack.filter(id => id !== diagramId);
-          const fallbackId = activeDiagramId === diagramId
-            ? (diagramNavBackStack.pop() || doc.rootDiagramId || doc.diagrams[0]?.id)
-            : activeDiagramId;
-          activeDiagramId = fallbackId;
-          doc.activeDiagramId = fallbackId;
-          applyDiagramRecordToCanvas(getActiveDiagramRecord());
-          clearHistoryStacks();
+          deleteDiagramRecordById(diagramId);
           render();
           saveToLocalStorage();
           setStatusModeMessage('Diagram deleted', { fade: true, autoClearMs: 1600 });

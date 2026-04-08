@@ -1732,6 +1732,45 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect.poll(async () => page.evaluate(() => state.nodes[0].linkedDiagramId || '')).toBe('');
   });
 
+  test('deleting a node with a linked diagram asks whether to keep or delete the diagram', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    const [nodeId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Payments Service';
+      render();
+      selectNode(id);
+    }, nodeId);
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await page.getByRole('button', { name: 'Back' }).click();
+
+    await page.evaluate(id => {
+      selectNode(id);
+      deleteSelected();
+    }, nodeId);
+    await expect(page.locator('#modal-title')).toHaveText('Delete linked node');
+    await page.locator('#modal-btns button', { hasText: 'Delete node only' }).click();
+    await expect.poll(async () => page.evaluate(() => getDiagramDocumentPayload().diagrams.length)).toBe(2);
+    await expect(page.locator('.node')).toHaveCount(0);
+
+    await addNode(page, 'internal', 920, 660);
+    const [replacementId] = await getNodeIds(page);
+    const childId = await page.evaluate(() => getDiagramDocumentPayload().diagrams.find(diagram => diagram.id !== getDiagramDocumentPayload().rootDiagramId).id);
+    await page.evaluate(({ replacementId, childId }) => {
+      state.nodes.find(node => node.id === replacementId).linkedDiagramId = childId;
+      render();
+      selectNode(replacementId);
+    }, { replacementId, childId });
+
+    await page.evaluate(() => deleteSelected());
+    await expect(page.locator('#modal-title')).toHaveText('Delete linked node');
+    await page.locator('#modal-btns button', { hasText: 'Delete node and diagram' }).click();
+    await expect.poll(async () => page.evaluate(() => getDiagramDocumentPayload().diagrams.length)).toBe(1);
+    await expect(page.locator('.node')).toHaveCount(0);
+  });
+
   test('current diagram JSON export strips links to non-exported diagrams', async ({ page }) => {
     await bootFresh(page);
 
