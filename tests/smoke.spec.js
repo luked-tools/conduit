@@ -1917,11 +1917,20 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
 
     await expect(exportedPage.locator('#export-title')).toHaveText('System Overview');
     await expect(exportedPage.locator('#export-diagram-nav')).toContainText('Diagram path');
+    await expect(exportedPage.getByRole('button', { name: 'Diagrams' })).toBeVisible();
+    await expect(exportedPage.getByRole('button', { name: /More detail/i })).toBeVisible();
 
-    await exportedPage.locator('.detail-btn[data-node-detail-id]').click();
+    await exportedPage.getByRole('button', { name: /More detail/i }).click();
     await expect(exportedPage.locator('#detail-panel')).toHaveClass(/open/);
     await expect(exportedPage.locator('#export-title')).toHaveText('System Overview');
     await exportedPage.locator('#dp-close').click();
+
+    await exportedPage.getByRole('button', { name: 'Diagrams' }).click();
+    await expect(exportedPage.locator('#export-diagram-menu')).toBeVisible();
+    await exportedPage.locator('#export-diagram-menu .export-diagram-menu-item', { hasText: 'Gateway drilldown' }).click();
+    await expect(exportedPage.locator('#export-title')).toHaveText('Gateway drilldown');
+    await exportedPage.locator('#export-nav-back').click();
+    await expect(exportedPage.locator('#export-title')).toHaveText('System Overview');
 
     await exportedPage.locator('.linked-diagram-chip').click();
     await expect(exportedPage.locator('#export-title')).toHaveText('Gateway drilldown');
