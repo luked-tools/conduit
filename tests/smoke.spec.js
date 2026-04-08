@@ -1668,6 +1668,14 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await page.getByRole('button', { name: 'Back' }).click();
     await expect(page.locator('#diagram-title-input')).toHaveValue(BLANK_TITLE);
     await expect(page.locator('.node')).toHaveCount(1);
+    await expect(page.locator('.node-diagram-link-badge')).toHaveCount(1);
+
+    await page.evaluate(id => selectNode(id), nodeId);
+    await page.getByRole('button', { name: 'Open linked diagram' }).click();
+    await expect(page.locator('#diagram-title-input')).toHaveValue('Payments Service');
+    await page.locator('#diagram-breadcrumbs .diagram-crumb', { hasText: BLANK_TITLE }).click();
+    await expect(page.locator('#diagram-title-input')).toHaveValue(BLANK_TITLE);
+    await expect(page.locator('.node-diagram-link-badge')).toHaveCount(1);
   });
 
   test('node action can link and unlink an existing diagram', async ({ page }) => {

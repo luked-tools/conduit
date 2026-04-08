@@ -224,6 +224,26 @@
     color: var(--text3); opacity: 1;
   }
   .node.boundary .node-info-hint { display: none; }
+  .node-diagram-link-badge {
+    position: absolute;
+    top: 6px;
+    left: 8px;
+    width: 17px;
+    height: 17px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    color: var(--accent3);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    pointer-events: none;
+  }
 
   #nm-footer {
     display: flex; align-items: center; gap: 8px;

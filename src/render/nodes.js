@@ -123,6 +123,17 @@ function createNodeEl(n) {
   }
   div.appendChild(inner);
 
+  if (n.type !== 'boundary' && n.linkedDiagramId && typeof getDiagramById === 'function') {
+    const linkedDiagram = getDiagramById(n.linkedDiagramId);
+    if (linkedDiagram) {
+      const linkBadge = document.createElement('div');
+      linkBadge.className = 'node-diagram-link-badge';
+      linkBadge.textContent = '↗';
+      linkBadge.title = `Linked diagram: ${linkedDiagram.title || 'Untitled diagram'}`;
+      div.appendChild(linkBadge);
+    }
+  }
+
   // Resize handles
   const rh = document.createElement('div');
   rh.className = 'node-resize';
