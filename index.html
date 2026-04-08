@@ -344,6 +344,11 @@
       <span id="quick-connect-text">Quick connect — click a node</span>
       <button id="quick-connect-cancel" onclick="cancelQuickConnectMode()">&#10005; Cancel</button>
     </div>
+    <div id="diagram-nav" hidden>
+      <button id="diagram-nav-back" class="diagram-nav-btn" onclick="navigateDiagramBack()" title="Back to previous diagram">Back</button>
+      <button id="diagram-nav-forward" class="diagram-nav-btn" onclick="navigateDiagramForward()" title="Forward to next diagram">Forward</button>
+      <div id="diagram-breadcrumbs"></div>
+    </div>
     <div id="canvas-notice-banner" role="status" aria-live="polite">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true"><path d="M7 1.5 12.2 11a1 1 0 0 1-.88 1.5H2.68A1 1 0 0 1 1.8 11L7 1.5Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><path d="M7 4.4v3.6" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="7" cy="9.9" r=".7" fill="currentColor"/></svg>
       <span id="canvas-notice-text"></span>
@@ -539,6 +544,7 @@
 <div id="palette-drag-ghost"></div>
 <script src="src/services/ids.js"></script>
 <script src="src/services/escape.js"></script>
+<script src="src/services/diagrams.js"></script>
 <script src="src/services/serializer.js"></script>
 <script src="src/services/storage.js"></script>
 <script src="src/state/history.js"></script>

@@ -1601,6 +1601,75 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(1);
   });
 
+  test('JSON export includes a multi-diagram document shell', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+
+    const payload = await page.evaluate(() => getDiagramDocumentPayload());
+    expect(payload.version).toBe(2);
+    expect(payload.diagrams).toHaveLength(1);
+    expect(payload.activeDiagramId).toBe(payload.diagrams[0].id);
+    expect(payload.rootDiagramId).toBe(payload.diagrams[0].id);
+    expect(payload.state.nodes).toHaveLength(1);
+    expect(payload.diagrams[0].state.nodes).toHaveLength(1);
+  });
+
+  test('legacy JSON payloads migrate into a single-diagram document', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      applyDiagramPayload({
+        version: 1,
+        title: 'Legacy Map',
+        subtitle: 'Legacy subtitle',
+        state: {
+          nodes: [
+            { id: 'legacy-node', type: 'internal', tag: 'LEG', title: 'Legacy Node', subtitle: '', x: 840, y: 620, w: 180, h: 100, functions: [] }
+          ],
+          arrows: [],
+          canvasOrder: []
+        }
+      });
+      render();
+    });
+
+    await expect(page.locator('#diagram-title-input')).toHaveValue('Legacy Map');
+    await expect(page.locator('.node')).toHaveCount(1);
+    await expect.poll(async () => page.evaluate(() => getDiagramDocumentPayload().diagrams.length)).toBe(1);
+    await expect.poll(async () => page.evaluate(() => getDiagramDocumentPayload().diagrams[0].id)).toBe('diagram-main');
+  });
+
+  test('node action can create and open a blank linked diagram', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    const [nodeId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Payments Service';
+      render();
+      selectNode(id);
+    }, nodeId);
+
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+
+    await expect(page.locator('#diagram-title-input')).toHaveValue('Payments Service');
+    await expect(page.locator('.node')).toHaveCount(0);
+    await expect(page.locator('#diagram-nav')).toBeVisible();
+    await expect(page.locator('#diagram-breadcrumbs')).toContainText('Payments Service');
+
+    const payload = await page.evaluate(() => getDiagramDocumentPayload());
+    expect(payload.diagrams).toHaveLength(2);
+    expect(payload.activeDiagramId).not.toBe(payload.rootDiagramId);
+    const parent = payload.diagrams.find(diagram => diagram.id === payload.rootDiagramId);
+    expect(parent.state.nodes[0].linkedDiagramId).toBe(payload.activeDiagramId);
+
+    await page.getByRole('button', { name: 'Back' }).click();
+    await expect(page.locator('#diagram-title-input')).toHaveValue(BLANK_TITLE);
+    await expect(page.locator('.node')).toHaveCount(1);
+  });
+
   test('function editor updates the node function list', async ({ page }) => {
     await bootFresh(page);
 

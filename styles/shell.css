@@ -541,6 +541,60 @@
     pointer-events: none;
     overflow: visible;
   }
+  #diagram-nav {
+    position: absolute;
+    top: 12px;
+    left: 14px;
+    z-index: 42;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px;
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    box-shadow: var(--shadow-soft);
+    backdrop-filter: blur(8px);
+  }
+  #diagram-nav[hidden] { display: none; }
+  .diagram-nav-btn,
+  .diagram-crumb {
+    min-height: 24px;
+    padding: 3px 8px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    cursor: pointer;
+  }
+  .diagram-nav-btn:hover:not(:disabled),
+  .diagram-crumb:hover:not(:disabled) {
+    border-color: var(--border2);
+    color: var(--text);
+    background: var(--surface-hover);
+  }
+  .diagram-nav-btn:disabled,
+  .diagram-crumb:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+  #diagram-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .diagram-crumb.active {
+    color: var(--accent3);
+    background: var(--accent-soft);
+    border-color: var(--accent);
+  }
+  .diagram-crumb-sep {
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+  }
 
   /* Nodes */
   .node {

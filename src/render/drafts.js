@@ -24,9 +24,12 @@ function formatDraftTime(iso) {
 
 function getDraftSummary(meta) {
   const payload = getDraftPayload(meta.id) || {};
-  const nodeCount = Array.isArray(payload.state?.nodes) ? payload.state.nodes.length : 0;
-  const arrowCount = Array.isArray(payload.state?.arrows) ? payload.state.arrows.length : 0;
-  return { payload, nodeCount, arrowCount };
+  const diagrams = Array.isArray(payload.diagrams) && payload.diagrams.length
+    ? payload.diagrams
+    : (payload.state ? [{ state: payload.state }] : []);
+  const nodeCount = diagrams.reduce((sum, diagram) => sum + (Array.isArray(diagram.state?.nodes) ? diagram.state.nodes.length : 0), 0);
+  const arrowCount = diagrams.reduce((sum, diagram) => sum + (Array.isArray(diagram.state?.arrows) ? diagram.state.arrows.length : 0), 0);
+  return { payload, nodeCount, arrowCount, diagramCount: diagrams.length };
 }
 
 function suggestDraftName(baseName = '') {
@@ -79,7 +82,7 @@ function renderDraftManagerBody() {
           </div>
           <div class="draft-row-meta">
             Updated ${escapeDraftText(formatDraftTime(meta.updatedAt))}<br>
-            ${summary.nodeCount} items · ${summary.arrowCount} connections
+            ${summary.diagramCount} diagram${summary.diagramCount === 1 ? '' : 's'} · ${summary.nodeCount} items · ${summary.arrowCount} connections
           </div>
         </div>
         <div class="draft-row-actions">

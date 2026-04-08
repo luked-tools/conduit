@@ -23,6 +23,7 @@ function render() {
   renderArrows();
   renderSidebar();
   if (typeof renderLayersPanel === 'function') renderLayersPanel();
+  if (typeof renderDiagramNavigation === 'function') renderDiagramNavigation();
   updateStatusBar();
   updateEmptyState();
   if (typeof updateContextToolbar === 'function') updateContextToolbar();
@@ -181,6 +182,7 @@ function renderPropsPanel() {
 
     const isBoundary = n.type === 'boundary';
     const identityBody = appendPropGroup(body, 'Identity');
+    const diagramBody = appendPropGroup(body, 'Diagram Link');
     const appearanceBody = appendPropGroup(body, 'Appearance');
     const structureBody = !isBoundary ? appendPropGroup(body, 'Structure') : null;
     const arrangeBody = appendPropGroup(body, 'Arrange');
@@ -211,6 +213,20 @@ function renderPropsPanel() {
       row.appendChild(inp);
       identityBody.appendChild(row);
     });
+
+    if (n.linkedDiagramId && getDiagramById(n.linkedDiagramId)) {
+      const openBtn = document.createElement('button');
+      openBtn.className = 'prop-btn accent';
+      openBtn.textContent = 'Open linked diagram';
+      openBtn.addEventListener('click', () => openLinkedDiagramForNode(n.id));
+      diagramBody.appendChild(openBtn);
+    } else {
+      const createBtn = document.createElement('button');
+      createBtn.className = 'prop-btn accent';
+      createBtn.textContent = 'Create linked diagram';
+      createBtn.addEventListener('click', () => createLinkedDiagramForNode(n.id));
+      diagramBody.appendChild(createBtn);
+    }
 
     // Text colour controls for boundary nodes (no Content Style panel for them)
     if (n.type === 'boundary') {
