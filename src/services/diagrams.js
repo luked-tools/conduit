@@ -25,6 +25,10 @@ function createBlankDiagramState() {
   return { nodes: [], arrows: [], canvasOrder: [] };
 }
 
+function createDefaultDiagramViewport() {
+  return { scale: 1, panX: 60, panY: 40 };
+}
+
 function normalizeDiagramState(diagramState) {
   const nextState = cloneDiagramData(diagramState || createBlankDiagramState());
   if (!Array.isArray(nextState.nodes)) nextState.nodes = [];
@@ -33,12 +37,22 @@ function normalizeDiagramState(diagramState) {
   return nextState;
 }
 
-function makeDiagramRecord({ id = makeDiagramId(), title = 'Untitled diagram', subtitle = '', state: diagramState = null } = {}) {
+function normalizeDiagramViewport(viewport) {
+  const base = createDefaultDiagramViewport();
+  if (!viewport || typeof viewport !== 'object') return base;
+  const nextScale = Number.isFinite(viewport.scale) ? viewport.scale : base.scale;
+  const nextPanX = Number.isFinite(viewport.panX) ? viewport.panX : base.panX;
+  const nextPanY = Number.isFinite(viewport.panY) ? viewport.panY : base.panY;
+  return { scale: nextScale, panX: nextPanX, panY: nextPanY };
+}
+
+function makeDiagramRecord({ id = makeDiagramId(), title = 'Untitled diagram', subtitle = '', state: diagramState = null, viewport = null } = {}) {
   return {
     id,
     title: title || 'Untitled diagram',
     subtitle: subtitle || '',
-    state: normalizeDiagramState(diagramState)
+    state: normalizeDiagramState(diagramState),
+    viewport: normalizeDiagramViewport(viewport)
   };
 }
 
@@ -56,7 +70,8 @@ function createDiagramDocumentFromPayload(data = {}) {
       id: diagram.id,
       title: diagram.title,
       subtitle: diagram.subtitle,
-      state: diagram.state
+      state: diagram.state,
+      viewport: diagram.viewport
     }));
     const ids = new Set(diagrams.map(diagram => diagram.id));
     const rootDiagramId = ids.has(data.rootDiagramId) ? data.rootDiagramId : diagrams[0].id;
@@ -75,7 +90,8 @@ function createDiagramDocumentFromPayload(data = {}) {
     id: data.activeDiagramId || data.rootDiagramId || 'diagram-main',
     title: data.title || 'System Map',
     subtitle: data.subtitle || 'Processes, platforms, and data flows',
-    state: data.state
+    state: data.state,
+    viewport: data.viewport
   });
   return {
     version: DIAGRAM_DOCUMENT_VERSION,
@@ -107,6 +123,7 @@ function syncActiveDiagramFromCurrentState() {
   active.title = getDiagramTitleInputValue();
   active.subtitle = getDiagramSubtitleInputValue();
   active.state = cloneDiagramData(state);
+  active.viewport = normalizeDiagramViewport({ scale, panX, panY });
   doc.activeDiagramId = active.id;
   activeDiagramId = active.id;
   return doc;
@@ -129,6 +146,11 @@ function applyDiagramRecordToCanvas(diagram) {
 
   selectedNode = null;
   selectedArrow = null;
+  const viewport = normalizeDiagramViewport(diagram?.viewport);
+  scale = viewport.scale;
+  panX = viewport.panX;
+  panY = viewport.panY;
+  if (typeof applyTransform === 'function') applyTransform();
   refreshCountersFromState();
   updateDocumentPanelFromInputs();
 }

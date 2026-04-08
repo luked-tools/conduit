@@ -211,6 +211,7 @@ window.addEventListener('mousemove', e => {
 });
 
 window.addEventListener('mouseup', e => {
+  const wasPanning = panDragging;
   panDragging = false;
   const wasDragging = draggingNode;
   const wasResizing = resizingNode;
@@ -221,6 +222,8 @@ window.addEventListener('mouseup', e => {
     completeEndpointDrag();
   } else if (wireActive) {
     completeWire();
+  } else if (wasPanning) {
+    saveToLocalStorage();
   } else if (wasDragging || wasResizing) {
     saveToLocalStorage();
   }

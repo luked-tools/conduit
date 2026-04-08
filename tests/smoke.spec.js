@@ -1744,6 +1744,33 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect(page.locator('#diagram-title-input')).toHaveValue('Payments Boundary');
   });
 
+  test('viewport pan and zoom persist after reload', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 1280, 920);
+
+    await page.evaluate(() => {
+      scale = 0.72;
+      panX = -240;
+      panY = -180;
+      applyTransform();
+      saveToLocalStorage();
+    });
+
+    await page.reload();
+
+    await expect.poll(async () => page.evaluate(() => ({
+      scale,
+      panX,
+      panY
+    }))).toEqual({
+      scale: 0.72,
+      panX: -240,
+      panY: -180
+    });
+  });
+
   test('diagram manager can rename and delete linked diagrams', async ({ page }) => {
     await bootFresh(page);
 
