@@ -250,13 +250,27 @@ function openLinkedDiagramForNode(nodeId) {
 function unlinkDiagramFromNode(nodeId) {
   const node = state.nodes.find(item => item.id === nodeId);
   if (!node?.linkedDiagramId) return false;
-  delete node.linkedDiagramId;
-  syncActiveDiagramFromCurrentState();
-  renderSidebar();
-  renderNodes();
-  if (typeof renderLayersPanel === 'function') renderLayersPanel();
-  saveToLocalStorage();
-  setStatusModeMessage('Diagram link removed', { fade: true, autoClearMs: 1500 });
+  const linkedDiagram = getDiagramById(node.linkedDiagramId);
+  openBasicModal({
+    title: 'Unlink diagram',
+    body: `<div class="draft-modal-note">Remove the link from <b>${escapeHtml(node.title || node.tag || 'this node')}</b> to <b>${escapeHtml(linkedDiagram?.title || 'Untitled diagram')}</b>? The linked diagram will be kept.</div>`,
+    buttons: [
+      { label: 'Cancel', className: 'tb-btn' },
+      {
+        label: 'Unlink diagram',
+        className: 'tb-btn danger',
+        onClick: () => {
+          delete node.linkedDiagramId;
+          syncActiveDiagramFromCurrentState();
+          renderSidebar();
+          renderNodes();
+          if (typeof renderLayersPanel === 'function') renderLayersPanel();
+          saveToLocalStorage();
+          setStatusModeMessage('Diagram link removed', { fade: true, autoClearMs: 1500 });
+        }
+      }
+    ]
+  });
   return true;
 }
 

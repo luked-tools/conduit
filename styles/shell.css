@@ -571,6 +571,23 @@
     font-size: 9px;
     cursor: pointer;
   }
+  .diagram-nav-label {
+    padding: 0 4px 0 2px;
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .diagram-nav-divider {
+    width: 1px;
+    align-self: stretch;
+    min-height: 20px;
+    background: var(--border);
+    margin: 2px 1px;
+  }
   .diagram-nav-btn:hover:not(:disabled),
   .diagram-crumb:hover:not(:disabled) {
     border-color: var(--border2);

@@ -353,8 +353,10 @@
       <button id="quick-connect-cancel" onclick="cancelQuickConnectMode()">&#10005; Cancel</button>
     </div>
     <div id="diagram-nav" hidden>
-      <button id="diagram-nav-back" class="diagram-nav-btn" onclick="navigateDiagramBack()" title="Back to previous diagram">Back</button>
-      <button id="diagram-nav-forward" class="diagram-nav-btn" onclick="navigateDiagramForward()" title="Forward to next diagram">Forward</button>
+      <span class="diagram-nav-label">Diagram path</span>
+      <button id="diagram-nav-back" class="diagram-nav-btn" onclick="navigateDiagramBack()">Back</button>
+      <span class="diagram-nav-divider" aria-hidden="true"></span>
+      <button id="diagram-nav-forward" class="diagram-nav-btn" onclick="navigateDiagramForward()">Forward</button>
       <div id="diagram-breadcrumbs"></div>
     </div>
     <div id="canvas-notice-banner" role="status" aria-live="polite">

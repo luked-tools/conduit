@@ -1657,6 +1657,7 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect(page.locator('#diagram-title-input')).toHaveValue('Payments Service');
     await expect(page.locator('.node')).toHaveCount(0);
     await expect(page.locator('#diagram-nav')).toBeVisible();
+    await expect(page.locator('#diagram-nav')).toContainText('Diagram path');
     await expect(page.locator('#diagram-breadcrumbs')).toContainText('Payments Service');
 
     const payload = await page.evaluate(() => getDiagramDocumentPayload());
@@ -1668,14 +1669,21 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await page.getByRole('button', { name: 'Back' }).click();
     await expect(page.locator('#diagram-title-input')).toHaveValue(BLANK_TITLE);
     await expect(page.locator('.node')).toHaveCount(1);
-    await expect(page.locator('.node-diagram-link-badge')).toHaveCount(1);
+    await expect(page.locator('.node-diagram-link-badge')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Open linked diagram: Payments Service' })).toHaveCount(1);
 
-    await page.evaluate(id => selectNode(id), nodeId);
-    await page.getByRole('button', { name: 'Open linked diagram' }).click();
+    await page.getByRole('button', { name: 'Open linked diagram: Payments Service' }).click();
     await expect(page.locator('#diagram-title-input')).toHaveValue('Payments Service');
     await page.locator('#diagram-breadcrumbs .diagram-crumb', { hasText: BLANK_TITLE }).click();
     await expect(page.locator('#diagram-title-input')).toHaveValue(BLANK_TITLE);
-    await expect(page.locator('.node-diagram-link-badge')).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Open linked diagram: Payments Service' })).toHaveCount(1);
+
+    await page.evaluate(id => selectNode(id), nodeId);
+    await page.getByRole('button', { name: 'Open linked diagram', exact: true }).click();
+    await expect(page.locator('#diagram-title-input')).toHaveValue('Payments Service');
+    await page.locator('#diagram-breadcrumbs .diagram-crumb', { hasText: BLANK_TITLE }).click();
+    await expect(page.locator('#diagram-title-input')).toHaveValue(BLANK_TITLE);
+    await expect(page.getByRole('button', { name: 'Open linked diagram: Payments Service' })).toHaveCount(1);
   });
 
   test('node action can link and unlink an existing diagram', async ({ page }) => {
@@ -1703,13 +1711,37 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect.poll(async () => page.evaluate(id =>
       Boolean(state.nodes.find(node => node.id === id)?.linkedDiagramId)
     , secondId)).toBe(true);
-    await expect(page.getByRole('button', { name: 'Open linked diagram' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open linked diagram', exact: true })).toBeVisible();
 
     await page.getByRole('button', { name: 'Unlink diagram' }).click();
+    await expect(page.locator('#modal-title')).toHaveText('Unlink diagram');
+    await expect(page.locator('#modal-body')).toContainText('will be kept');
+    await page.locator('#modal-btns button', { hasText: 'Unlink diagram' }).click();
     await expect.poll(async () => page.evaluate(id =>
       Boolean(state.nodes.find(node => node.id === id)?.linkedDiagramId)
     , secondId)).toBe(false);
     await expect(page.getByRole('button', { name: 'Link existing diagram' })).toBeVisible();
+  });
+
+  test('boundary nodes show the linked diagram chip and can open linked diagrams from canvas', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'boundary', 860, 620);
+    const [nodeId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Payments Boundary';
+      render();
+      selectNode(id);
+    }, nodeId);
+
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await expect(page.locator('#diagram-title-input')).toHaveValue('Payments Boundary');
+    await page.getByRole('button', { name: 'Back' }).click();
+
+    await expect(page.getByRole('button', { name: 'Open linked diagram: Payments Boundary' })).toHaveCount(1);
+    await page.getByRole('button', { name: 'Open linked diagram: Payments Boundary' }).click();
+    await expect(page.locator('#diagram-title-input')).toHaveValue('Payments Boundary');
   });
 
   test('diagram manager can rename and delete linked diagrams', async ({ page }) => {
