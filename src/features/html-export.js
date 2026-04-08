@@ -324,26 +324,28 @@ function buildExportHTML(opts) {
 html,body{height:100%;overflow:hidden;}
 :root{${cssVars}}
 body{background:var(--bg);font-family:'Inter',sans-serif;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased;}
-#export-header{flex-shrink:0;padding:12px 14px;background:var(--surface);border-bottom:1px solid var(--border);border-top:2px solid var(--accent);display:flex;flex-direction:column;gap:10px;z-index:10;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+#export-header{position:relative;flex-shrink:0;padding:12px 14px;background:var(--surface);border-bottom:1px solid var(--border);border-top:2px solid var(--accent);display:flex;flex-direction:column;gap:10px;z-index:40;box-shadow:0 1px 3px rgba(0,0,0,0.06);}
+#export-header-title{min-height:32px;}
 #export-header-title h1{font-size:13px;font-weight:600;color:var(--text);letter-spacing:-0.02em;}
 #export-header-title p{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text3);margin-top:3px;}
-#export-diagram-nav{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;}
+#export-diagram-nav{display:flex;flex-wrap:wrap;align-items:center;gap:8px;width:fit-content;max-width:calc(100% - 28px);padding:7px 10px;border:1px solid var(--border);border-radius:14px;background:color-mix(in srgb, var(--surface) 94%, transparent);box-shadow:0 8px 24px rgba(0,0,0,0.06);}
 #export-diagram-nav[hidden]{display:none;}
-.export-nav-label{font-family:'IBM Plex Mono',monospace;font-size:9px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);}
 .export-nav-controls{display:flex;align-items:center;gap:8px;}
-.export-nav-divider{width:1px;height:14px;background:var(--border);}
-.export-nav-btn,.export-crumb{border:1px solid var(--border);background:var(--surface2);color:var(--text2);border-radius:6px;padding:5px 9px;font-size:10px;font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:all 0.12s;}
+.export-nav-divider{width:1px;align-self:stretch;min-height:22px;background:var(--border);margin:1px 2px;}
+.export-nav-btn,.export-crumb{min-height:24px;padding:4px 10px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--text2);font-size:9px;font-family:'IBM Plex Mono',monospace;font-weight:500;cursor:pointer;white-space:nowrap;transition:all 0.12s;}
 .export-nav-btn:hover:not(:disabled),.export-crumb:hover:not(:disabled){border-color:var(--border2);color:var(--text);background:var(--surface3);}
 .export-nav-btn:disabled,.export-crumb:disabled{opacity:0.45;cursor:default;}
-#export-breadcrumbs{display:flex;align-items:center;flex-wrap:wrap;gap:6px;}
+#export-breadcrumbs{display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-width:0;}
 .export-menu-wrap{position:relative;}
-#export-diagram-menu{position:absolute;top:calc(100% + 8px);right:0;min-width:220px;max-width:320px;max-height:280px;overflow:auto;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,0.18);display:flex;flex-direction:column;gap:4px;z-index:30;}
+#export-diagram-menu{position:absolute;top:calc(100% + 8px);left:0;right:auto;min-width:220px;max-width:min(320px,calc(100vw - 32px));max-height:280px;overflow:auto;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,0.18);display:flex;flex-direction:column;gap:4px;z-index:60;}
 #export-diagram-menu[hidden]{display:none;}
 .export-diagram-menu-item{border:1px solid transparent;background:transparent;color:var(--text2);border-radius:6px;padding:7px 9px;text-align:left;font-size:10px;font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:all 0.12s;}
 .export-diagram-menu-item:hover:not(:disabled){background:var(--surface2);border-color:var(--border);color:var(--text);}
 .export-diagram-menu-item:disabled{background:var(--surface2);border-color:var(--border);color:var(--text);cursor:default;}
-.export-crumb.active{background:transparent;border-color:var(--border);color:var(--text);}
-.export-crumb-sep{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text3);}
+.export-nav-manager-btn{color:var(--text);border-color:var(--border);background:color-mix(in srgb, var(--surface2) 88%, transparent);}
+.export-nav-arrow-btn{min-width:36px;min-height:28px;padding:1px 0 3px;justify-content:center;font-size:17px;font-weight:700;line-height:1;}
+.export-crumb.active{color:var(--text);font-weight:600;background:color-mix(in srgb, var(--surface2) 88%, transparent);border-color:var(--border2);}
+.export-crumb-sep{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text3);margin:0 -2px;}
 /* Canvas viewport */
 #viewport{flex:1;overflow:hidden;position:relative;cursor:grab;}
 #viewport.panning{cursor:grabbing;}
@@ -393,7 +395,7 @@ body{background:var(--bg);font-family:'Inter',sans-serif;display:flex;flex-direc
 .legend-box{width:18px;height:12px;border-radius:2px;}
 .legend-line{width:24px;height:2px;}
 /* Help tip */
-#help-hud{position:fixed;top:92px;left:16px;background:var(--surface);border:1px solid var(--border);backdrop-filter:blur(8px);border-radius:6px;padding:7px 11px;font-size:9.5px;color:var(--text3);z-index:20;line-height:1.75;font-family:'IBM Plex Mono',monospace;}
+#help-hud{position:fixed;top:120px;left:16px;background:var(--surface);border:1px solid var(--border);backdrop-filter:blur(8px);border-radius:6px;padding:7px 11px;font-size:9.5px;color:var(--text3);z-index:20;line-height:1.75;font-family:'IBM Plex Mono',monospace;}
 #help-hud b{color:var(--text2);font-weight:500;}
 /* Detail panel */
 #detail-overlay{position:fixed;inset:0;background:#00000060;z-index:1000;display:none;backdrop-filter:blur(2px);}
@@ -438,7 +440,7 @@ ${opts.showGrid ? '<div class="grid-bg"></div>' : ''}
       <div id="dp-tag"></div>
       <div id="dp-title"></div>
     </div>
-    <button id="dp-close" onclick="closeDetail()">×</button>
+    <button id="dp-close" onclick="closeDetail()" aria-label="Close detail panel">×</button>
   </div>
   <div id="dp-body"></div>
 </div>
@@ -448,16 +450,16 @@ ${opts.showGrid ? '<div class="grid-bg"></div>' : ''}
     <p id="export-subtitle"${subtitle ? '' : ' hidden'}>${safeSubtitle}</p>
   </div>
   <div id="export-diagram-nav" hidden>
-    <div class="export-nav-label">Diagram path</div>
-    <div class="export-nav-controls">
-      <button type="button" id="export-nav-back" class="export-nav-btn">Back</button>
-      <span class="export-nav-divider"></span>
-      <button type="button" id="export-nav-forward" class="export-nav-btn">Forward</button>
-    </div>
     <div class="export-menu-wrap">
-      <button type="button" id="export-diagram-menu-toggle" class="export-nav-btn">Diagrams</button>
+      <button type="button" id="export-diagram-menu-toggle" class="export-nav-btn export-nav-manager-btn">Diagrams</button>
       <div id="export-diagram-menu" hidden></div>
     </div>
+    <span class="export-nav-divider"></span>
+    <div class="export-nav-controls">
+      <button type="button" id="export-nav-back" class="export-nav-btn export-nav-arrow-btn" aria-label="Back">←</button>
+      <button type="button" id="export-nav-forward" class="export-nav-btn export-nav-arrow-btn" aria-label="Forward">→</button>
+    </div>
+    <span class="export-nav-divider"></span>
     <div id="export-breadcrumbs"></div>
   </div>
 </div>
@@ -467,16 +469,15 @@ ${opts.showGrid ? '<div class="grid-bg"></div>' : ''}
 <div id="zoom-hud">
   <button class="zoom-hud-btn" onclick="zoomBy(1.2)">+</button>
   <div id="zoom-label">100%</div>
-  <button class="zoom-hud-btn" onclick="zoomBy(1/1.2)" title="Zoom out">−</button>
-  <button class="zoom-hud-btn" onclick="resetView()" title="Fit to screen" style="font-size:11px;">⌖</button>
+  <button class="zoom-hud-btn" onclick="zoomBy(1/1.2)">−</button>
+  <button class="zoom-hud-btn" onclick="resetView()" style="font-size:11px;">⌖</button>
 </div>
 <div id="help-hud"><b>Scroll</b> to zoom · <b>Drag</b> to pan · Use <b>Linked diagram</b> and <b>More detail</b> for navigation and context</div>
   ${opts.showLegend ? `<div id="legend-wrap"><div class="legend">
-    <div class="legend-item"><div class="legend-box" style="background:var(--node-internal);border-left:3px solid var(--node-internal-border);border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);"></div>Internal system</div>
-    <div class="legend-item"><div class="legend-box" style="background:var(--node-external);border-left:3px dashed var(--node-external-border);border-top:1px solid var(--border);border-right:1px solid var(--border);border-bottom:1px solid var(--border);"></div>External boundary</div>
+    <div class="legend-item"><svg width="18" height="12" style="flex-shrink:0"><rect x="1" y="1" width="16" height="10" rx="2" fill="var(--node-internal)" stroke="var(--node-internal-border)" stroke-width="1.5"/></svg>Internal system</div>
+    <div class="legend-item"><svg width="18" height="12" style="flex-shrink:0"><rect x="1" y="1" width="16" height="10" rx="2" fill="var(--node-external)" stroke="var(--node-external-border)" stroke-width="1.5" stroke-dasharray="4 2"/></svg>External entity</div>
     <div class="legend-item"><div class="legend-box" style="background:transparent;border:1.5px dashed var(--border2);"></div>Label / boundary</div>
     <div class="legend-item"><div class="legend-line" style="background:var(--accent);border-radius:1px;"></div>Connection</div>
-    <div class="legend-item"><svg width="28" height="4" style="flex-shrink:0"><line x1="0" y1="2" x2="28" y2="2" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="4 3"/></svg>Dashed connection</div>
   </div>` : ''}
 <footer style="position:fixed;bottom:4px;right:16px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#2a2f3e;z-index:5;">Conduit v1.3 · ${new Date().toLocaleDateString()}</footer>
 </div>

@@ -1657,7 +1657,7 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect(page.locator('#diagram-title-input')).toHaveValue('Payments Service');
     await expect(page.locator('.node')).toHaveCount(0);
     await expect(page.locator('#diagram-nav')).toBeVisible();
-    await expect(page.locator('#diagram-nav')).toContainText('Diagram path');
+    await expect(page.locator('#diagram-nav')).toContainText('Diagrams');
     await expect(page.locator('#diagram-breadcrumbs')).toContainText('Payments Service');
 
     const payload = await page.evaluate(() => getDiagramDocumentPayload());
@@ -1916,7 +1916,7 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await exportedPage.setContent(html, { waitUntil: 'load' });
 
     await expect(exportedPage.locator('#export-title')).toHaveText('System Overview');
-    await expect(exportedPage.locator('#export-diagram-nav')).toContainText('Diagram path');
+    await expect(exportedPage.locator('#export-diagram-nav')).toContainText('Diagrams');
     await expect(exportedPage.getByRole('button', { name: 'Diagrams' })).toBeVisible();
     await expect(exportedPage.getByRole('button', { name: /More detail/i })).toBeVisible();
 
