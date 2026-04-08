@@ -186,7 +186,10 @@ function applyLayersDrop(sourceKind, sourceId, targetKind, targetId, position) {
   if (!sourceId || !targetId) return false;
   if (sourceKind === targetKind && sourceId === targetId) return false;
   pushUndo();
-  const moved = moveCanvasLayerRelative(sourceKind, sourceId, targetKind, targetId, position);
+  // The panel displays front-to-back, while canvasOrder is stored back-to-front.
+  // Convert the visual drop edge into the stored insertion side.
+  const storedPosition = position === 'after' ? 'before' : 'after';
+  const moved = moveCanvasLayerRelative(sourceKind, sourceId, targetKind, targetId, storedPosition);
   if (!moved) return false;
   render();
   if (sourceKind === 'node') selectNode(sourceId);

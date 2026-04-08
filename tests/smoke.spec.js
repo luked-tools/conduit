@@ -237,6 +237,33 @@ test.describe('Conduit smoke', () => {
     }, { fromId, arrowId })).toEqual({ arrowAboveNode: true });
   });
 
+  test('moving a connection refreshes node z-indexes immediately', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 1180, 620);
+    const [fromId, toId] = await getNodeIds(page);
+
+    await dragBetween(
+      page,
+      `#node-${fromId} .conn-point[data-pos="e"]`,
+      `#node-${toId} .conn-point[data-pos="w"]`
+    );
+
+    const arrowId = await page.evaluate(() => state.arrows[0].id);
+    await page.evaluate(() => deselect());
+    await page.evaluate(id => moveArrowLayer(id, 'backward'), arrowId);
+
+    await expect.poll(async () => page.evaluate(toId => {
+      const node = state.nodes.find(item => item.id === toId);
+      const nodeEl = document.getElementById(`node-${toId}`);
+      return {
+        domZ: nodeEl ? Number(getComputedStyle(nodeEl).zIndex || 0) : null,
+        expectedZ: getRenderedNodeLayerValue(node)
+      };
+    }, toId)).toEqual({ domZ: 3, expectedZ: 3 });
+  });
+
   test('context toolbar appears for selected node and can move it forward', async ({ page }) => {
     await bootFresh(page);
 
@@ -739,6 +766,30 @@ test('selected connection properties are grouped and prioritize route titles ove
     }, [firstId, secondId, thirdId])).toEqual({ firstMoved: true, normalized: true });
   });
 
+  test('layers panel drops nodes into the adjacent visual slot', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 840, 620);
+    await addNode(page, 'external', 920, 680);
+    await addNode(page, 'internal', 1000, 740);
+    const [firstId, secondId, thirdId] = await getNodeIds(page);
+
+    await page.locator('#layers-toggle-btn').click();
+    await expect(page.locator('#layers-panel')).toHaveClass(/open/);
+
+    await page.evaluate(({ thirdId, secondId }) => {
+      applyLayersDrop('node', thirdId, 'node', secondId, 'after');
+    }, { thirdId, secondId });
+
+    await expect.poll(async () => page.evaluate(() =>
+      getCanvasLayerEntries().map(entry => `${entry.kind}:${entry.id}`)
+    )).toEqual([
+      `node:${firstId}`,
+      `node:${thirdId}`,
+      `node:${secondId}`
+    ]);
+  });
+
   test('layers panel can drag reorder connection layers', async ({ page }) => {
     await bootFresh(page);
 
@@ -765,7 +816,11 @@ test('selected connection properties are grouped and prioritize route titles ove
 
     const secondHandle = page.locator(`#layers-panel .layers-row[data-kind="arrow"][data-id="${secondArrowId}"] .layers-drag-handle`);
     const firstRow = page.locator(`#layers-panel .layers-row[data-kind="arrow"][data-id="${firstArrowId}"]`);
-    await secondHandle.dragTo(firstRow, { targetPosition: { x: 20, y: 20 } });
+    const firstRowBox = await firstRow.boundingBox();
+    if (!firstRowBox) {
+      throw new Error('Could not resolve first connection layer row');
+    }
+    await secondHandle.dragTo(firstRow, { targetPosition: { x: 20, y: Math.max(4, firstRowBox.height - 4) } });
 
     await expect.poll(async () => page.evaluate(ids => {
       return ids.map(id => state.arrows.find(arrow => arrow.id === id)?.z ?? null);
