@@ -40,7 +40,7 @@ window.addEventListener('mousemove', event => {
     arrow.labelOffsetY = (arrow.labelOffsetY || 0) + (event.clientY - _activeArrowDrag.lastY) / scale;
     _activeArrowDrag.lastX = event.clientX;
     _activeArrowDrag.lastY = event.clientY;
-    renderArrows();
+    scheduleRenderArrows();
     return;
   }
 
@@ -59,7 +59,7 @@ window.addEventListener('mousemove', event => {
   }
 
   arrow[_activeArrowDrag.prop] = nextVal;
-  renderArrows();
+  scheduleRenderArrows();
 
   const bendSlider = document.getElementById('ortho-slider-bend');
   const orthoSlider = document.getElementById('ortho-slider-orthoY');

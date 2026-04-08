@@ -382,7 +382,7 @@ ${opts.showGrid ? '<div class="grid-bg"></div>' : ''}
     <div class="legend-item"><div class="legend-line" style="background:var(--accent);border-radius:1px;"></div>Connection</div>
     <div class="legend-item"><svg width="28" height="4" style="flex-shrink:0"><line x1="0" y1="2" x2="28" y2="2" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="4 3"/></svg>Dashed connection</div>
   </div>` : ''}
-<footer style="position:fixed;bottom:4px;right:16px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#2a2f3e;z-index:5;">Conduit v1.2 · ${new Date().toLocaleDateString()}</footer>
+<footer style="position:fixed;bottom:4px;right:16px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#2a2f3e;z-index:5;">Conduit v1.3 · ${new Date().toLocaleDateString()}</footer>
 </div>
 <scr\u0069pt>
 const _nodeData = ${nodeDetailJson};

@@ -1,5 +1,49 @@
+let _sharedArrowMarkers = {};
+
+function getSharedArrowMarkerIds(stroke) {
+  const key = String(stroke || '').toLowerCase();
+  if (_sharedArrowMarkers[key]) return _sharedArrowMarkers[key];
+  const safeKey = key.replace(/[^a-z0-9]+/gi, '-').replace(/^-+|-+$/g, '') || 'default';
+  const idFwd = `arrow-marker-fwd-${safeKey}`;
+  const idBwd = `arrow-marker-bwd-${safeKey}`;
+  const defsHost = arrowSVG;
+  if (!defsHost) return { fwd: idFwd, bwd: idBwd };
+
+  let defs = defsHost.querySelector('defs[data-shared-arrow-markers="1"]');
+  if (!defs) {
+    defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    defs.setAttribute('data-shared-arrow-markers', '1');
+    defsHost.insertBefore(defs, defsHost.firstChild);
+  }
+
+  function ensureMarker(id, forStart) {
+    if (document.getElementById(id)) return;
+    const m = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+    m.setAttribute('id', id);
+    m.setAttribute('markerWidth', '8');
+    m.setAttribute('markerHeight', '6');
+    m.setAttribute('refX', '8');
+    m.setAttribute('refY', '3');
+    m.setAttribute('orient', forStart ? 'auto-start-reverse' : 'auto');
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('d', 'M0,0 L0,6 L8,3 z');
+    p.setAttribute('fill', stroke);
+    m.appendChild(p);
+    defs.appendChild(m);
+  }
+
+  ensureMarker(idFwd, false);
+  ensureMarker(idBwd, true);
+  _sharedArrowMarkers[key] = { fwd: idFwd, bwd: idBwd };
+  return _sharedArrowMarkers[key];
+}
+
 function renderArrows() {
   document.querySelectorAll('.arrow-object').forEach(el => el.remove());
+  const nodeById = new Map(state.nodes.map(n => [n.id, n]));
+  const rootStyles = getComputedStyle(document.documentElement);
+  const accentStrokeFallback = rootStyles.getPropertyValue('--accent3').trim() || '#e85e00';
+  const defaultArrowStroke = rootStyles.getPropertyValue('--arrow-color').trim() || '#ff8c42';
 
   const portGroups = {};
   state.arrows.forEach(a => {
@@ -38,17 +82,16 @@ function renderArrows() {
 
   orderedArrows.forEach(entry => {
     const a = entry.object;
-    const fromNode = state.nodes.find(n => n.id === a.from);
-    const toNode = state.nodes.find(n => n.id === a.to);
+    const fromNode = nodeById.get(a.from);
+    const toNode = nodeById.get(a.to);
     if (!fromNode || !toNode) return;
 
     const p1 = staggeredPortXY(fromNode, a.fromPos || 'e', a.id, 'from', getArrowEndOffset(a, 'from'));
     const p2 = staggeredPortXY(toNode, a.toPos || 'w', a.id, 'to', getArrowEndOffset(a, 'to'));
 
     const isSelected = selectedArrow === a.id;
-    const accentStroke = getComputedStyle(document.documentElement).getPropertyValue('--accent3').trim() || '#e85e00';
-    const stroke = a.color || (getComputedStyle(document.documentElement).getPropertyValue('--arrow-color').trim() || '#ff8c42');
-    const uid = a.id;
+    const accentStroke = accentStrokeFallback;
+    const stroke = a.color || defaultArrowStroke;
 
     const arrowObject = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
     arrowObject.setAttribute('class', 'arrow-object');
@@ -61,25 +104,7 @@ function renderArrows() {
     arrowObject.style.zIndex = String(isSelected ? Number(getSelectedArrowLayerZ()) : getRenderedArrowLayerValue(a));
     arrowObject.style.pointerEvents = 'none';
 
-    const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    function makeArrowMarker(mid, forStart) {
-      const m = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-      m.setAttribute('id', mid);
-      m.setAttribute('markerWidth', '8');
-      m.setAttribute('markerHeight', '6');
-      m.setAttribute('refX', '8');
-      m.setAttribute('refY', '3');
-      m.setAttribute('orient', forStart ? 'auto-start-reverse' : 'auto');
-      const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      p.setAttribute('d', 'M0,0 L0,6 L8,3 z');
-      p.setAttribute('fill', stroke);
-      m.appendChild(p);
-      defs.appendChild(m);
-      return mid;
-    }
-    const mFwd = makeArrowMarker('mf-' + uid, false);
-    const mBwd = makeArrowMarker('mb-' + uid, true);
-    arrowObject.appendChild(defs);
+    const markerIds = getSharedArrowMarkerIds(stroke);
 
     const pathResult = buildArrowPath(p1, p2, a.fromPos || 'e', a.toPos || 'w', a.bend || 0, a.lineStyle || 'curved', 0, 0, a.orthoY || 0);
     const { d, lx: _lx, ly: _ly } = pathResult;
@@ -125,10 +150,10 @@ function renderArrows() {
     const dasharray = getArrowStrokeDasharray(a);
     if (dasharray) path.setAttribute('stroke-dasharray', dasharray);
     if (a.direction === 'directed') {
-      path.setAttribute('marker-end', `url(#${mFwd})`);
+      path.setAttribute('marker-end', `url(#${markerIds.fwd})`);
     } else if (a.direction === 'bidirectional') {
-      path.setAttribute('marker-end', `url(#${mFwd})`);
-      path.setAttribute('marker-start', `url(#${mBwd})`);
+      path.setAttribute('marker-end', `url(#${markerIds.fwd})`);
+      path.setAttribute('marker-start', `url(#${markerIds.bwd})`);
     }
     arrowGroup.appendChild(path);
 

@@ -451,7 +451,7 @@ function moveArrowLayer(arrowId, mode) {
   pushUndo();
   const moved = moveCanvasLayer('arrow', arrowId, mode);
   if (!moved) return false;
-  renderArrows();
+  renderNodes();
   selectArrow(arrowId);
   saveToLocalStorage();
 
@@ -480,7 +480,7 @@ function moveArrowLayerToDisplayIndex(arrowId, displayIndex) {
   pushUndo();
   const moved = moveCanvasLayerToDisplayIndex('arrow', arrowId, displayIndex);
   if (!moved) return false;
-  renderArrows();
+  renderNodes();
   selectArrow(arrowId);
   saveToLocalStorage();
   setStatusModeMessage('Connection layer order updated', { fade: true, autoClearMs: 1500 });
