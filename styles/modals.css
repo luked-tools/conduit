@@ -270,17 +270,6 @@
   .node-diagram-link-chip:focus-visible {
     box-shadow: 0 0 0 3px var(--accent-ring);
   }
-  .node.boundary .node-diagram-link-chip {
-    background: color-mix(in srgb, var(--surface) 92%, transparent);
-    border-style: dashed;
-    color: var(--text2);
-  }
-  .node.boundary .node-diagram-link-chip:hover,
-  .node.boundary .node-diagram-link-chip:focus-visible {
-    border-color: var(--accent);
-    color: var(--accent3);
-  }
-
   #nm-footer {
     display: flex; align-items: center; gap: 8px;
     padding: 14px 24px;
