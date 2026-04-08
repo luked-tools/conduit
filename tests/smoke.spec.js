@@ -1666,7 +1666,7 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     const parent = payload.diagrams.find(diagram => diagram.id === payload.rootDiagramId);
     expect(parent.state.nodes[0].linkedDiagramId).toBe(payload.activeDiagramId);
 
-    await page.getByRole('button', { name: 'Back' }).click();
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
     await expect(page.locator('#diagram-title-input')).toHaveValue(BLANK_TITLE);
     await expect(page.locator('.node')).toHaveCount(1);
     await expect(page.locator('.node-diagram-link-badge')).toHaveCount(0);
@@ -1698,7 +1698,7 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
       selectNode(id);
     }, firstId);
     await page.getByRole('button', { name: 'Create linked diagram' }).click();
-    await page.getByRole('button', { name: 'Back' }).click();
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
 
     await addNode(page, 'external', 1180, 620);
     const secondId = await page.evaluate(() => state.nodes[1].id);
@@ -1737,7 +1737,7 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
 
     await page.getByRole('button', { name: 'Create linked diagram' }).click();
     await expect(page.locator('#diagram-title-input')).toHaveValue('Payments Boundary');
-    await page.getByRole('button', { name: 'Back' }).click();
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
 
     await expect(page.getByRole('button', { name: 'Open linked diagram: Payments Boundary' })).toHaveCount(1);
     await page.getByRole('button', { name: 'Open linked diagram: Payments Boundary' }).click();
@@ -1884,6 +1884,54 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     expect(result.title).toBe(BLANK_TITLE);
     expect(result.hasRootNode).toBe(true);
     expect(result.activeCanvasNodeCount).toBe(0);
+  });
+
+  test('exported HTML can navigate linked diagrams and keep detail separate', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.locator('#diagram-title-input').fill('System Overview');
+    await page.locator('#diagram-subtitle-input').fill('Root export map');
+    await addNode(page, 'internal', 860, 620);
+    const [nodeId] = await getNodeIds(page);
+
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Root Gateway';
+      node.notes = 'Gateway notes';
+      render();
+      selectNode(id);
+    }, nodeId);
+
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await page.locator('#diagram-title-input').fill('Gateway drilldown');
+    await addNode(page, 'internal', 1040, 620);
+    await page.evaluate(() => {
+      if (state.nodes[0]) state.nodes[0].title = 'Child worker';
+      render();
+    });
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
+
+    const html = await page.evaluate(() => buildExportHTML({ showLegend: false, showGrid: false }).html);
+    const exportedPage = await page.context().newPage();
+    await exportedPage.setContent(html, { waitUntil: 'load' });
+
+    await expect(exportedPage.locator('#export-title')).toHaveText('System Overview');
+    await expect(exportedPage.locator('#export-diagram-nav')).toContainText('Diagram path');
+
+    await exportedPage.locator('.detail-btn[data-node-detail-id]').click();
+    await expect(exportedPage.locator('#detail-panel')).toHaveClass(/open/);
+    await expect(exportedPage.locator('#export-title')).toHaveText('System Overview');
+    await exportedPage.locator('#dp-close').click();
+
+    await exportedPage.locator('.linked-diagram-chip').click();
+    await expect(exportedPage.locator('#export-title')).toHaveText('Gateway drilldown');
+    await expect(exportedPage.locator('.node')).toContainText('Child worker');
+    await expect(exportedPage.locator('#export-breadcrumbs')).toContainText('System Overview');
+
+    await exportedPage.locator('#export-breadcrumbs .export-crumb', { hasText: 'System Overview' }).click();
+    await expect(exportedPage.locator('#export-title')).toHaveText('System Overview');
+
+    await exportedPage.close();
   });
 
   test('function editor updates the node function list', async ({ page }) => {
