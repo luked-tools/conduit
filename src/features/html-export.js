@@ -357,7 +357,7 @@ body{background:var(--bg);font-family:'Inter',sans-serif;display:flex;flex-direc
 .node{position:absolute;border-radius:var(--radius);cursor:default;min-width:120px;z-index:3;}
 .node.internal{background:var(--node-internal);border:1px solid var(--node-internal-edge);border-left:3px solid var(--node-internal-border);box-shadow:var(--shadow);}
 .node.external{background:var(--node-external);border:1px solid var(--node-external-edge);border-left:3px dashed var(--node-external-border);box-shadow:var(--shadow);}
-.node.boundary{background:transparent;border:1px dashed #cccccc;box-shadow:none;z-index:1;}
+.node.boundary{background:transparent;border:1px dashed var(--border2);box-shadow:none;z-index:1;}
 .node-inner{padding:12px 14px;}
 .node.boundary .node-inner{padding:10px 14px;}
 .node.has-linked-diagram .node-inner{padding-bottom:42px;}
@@ -440,7 +440,7 @@ ${opts.showGrid ? '<div class="grid-bg"></div>' : ''}
       <div id="dp-tag"></div>
       <div id="dp-title"></div>
     </div>
-    <button id="dp-close" onclick="closeDetail()" aria-label="Close detail panel">×</button>
+    <button id="dp-close" onclick="closeDetail()" aria-label="Close detail panel">&times;</button>
   </div>
   <div id="dp-body"></div>
 </div>
@@ -456,8 +456,8 @@ ${opts.showGrid ? '<div class="grid-bg"></div>' : ''}
     </div>
     <span class="export-nav-divider"></span>
     <div class="export-nav-controls">
-      <button type="button" id="export-nav-back" class="export-nav-btn export-nav-arrow-btn" aria-label="Back">←</button>
-      <button type="button" id="export-nav-forward" class="export-nav-btn export-nav-arrow-btn" aria-label="Forward">→</button>
+      <button type="button" id="export-nav-back" class="export-nav-btn export-nav-arrow-btn" aria-label="Back">&#8592;</button>
+      <button type="button" id="export-nav-forward" class="export-nav-btn export-nav-arrow-btn" aria-label="Forward">&#8594;</button>
     </div>
     <span class="export-nav-divider"></span>
     <div id="export-breadcrumbs"></div>
@@ -469,17 +469,17 @@ ${opts.showGrid ? '<div class="grid-bg"></div>' : ''}
 <div id="zoom-hud">
   <button class="zoom-hud-btn" onclick="zoomBy(1.2)">+</button>
   <div id="zoom-label">100%</div>
-  <button class="zoom-hud-btn" onclick="zoomBy(1/1.2)">−</button>
-  <button class="zoom-hud-btn" onclick="resetView()" style="font-size:11px;">⌖</button>
+  <button class="zoom-hud-btn" onclick="zoomBy(1/1.2)">&minus;</button>
+  <button class="zoom-hud-btn" onclick="resetView()" style="font-size:11px;">&#8998;</button>
 </div>
-<div id="help-hud"><b>Scroll</b> to zoom · <b>Drag</b> to pan · Use <b>Linked diagram</b> and <b>More detail</b> for navigation and context</div>
+<div id="help-hud"><b>Scroll</b> to zoom &middot; <b>Drag</b> to pan &middot; Use <b>Linked diagram</b> and <b>More detail</b> for navigation and context</div>
   ${opts.showLegend ? `<div id="legend-wrap"><div class="legend">
     <div class="legend-item"><svg width="18" height="12" style="flex-shrink:0"><rect x="1" y="1" width="16" height="10" rx="2" fill="var(--node-internal)" stroke="var(--node-internal-border)" stroke-width="1.5"/></svg>Internal system</div>
     <div class="legend-item"><svg width="18" height="12" style="flex-shrink:0"><rect x="1" y="1" width="16" height="10" rx="2" fill="var(--node-external)" stroke="var(--node-external-border)" stroke-width="1.5" stroke-dasharray="4 2"/></svg>External entity</div>
     <div class="legend-item"><div class="legend-box" style="background:transparent;border:1.5px dashed var(--border2);"></div>Label / boundary</div>
     <div class="legend-item"><div class="legend-line" style="background:var(--accent);border-radius:1px;"></div>Connection</div>
   </div>` : ''}
-<footer style="position:fixed;bottom:4px;right:16px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#2a2f3e;z-index:5;">Conduit v1.3 · ${new Date().toLocaleDateString()}</footer>
+<footer style="position:fixed;bottom:4px;right:16px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text3);z-index:5;">Conduit v1.4 &middot; ${new Date().toLocaleDateString()}</footer>
 </div>
 <scr\u0069pt>
 const _exportDoc = ${exportDocJson};
