@@ -1652,7 +1652,8 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
       selectNode(id);
     }, nodeId);
 
-    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await page.locator('#context-toolbar').getByRole('button', { name: 'More' }).click();
+    await page.locator('#context-toolbar .context-toolbar-menu').getByRole('button', { name: 'Create Linked Diagram' }).click();
 
     await expect(page.locator('#diagram-title-input')).toHaveValue('Payments Service');
     await expect(page.locator('.node')).toHaveCount(0);

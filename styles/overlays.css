@@ -127,19 +127,69 @@
     color: var(--text);
     padding: 10px 12px;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 10px;
-    font-family: 'IBM Plex Sans', sans-serif;
+    font-family: 'Inter', sans-serif;
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
     text-align: left;
+    transition: border-color 0.12s, background 0.12s, color 0.12s, box-shadow 0.12s;
   }
   .diagram-link-option:hover,
   .diagram-link-option.active {
+    border-color: var(--border2);
+    background: var(--surface-hover);
+  }
+  .diagram-link-option.active {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 1px var(--accent-soft) inset;
+  }
+  .diagram-link-option-main {
+    flex: 1;
+    min-width: 0;
+  }
+  .diagram-link-option-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex-wrap: wrap;
+  }
+  .diagram-link-option-title-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .diagram-link-option-meta {
+    margin-top: 4px;
+    font-size: 10px;
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    line-height: 1.5;
+  }
+  .diagram-link-option-action {
+    flex-shrink: 0;
+    align-self: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: color-mix(in srgb, var(--surface) 88%, var(--surface3) 12%);
+    color: var(--text2);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .diagram-link-option.active .diagram-link-option-action {
     border-color: var(--accent);
     background: var(--accent-soft);
+    color: var(--accent3);
   }
   .app-menu-divider,
   .tb-dropdown-sep {
@@ -678,11 +728,11 @@
     opacity: 0.42;
     cursor: default;
   }
-  .context-toolbar-btn:disabled:hover {
-    background: transparent;
-    border-color: transparent;
-    color: inherit;
-  }
+.context-toolbar-btn:disabled:hover {
+  background: transparent;
+  border-color: transparent;
+  color: inherit;
+}
 .context-toolbar-btn-icon {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 10px;

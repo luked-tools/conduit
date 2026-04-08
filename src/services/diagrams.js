@@ -490,10 +490,26 @@ function openDiagramLinkPickerForNode(nodeId) {
   openBasicModal({
     title: 'Link diagram',
     body: `<div class="draft-modal-note">Choose a diagram for <b>${escapeHtml(node.title || node.tag || 'this node')}</b>.</div><div id="diagram-link-picker" class="draft-list">${
-      candidates.map(diagram => `<button class="diagram-link-option${node.linkedDiagramId === diagram.id ? ' active' : ''}" data-diagram-id="${escapeHtml(diagram.id)}">
-        <span>${escapeHtml(diagram.title || 'Untitled diagram')}</span>
-        ${node.linkedDiagramId === diagram.id ? '<span class="draft-active-badge">Linked</span>' : ''}
-      </button>`).join('')
+      candidates.map(diagram => {
+        const isLinked = node.linkedDiagramId === diagram.id;
+        const isRoot = diagram.id === ensureDiagramDocument().rootDiagramId;
+        const isActive = diagram.id === activeDiagramId;
+        const nodeCount = (diagram.state?.nodes || []).length;
+        const arrowCount = (diagram.state?.arrows || []).length;
+        const linkCount = getDiagramLinkCount(diagram.id);
+        return `<button class="diagram-link-option${isLinked ? ' active' : ''}" data-diagram-id="${escapeHtml(diagram.id)}">
+          <div class="diagram-link-option-main">
+            <div class="diagram-link-option-title">
+              <span class="diagram-link-option-title-text">${escapeHtml(diagram.title || 'Untitled diagram')}</span>
+              ${isLinked ? '<span class="draft-active-badge">Linked</span>' : ''}
+              ${isRoot ? '<span class="draft-active-badge">Root</span>' : ''}
+              ${isActive ? '<span class="draft-active-badge">Current</span>' : ''}
+            </div>
+            <div class="diagram-link-option-meta">${nodeCount} items · ${arrowCount} connections · ${linkCount} link${linkCount === 1 ? '' : 's'}</div>
+          </div>
+          <span class="diagram-link-option-action">${isLinked ? 'Linked' : 'Link'}</span>
+        </button>`;
+      }).join('')
     }</div>`,
     buttons: [
       { label: 'Cancel', className: 'tb-btn' }
