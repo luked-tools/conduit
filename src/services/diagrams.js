@@ -212,6 +212,22 @@ function formatDiagramRelationshipMeta(diagramId) {
   return `Linked from ${inboundCount} node${inboundCount === 1 ? '' : 's'}`;
 }
 
+function getDiagramDisplayTitle(diagram) {
+  return diagram?.title || 'Untitled diagram';
+}
+
+function getDiagramCanvasStats(diagram) {
+  return {
+    nodeCount: Array.isArray(diagram?.state?.nodes) ? diagram.state.nodes.length : 0,
+    arrowCount: Array.isArray(diagram?.state?.arrows) ? diagram.state.arrows.length : 0
+  };
+}
+
+function getDiagramSummaryMeta(diagram) {
+  const { nodeCount, arrowCount } = getDiagramCanvasStats(diagram);
+  return `${nodeCount} items &middot; ${arrowCount} connections &middot; ${formatDiagramRelationshipMeta(diagram.id)}`;
+}
+
 function navigateToDiagram(diagramId, { pushHistory = true } = {}) {
   const target = getDiagramById(diagramId);
   if (!target || target.id === activeDiagramId) {
@@ -404,18 +420,16 @@ function renderDiagramManagerBody() {
     : `<div class="draft-modal-note">Each diagram belongs to this draft. Linked diagrams can be reused from multiple nodes, and diagram actions save immediately outside canvas undo.</div>`;
   host.innerHTML = `${introNote}<div class="draft-list">${
     doc.diagrams.map(diagram => {
-      const nodeCount = Array.isArray(diagram.state?.nodes) ? diagram.state.nodes.length : 0;
-      const arrowCount = Array.isArray(diagram.state?.arrows) ? diagram.state.arrows.length : 0;
       const isActive = diagram.id === activeDiagramId;
       const isRoot = diagram.id === doc.rootDiagramId;
       return `<div class="draft-row${isActive ? ' active' : ''}" data-diagram-id="${escapeHtml(diagram.id)}">
         <div class="draft-row-main">
           <div class="draft-row-title">
-            <span class="draft-row-title-text">${escapeHtml(diagram.title || 'Untitled diagram')}</span>
+            <span class="draft-row-title-text">${escapeHtml(getDiagramDisplayTitle(diagram))}</span>
             ${isRoot ? '<span class="draft-active-badge">Root</span>' : ''}
             ${isActive ? '<span class="draft-active-badge">Active</span>' : ''}
           </div>
-          <div class="draft-row-meta">${nodeCount} items &middot; ${arrowCount} connections &middot; ${formatDiagramRelationshipMeta(diagram.id)}</div>
+          <div class="draft-row-meta">${getDiagramSummaryMeta(diagram)}</div>
         </div>
         <div class="draft-row-actions">
           ${isActive ? '' : `<button class="tb-btn" data-action="open" data-diagram-id="${escapeHtml(diagram.id)}">Open</button>`}
@@ -462,7 +476,7 @@ function renameDiagramById(diagramId) {
   if (!diagram) return;
   openDiagramNameModal({
     title: 'Rename diagram',
-    initialValue: diagram.title || 'Untitled diagram',
+    initialValue: getDiagramDisplayTitle(diagram),
     confirmLabel: 'Save title',
     onConfirm: value => {
       diagram.title = value;
@@ -486,7 +500,7 @@ function deleteDiagramById(diagramId) {
   syncActiveDiagramFromCurrentState();
   openBasicModal({
     title: 'Delete diagram',
-    body: `<div class="draft-modal-note">Delete <b>${escapeHtml(diagram.title || 'Untitled diagram')}</b>? Links to this diagram will be removed from any nodes that reference it.</div>`,
+    body: `<div class="draft-modal-note">Delete <b>${escapeHtml(getDiagramDisplayTitle(diagram))}</b>? Links to this diagram will be removed from any nodes that reference it.</div>`,
     buttons: [
       { label: 'Cancel', className: 'tb-btn' },
       {
@@ -519,17 +533,15 @@ function openDiagramLinkPickerForNode(nodeId) {
         const isLinked = node.linkedDiagramId === diagram.id;
         const isRoot = diagram.id === ensureDiagramDocument().rootDiagramId;
         const isActive = diagram.id === activeDiagramId;
-        const nodeCount = (diagram.state?.nodes || []).length;
-        const arrowCount = (diagram.state?.arrows || []).length;
         return `<button class="diagram-link-option${isLinked ? ' active' : ''}" data-diagram-id="${escapeHtml(diagram.id)}">
           <div class="diagram-link-option-main">
             <div class="diagram-link-option-title">
-              <span class="diagram-link-option-title-text">${escapeHtml(diagram.title || 'Untitled diagram')}</span>
+              <span class="diagram-link-option-title-text">${escapeHtml(getDiagramDisplayTitle(diagram))}</span>
               ${isLinked ? '<span class="draft-active-badge">Linked</span>' : ''}
               ${isRoot ? '<span class="draft-active-badge">Root</span>' : ''}
               ${isActive ? '<span class="draft-active-badge">Current</span>' : ''}
             </div>
-            <div class="diagram-link-option-meta">${nodeCount} items &middot; ${arrowCount} connections &middot; ${formatDiagramRelationshipMeta(diagram.id)}</div>
+            <div class="diagram-link-option-meta">${getDiagramSummaryMeta(diagram)}</div>
           </div>
           <span class="diagram-link-option-action">${isLinked ? 'Linked' : 'Link'}</span>
         </button>`;

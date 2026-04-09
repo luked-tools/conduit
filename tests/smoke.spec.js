@@ -2086,6 +2086,7 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect(exportedPage.locator('#export-diagram-nav')).toContainText('Diagrams');
     await expect(exportedPage.getByRole('button', { name: 'Diagrams' })).toBeVisible();
     await expect(exportedPage.getByRole('button', { name: /More detail/i })).toBeVisible();
+    await expect(exportedPage.locator('#help-hud')).toContainText('Diagrams');
 
     await exportedPage.getByRole('button', { name: /More detail/i }).click();
     await expect(exportedPage.locator('#detail-panel')).toHaveClass(/open/);
@@ -2094,6 +2095,8 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
 
     await exportedPage.getByRole('button', { name: 'Diagrams' }).click();
     await expect(exportedPage.locator('#export-diagram-menu')).toBeVisible();
+    await expect(exportedPage.locator('#export-diagram-menu .export-diagram-menu-item', { hasText: 'System Overview' })).toContainText('Root');
+    await expect(exportedPage.locator('#export-diagram-menu .export-diagram-menu-item', { hasText: 'System Overview' })).toContainText('Current');
     await exportedPage.locator('#export-diagram-menu .export-diagram-menu-item', { hasText: 'Gateway drilldown' }).click();
     await expect(exportedPage.locator('#export-title')).toHaveText('Gateway drilldown');
     await exportedPage.locator('#export-nav-back').click();
@@ -2109,6 +2112,7 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
 
     await exportedPage.getByRole('button', { name: 'Diagrams' }).click();
     await expect(exportedPage.locator('#export-diagram-menu')).toBeVisible();
+    await expect(exportedPage.locator('#export-diagram-menu .export-diagram-menu-item', { hasText: 'System Overview' })).toContainText('Current');
     await exportedPage.keyboard.press('Escape');
     await expect(exportedPage.locator('#export-diagram-menu')).toBeHidden();
 
