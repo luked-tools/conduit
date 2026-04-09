@@ -40,7 +40,7 @@ window.addEventListener('mousemove', event => {
     arrow.labelOffsetY = (arrow.labelOffsetY || 0) + (event.clientY - _activeArrowDrag.lastY) / scale;
     _activeArrowDrag.lastX = event.clientX;
     _activeArrowDrag.lastY = event.clientY;
-    scheduleRenderArrows();
+    scheduleRenderArrows([arrow.id]);
     return;
   }
 
@@ -59,7 +59,7 @@ window.addEventListener('mousemove', event => {
   }
 
   arrow[_activeArrowDrag.prop] = nextVal;
-  scheduleRenderArrows();
+  scheduleRenderArrows([arrow.id]);
 
   const bendSlider = document.getElementById('ortho-slider-bend');
   const orthoSlider = document.getElementById('ortho-slider-orthoY');
@@ -77,6 +77,6 @@ window.addEventListener('mouseup', () => {
   if (!_activeArrowDrag) return;
   const activeArrowId = _activeArrowDrag.arrowId;
   _activeArrowDrag = null;
-  saveToLocalStorage();
+  scheduleSaveToLocalStorage();
   if (selectedArrow === activeArrowId) renderSidebar();
 });

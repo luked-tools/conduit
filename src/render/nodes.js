@@ -3,15 +3,27 @@
 function renderNodes() {
   // Remove old node elements (keep svg)
   document.querySelectorAll('.node').forEach(e => e.remove());
+  const selectedArrowObj = selectedArrow ? state.arrows.find(a => a.id === selectedArrow) : null;
   getSortedNodeLayerEntries().forEach(entry => {
     const n = entry.node;
-    const el = createNodeEl(n);
+    const el = createNodeEl(n, selectedArrowObj);
     el.style.zIndex = String(getRenderedNodeLayerValue(n, entry.index));
     canvas.appendChild(el);
   });
 }
 
-function createNodeEl(n) {
+function refreshRenderedNodeLayers() {
+  const fallbackIndexById = new Map(
+    getSortedNodeLayerEntries().map((entry, index) => [entry.node.id, index])
+  );
+  state.nodes.forEach(node => {
+    const el = document.getElementById(`node-${node.id}`);
+    if (!el) return;
+    el.style.zIndex = String(getRenderedNodeLayerValue(node, fallbackIndexById.get(node.id) || 0));
+  });
+}
+
+function createNodeEl(n, selectedArrowObj = null) {
   const div = document.createElement('div');
   div.className = `node ${n.type}`;
   div.id = `node-${n.id}`;
@@ -25,6 +37,13 @@ function createNodeEl(n) {
     div.style.setProperty('background', n.color + hex);
   }
   if (selectedNode === n.id) div.classList.add('selected');
+  if (selectedArrowObj && (selectedArrowObj.from === n.id || selectedArrowObj.to === n.id)) {
+    div.classList.add('arrow-endpoint');
+    const hidePorts = [];
+    if (selectedArrowObj.from === n.id) hidePorts.push(selectedArrowObj.fromPos || 'e');
+    if (selectedArrowObj.to === n.id) hidePorts.push(selectedArrowObj.toPos || 'w');
+    if (hidePorts.length) div.dataset.hidePorts = hidePorts.join(' ');
+  }
 
   const inner = document.createElement('div');
   inner.className = 'node-inner';

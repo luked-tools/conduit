@@ -1,16 +1,49 @@
+function clearSelectedNodeVisual(nodeId) {
+  if (!nodeId) return;
+  const el = document.getElementById(`node-${nodeId}`);
+  if (el) el.classList.remove('selected');
+}
+
+function clearArrowEndpointVisuals(arrow) {
+  if (!arrow) return;
+  [arrow.from, arrow.to].forEach(nodeId => {
+    const el = document.getElementById('node-' + nodeId);
+    if (!el) return;
+    el.classList.remove('arrow-endpoint');
+    el.removeAttribute('data-hide-ports');
+  });
+  document.querySelectorAll('.conn-point.arrow-endpoint-port').forEach(cp => cp.classList.remove('arrow-endpoint-port'));
+}
+
+function applyArrowEndpointVisuals(arrow) {
+  if (!arrow) return;
+  const fromEl = document.getElementById('node-' + arrow.from);
+  const toEl = document.getElementById('node-' + arrow.to);
+  if (fromEl) {
+    fromEl.classList.add('arrow-endpoint');
+    const ports = new Set((fromEl.dataset.hidePorts || '').split(' ').filter(Boolean));
+    ports.add(arrow.fromPos || 'e');
+    fromEl.dataset.hidePorts = [...ports].join(' ');
+  }
+  if (toEl) {
+    toEl.classList.add('arrow-endpoint');
+    const ports = new Set((toEl.dataset.hidePorts || '').split(' ').filter(Boolean));
+    ports.add(arrow.toPos || 'w');
+    toEl.dataset.hidePorts = [...ports].join(' ');
+  }
+}
+
 function selectNode(id) {
   if (_nodeLayerTargetMode && _nodeLayerTargetMode.sourceId !== id) cancelNodeLayerTargetMode();
   if (_quickConnectMode && _quickConnectMode.sourceId !== id) cancelQuickConnectMode();
   if (typeof _contextToolbarMenuOpen !== 'undefined') _contextToolbarMenuOpen = false;
+  const previousNodeId = selectedNode;
+  const previousArrow = selectedArrow ? state.arrows.find(a => a.id === selectedArrow) : null;
   selectedNode = id;
   selectedArrow = null;
   arrowSVG.style.zIndex = String(getArrowRenderBaseZ());
-  document.querySelectorAll('.node').forEach(e => {
-    e.classList.remove('selected');
-    e.classList.remove('arrow-endpoint');
-    e.removeAttribute('data-hide-ports');
-  });
-  document.querySelectorAll('.conn-point.arrow-endpoint-port').forEach(cp => cp.classList.remove('arrow-endpoint-port'));
+  clearSelectedNodeVisual(previousNodeId);
+  clearArrowEndpointVisuals(previousArrow);
   const el = document.getElementById(`node-${id}`);
   if (el) el.classList.add('selected');
   if (_apNodeId) {
@@ -18,10 +51,10 @@ function selectNode(id) {
     if (selN && selN.type === 'boundary') closeAppearancePanel();
     else if (_apNodeId !== id) openAppearancePanel(id);
   }
-  renderArrows();
-  renderSidebar();
-  if (typeof renderLayersPanel === 'function') renderLayersPanel();
-  if (typeof updateContextToolbar === 'function') updateContextToolbar();
+  if (previousArrow) {
+    renderArrows([previousArrow.id]);
+  }
+  scheduleSelectionChromeRefresh();
 }
 
 function getSelectedArrowLayerZ() {
@@ -35,37 +68,18 @@ function selectArrow(id) {
   if (_nodeLayerTargetMode) cancelNodeLayerTargetMode();
   if (_quickConnectMode) cancelQuickConnectMode();
   if (typeof _contextToolbarMenuOpen !== 'undefined') _contextToolbarMenuOpen = false;
+  const previousNodeId = selectedNode;
+  const previousArrow = selectedArrow ? state.arrows.find(a => a.id === selectedArrow) : null;
   selectedArrow = id;
   selectedNode = null;
   closeAppearancePanel();
-  document.querySelectorAll('.node').forEach(e => {
-    e.classList.remove('selected');
-    e.classList.remove('arrow-endpoint');
-    e.removeAttribute('data-hide-ports');
-  });
-  document.querySelectorAll('.conn-point.arrow-endpoint-port').forEach(cp => cp.classList.remove('arrow-endpoint-port'));
+  clearSelectedNodeVisual(previousNodeId);
+  clearArrowEndpointVisuals(previousArrow);
   const arr = state.arrows.find(a => a.id === id);
-  if (arr) {
-    const fromEl = document.getElementById('node-' + arr.from);
-    const toEl   = document.getElementById('node-' + arr.to);
-    if (fromEl) {
-      fromEl.classList.add('arrow-endpoint');
-      const ports = new Set((fromEl.dataset.hidePorts || '').split(' ').filter(Boolean));
-      ports.add(arr.fromPos || 'e');
-      fromEl.dataset.hidePorts = [...ports].join(' ');
-    }
-    if (toEl) {
-      toEl.classList.add('arrow-endpoint');
-      const ports = new Set((toEl.dataset.hidePorts || '').split(' ').filter(Boolean));
-      ports.add(arr.toPos || 'w');
-      toEl.dataset.hidePorts = [...ports].join(' ');
-    }
-  }
+  applyArrowEndpointVisuals(arr);
   arrowSVG.style.zIndex = getSelectedArrowLayerZ();
-  renderArrows();
-  renderSidebar();
-  if (typeof renderLayersPanel === 'function') renderLayersPanel();
-  if (typeof updateContextToolbar === 'function') updateContextToolbar();
+  renderArrows([previousArrow?.id, id].filter(Boolean));
+  scheduleSelectionChromeRefresh();
 }
 
 function deselect(e) {
@@ -73,18 +87,16 @@ function deselect(e) {
   if (_nodeLayerTargetMode) cancelNodeLayerTargetMode();
   if (_quickConnectMode) cancelQuickConnectMode();
   if (typeof _contextToolbarMenuOpen !== 'undefined') _contextToolbarMenuOpen = false;
+  const previousNodeId = selectedNode;
+  const previousArrow = selectedArrow ? state.arrows.find(a => a.id === selectedArrow) : null;
   selectedNode = null;
   selectedArrow = null;
   closeAppearancePanel();
-  document.querySelectorAll('.node').forEach(e => {
-    e.classList.remove('selected');
-    e.classList.remove('arrow-endpoint');
-    e.removeAttribute('data-hide-ports');
-  });
-  document.querySelectorAll('.conn-point.arrow-endpoint-port').forEach(cp => cp.classList.remove('arrow-endpoint-port'));
+  clearSelectedNodeVisual(previousNodeId);
+  clearArrowEndpointVisuals(previousArrow);
   arrowSVG.style.zIndex = String(getArrowRenderBaseZ());
-  renderArrows();
-  renderSidebar();
-  if (typeof renderLayersPanel === 'function') renderLayersPanel();
-  if (typeof updateContextToolbar === 'function') updateContextToolbar();
+  if (previousArrow) {
+    renderArrows([previousArrow.id]);
+  }
+  scheduleSelectionChromeRefresh();
 }

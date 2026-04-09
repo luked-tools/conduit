@@ -3,14 +3,58 @@ let _nodeListFilter = '';
 const WELCOME_SEEN_KEY = 'conduit_welcome_seen_v1';
 let _showWelcomeCard = false;
 let _arrowRenderScheduled = false;
+let _scheduledArrowRenderIds = null;
+let _selectionChromeScheduled = false;
+let _deferredLayersPanelRefresh = false;
+let _deferredContextToolbarRefresh = false;
 
-function scheduleRenderArrows() {
+function scheduleRenderArrows(arrowIds = null) {
+  if (arrowIds && arrowIds.length) {
+    if (_scheduledArrowRenderIds === null) {
+      _scheduledArrowRenderIds = new Set(arrowIds);
+    } else {
+      arrowIds.forEach(id => _scheduledArrowRenderIds.add(id));
+    }
+  } else {
+    _scheduledArrowRenderIds = [];
+  }
   if (_arrowRenderScheduled) return;
   _arrowRenderScheduled = true;
   requestAnimationFrame(() => {
     _arrowRenderScheduled = false;
-    renderArrows();
+    const targetIds = Array.isArray(_scheduledArrowRenderIds)
+      ? null
+      : (_scheduledArrowRenderIds ? Array.from(_scheduledArrowRenderIds) : null);
+    _scheduledArrowRenderIds = null;
+    renderArrows(targetIds);
   });
+}
+
+function scheduleSelectionChromeRefresh() {
+  if (_selectionChromeScheduled) return;
+  _selectionChromeScheduled = true;
+  requestAnimationFrame(() => {
+    _selectionChromeScheduled = false;
+    renderSidebar();
+    if (draggingNode || resizingNode || panDragging) {
+      _deferredLayersPanelRefresh = true;
+      _deferredContextToolbarRefresh = true;
+      return;
+    }
+    if (typeof renderLayersPanel === 'function') renderLayersPanel();
+    if (typeof updateContextToolbar === 'function') updateContextToolbar();
+  });
+}
+
+function flushDeferredChromeRefresh() {
+  if (_deferredLayersPanelRefresh) {
+    _deferredLayersPanelRefresh = false;
+    if (typeof renderLayersPanel === 'function') renderLayersPanel();
+  }
+  if (_deferredContextToolbarRefresh) {
+    _deferredContextToolbarRefresh = false;
+    if (typeof updateContextToolbar === 'function') updateContextToolbar();
+  }
 }
 
 function setNodeListFilter(value) {
@@ -19,6 +63,9 @@ function setNodeListFilter(value) {
 }
 
 function render() {
+  if (typeof arrowSVG !== 'undefined' && arrowSVG) {
+    arrowSVG.style.zIndex = selectedArrow ? getSelectedArrowLayerZ() : String(getArrowRenderBaseZ());
+  }
   renderNodes();
   renderArrows();
   renderSidebar();

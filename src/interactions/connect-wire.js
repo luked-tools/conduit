@@ -158,7 +158,7 @@ function completeWire() {
   cancelWire();
   render();
   selectArrow(id);
-  saveToLocalStorage();
+  scheduleSaveToLocalStorage();
 }
 
 function startEndpointDrag(arrowId, nodeId, pos, e, forcedEnd) {
@@ -231,7 +231,7 @@ function completeEndpointDrag() {
       arr.toPos = wireTargetPos || 'w';
       arr.toOffset = wireTargetOffset;
     }
-    saveToLocalStorage();
+    scheduleSaveToLocalStorage();
   }
 
   epDragActive = false;

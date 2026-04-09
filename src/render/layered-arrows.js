@@ -1,4 +1,246 @@
 let _sharedArrowMarkers = {};
+let _arrowObjectRegistry = new Map();
+
+function createArrowSvgEl(tagName) {
+  return document.createElementNS('http://www.w3.org/2000/svg', tagName);
+}
+
+function getArrowById(arrowId) {
+  return state.arrows.find(item => item.id === arrowId) || null;
+}
+
+function ensureArrowObject(arrowId) {
+  let arrowObject = _arrowObjectRegistry.get(arrowId);
+  if (arrowObject && arrowObject.isConnected) return arrowObject;
+
+  arrowObject = createArrowSvgEl('svg');
+  arrowObject.setAttribute('class', 'arrow-object');
+  arrowObject.setAttribute('data-arrow-id', arrowId);
+  arrowObject.setAttribute('width', '4000');
+  arrowObject.setAttribute('height', '3000');
+  arrowObject.setAttribute('viewBox', '0 0 4000 3000');
+  arrowObject.style.left = '0';
+  arrowObject.style.top = '0';
+  arrowObject.style.pointerEvents = 'none';
+
+  const arrowGroup = createArrowSvgEl('g');
+  arrowGroup.style.pointerEvents = 'none';
+
+  const hit = createArrowSvgEl('path');
+  hit.setAttribute('fill', 'none');
+  hit.setAttribute('stroke', '#ffffff');
+  hit.setAttribute('stroke-width', '14');
+  hit.setAttribute('opacity', '0');
+  hit.setAttribute('class', 'arrow-hit');
+  hit.style.cursor = 'pointer';
+  hit.style.pointerEvents = 'stroke';
+  hit.addEventListener('click', e => {
+    e.stopPropagation();
+    selectArrow(arrowId);
+  });
+  hit.addEventListener('mouseenter', e => {
+    const arrow = getArrowById(arrowId);
+    if (arrow) showArrowTooltip(e, arrow);
+  });
+  hit.addEventListener('mousemove', e => { positionArrowTooltip(e); });
+  hit.addEventListener('mouseleave', () => { hideArrowTooltip(); });
+  arrowGroup.appendChild(hit);
+
+  const path = createArrowSvgEl('path');
+  path.setAttribute('fill', 'none');
+  path.setAttribute('class', 'arrow-path');
+  path.style.pointerEvents = 'none';
+  arrowGroup.appendChild(path);
+
+  const adornments = createArrowSvgEl('g');
+  adornments.setAttribute('class', 'arrow-adornments');
+  adornments.style.pointerEvents = 'none';
+  arrowGroup.appendChild(adornments);
+
+  arrowObject.appendChild(arrowGroup);
+  arrowObject._refs = { arrowGroup, hit, path, adornments };
+  _arrowObjectRegistry.set(arrowId, arrowObject);
+  return arrowObject;
+}
+
+function removeArrowObject(arrowId) {
+  const arrowObject = _arrowObjectRegistry.get(arrowId);
+  if (!arrowObject) return;
+  if (arrowObject.parentNode) arrowObject.parentNode.removeChild(arrowObject);
+  _arrowObjectRegistry.delete(arrowId);
+}
+
+function renderArrowLabel(adornments, arrowObject, arrow, isSelected, labelX, labelY) {
+  const lines = arrow.label.split('\n');
+  const lBold = !!arrow.labelBold;
+  const lItalic = !!arrow.labelItalic;
+  const lColor = arrow.labelColor || 'var(--text2)';
+  const fontSize = 11;
+  const lineH = fontSize + 4;
+  const totalH = lines.length * lineH;
+  const maxW = Math.max(...lines.map(l => l.length)) * (lBold ? 7 : 6.5);
+
+  const bg = createArrowSvgEl('rect');
+  bg.setAttribute('x', labelX - maxW / 2 - 5);
+  bg.setAttribute('y', labelY - totalH / 2 - 5);
+  bg.setAttribute('width', maxW + 10);
+  bg.setAttribute('height', totalH + 8);
+  bg.setAttribute('rx', '4');
+  bg.setAttribute('fill', 'var(--bg)');
+  bg.setAttribute('stroke', isSelected ? 'var(--accent3)' : 'var(--border)');
+  bg.setAttribute('stroke-width', isSelected ? '1.5' : '1');
+  adornments.appendChild(bg);
+
+  const txt = createArrowSvgEl('text');
+  txt.setAttribute('x', labelX);
+  txt.setAttribute('y', labelY - (lines.length - 1) * lineH / 2);
+  txt.setAttribute('fill', lColor);
+  txt.setAttribute('font-size', fontSize);
+  txt.setAttribute('font-family', 'Inter, IBM Plex Sans, sans-serif');
+  txt.setAttribute('font-weight', lBold ? '600' : '400');
+  txt.setAttribute('font-style', lItalic ? 'italic' : 'normal');
+  txt.setAttribute('text-anchor', 'middle');
+  txt.setAttribute('dominant-baseline', 'middle');
+  lines.forEach((line, i) => {
+    const ts = createArrowSvgEl('tspan');
+    ts.setAttribute('x', labelX);
+    ts.setAttribute('dy', i === 0 ? '0' : lineH);
+    ts.textContent = line;
+    txt.appendChild(ts);
+  });
+  adornments.appendChild(txt);
+
+  bg.style.cursor = txt.style.cursor = 'move';
+  bg.style.pointerEvents = txt.style.pointerEvents = 'all';
+  bg.addEventListener('mousedown', e => {
+    if (e.detail === 2) return;
+    startArrowLabelDrag(arrow.id, e);
+  });
+  txt.addEventListener('mousedown', e => {
+    if (e.detail === 2) return;
+    startArrowLabelDrag(arrow.id, e);
+  });
+  const onDbl = e => {
+    e.stopPropagation();
+    selectArrow(arrow.id);
+    startInlineLabelEdit(arrow, labelX, labelY);
+  };
+  bg.addEventListener('dblclick', onDbl);
+  txt.addEventListener('dblclick', onDbl);
+}
+
+function renderArrowSelectionHandles(adornments, arrow, p1, p2) {
+  [
+    { end: 'from', point: p1, nodeId: arrow.from, pos: arrow.fromPos || 'e' },
+    { end: 'to', point: p2, nodeId: arrow.to, pos: arrow.toPos || 'w' }
+  ].forEach(handle => {
+    const g = createArrowSvgEl('g');
+    g.setAttribute('class', 'arrow-endpoint-handle' + (epDragActive && epDragArrowId === arrow.id && epDragEnd === handle.end ? ' dragging' : ''));
+    g.setAttribute('transform', `translate(${handle.point.x},${handle.point.y})`);
+    const handleHit = createArrowSvgEl('circle');
+    handleHit.setAttribute('class', 'hit');
+    handleHit.setAttribute('r', '16');
+    g.appendChild(handleHit);
+    const c = createArrowSvgEl('circle');
+    c.setAttribute('class', 'dot');
+    c.setAttribute('r', '5.5');
+    g.appendChild(c);
+    g.addEventListener('mousedown', e => startEndpointDrag(arrow.id, handle.nodeId, handle.pos, e, handle.end));
+    adornments.appendChild(g);
+  });
+}
+
+function renderOrthogonalHandles(adornments, arrow, pathResult) {
+  [
+    { info: pathResult.hX, prop: 'bend', color: 'var(--accent3)' },
+    { info: pathResult.hY, prop: 'orthoY', color: 'var(--accent2)' }
+  ].forEach(({ info, prop, color }) => {
+    const isVertSeg = info.seg === 'vertical';
+    const isXDrag = info.axis === 'x';
+    const hw = isVertSeg ? 14 : 28;
+    const hh = isVertSeg ? 28 : 14;
+
+    const pill = createArrowSvgEl('rect');
+    pill.setAttribute('x', info.x - hw / 2);
+    pill.setAttribute('y', info.y - hh / 2);
+    pill.setAttribute('width', hw);
+    pill.setAttribute('height', hh);
+    pill.setAttribute('rx', '7');
+    pill.setAttribute('fill', color);
+    pill.setAttribute('opacity', '0.85');
+    pill.style.cursor = isXDrag ? 'ew-resize' : 'ns-resize';
+    pill.style.pointerEvents = 'all';
+
+    const grip = createArrowSvgEl('g');
+    grip.style.pointerEvents = 'none';
+    [-4, 0, 4].forEach(off => {
+      const gl = createArrowSvgEl('line');
+      if (isVertSeg) {
+        gl.setAttribute('x1', info.x - 4); gl.setAttribute('y1', info.y + off);
+        gl.setAttribute('x2', info.x + 4); gl.setAttribute('y2', info.y + off);
+      } else {
+        gl.setAttribute('x1', info.x + off); gl.setAttribute('y1', info.y - 4);
+        gl.setAttribute('x2', info.x + off); gl.setAttribute('y2', info.y + 4);
+      }
+      gl.setAttribute('stroke', 'var(--bg)');
+      gl.setAttribute('stroke-width', '1.5');
+      gl.setAttribute('stroke-linecap', 'round');
+      grip.appendChild(gl);
+    });
+
+    adornments.appendChild(pill);
+    adornments.appendChild(grip);
+    pill.addEventListener('mousedown', e => {
+      startOrthogonalHandleDrag(arrow.id, prop, info, isXDrag, e);
+    });
+  });
+}
+
+function updateArrowObject(arrowObject, arrow, { d, p1, p2, pathResult, stroke, accentStroke, isSelected, zIndex, labelX, labelY }) {
+  const { hit, path, adornments } = arrowObject._refs;
+  arrowObject.style.zIndex = String(zIndex);
+
+  hit.setAttribute('d', d);
+
+  path.setAttribute('d', d);
+  path.setAttribute('stroke', stroke);
+  path.setAttribute('stroke-width', isSelected ? '2' : '1.5');
+  path.removeAttribute('marker-start');
+  path.removeAttribute('marker-end');
+  path.removeAttribute('stroke-dasharray');
+
+  const dasharray = getArrowStrokeDasharray(arrow);
+  if (dasharray) path.setAttribute('stroke-dasharray', dasharray);
+
+  const markerIds = getSharedArrowMarkerIds(stroke);
+  if (arrow.direction === 'directed') {
+    path.setAttribute('marker-end', `url(#${markerIds.fwd})`);
+  } else if (arrow.direction === 'bidirectional') {
+    path.setAttribute('marker-end', `url(#${markerIds.fwd})`);
+    path.setAttribute('marker-start', `url(#${markerIds.bwd})`);
+  }
+
+  adornments.replaceChildren();
+
+  if (isSelected) {
+    const selectionPath = createArrowSvgEl('path');
+    selectionPath.setAttribute('d', d);
+    selectionPath.setAttribute('fill', 'none');
+    selectionPath.setAttribute('stroke', accentStroke);
+    selectionPath.setAttribute('stroke-width', '5');
+    selectionPath.setAttribute('opacity', '0.28');
+    selectionPath.style.pointerEvents = 'none';
+    const selectionDasharray = getArrowStrokeDasharray(arrow);
+    if (selectionDasharray) selectionPath.setAttribute('stroke-dasharray', selectionDasharray);
+    adornments.appendChild(selectionPath);
+  }
+
+  if (arrow.label) renderArrowLabel(adornments, arrowObject, arrow, isSelected, labelX, labelY);
+  if (isSelected) renderArrowSelectionHandles(adornments, arrow, p1, p2);
+  if (isSelected && (arrow.lineStyle || 'curved') === 'orthogonal' && pathResult.hX) {
+    renderOrthogonalHandles(adornments, arrow, pathResult);
+  }
+}
 
 function getSharedArrowMarkerIds(stroke) {
   const key = String(stroke || '').toLowerCase();
@@ -38,12 +280,14 @@ function getSharedArrowMarkerIds(stroke) {
   return _sharedArrowMarkers[key];
 }
 
-function renderArrows() {
-  document.querySelectorAll('.arrow-object').forEach(el => el.remove());
+function renderArrows(targetArrowIds = null) {
   const nodeById = new Map(state.nodes.map(n => [n.id, n]));
   const rootStyles = getComputedStyle(document.documentElement);
   const accentStrokeFallback = rootStyles.getPropertyValue('--accent3').trim() || '#e85e00';
   const defaultArrowStroke = rootStyles.getPropertyValue('--arrow-color').trim() || '#ff8c42';
+  const targetArrowIdSet = Array.isArray(targetArrowIds) && targetArrowIds.length
+    ? new Set(targetArrowIds)
+    : null;
 
   const portGroups = {};
   state.arrows.forEach(a => {
@@ -80,11 +324,18 @@ function renderArrows() {
       return (aBoost - bBoost) || (a.index - b.index);
     });
 
+  const seenArrowIds = targetArrowIdSet ? null : new Set();
+
   orderedArrows.forEach(entry => {
     const a = entry.object;
+    if (targetArrowIdSet && !targetArrowIdSet.has(a.id)) return;
     const fromNode = nodeById.get(a.from);
     const toNode = nodeById.get(a.to);
-    if (!fromNode || !toNode) return;
+    if (!fromNode || !toNode) {
+      removeArrowObject(a.id);
+      return;
+    }
+    if (seenArrowIds) seenArrowIds.add(a.id);
 
     const p1 = staggeredPortXY(fromNode, a.fromPos || 'e', a.id, 'from', getArrowEndOffset(a, 'from'));
     const p2 = staggeredPortXY(toNode, a.toPos || 'w', a.id, 'to', getArrowEndOffset(a, 'to'));
@@ -93,198 +344,42 @@ function renderArrows() {
     const accentStroke = accentStrokeFallback;
     const stroke = a.color || defaultArrowStroke;
 
-    const arrowObject = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    arrowObject.setAttribute('class', 'arrow-object');
-    arrowObject.setAttribute('data-arrow-id', a.id);
-    arrowObject.setAttribute('width', '4000');
-    arrowObject.setAttribute('height', '3000');
-    arrowObject.setAttribute('viewBox', '0 0 4000 3000');
-    arrowObject.style.left = '0';
-    arrowObject.style.top = '0';
-    arrowObject.style.zIndex = String(isSelected ? Number(getSelectedArrowLayerZ()) : getRenderedArrowLayerValue(a));
-    arrowObject.style.pointerEvents = 'none';
-
-    const markerIds = getSharedArrowMarkerIds(stroke);
-
     const pathResult = buildArrowPath(p1, p2, a.fromPos || 'e', a.toPos || 'w', a.bend || 0, a.lineStyle || 'curved', 0, 0, a.orthoY || 0);
     const { d, lx: _lx, ly: _ly } = pathResult;
-
-    const arrowGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-    arrowGroup.style.pointerEvents = 'none';
-
-    const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    hit.setAttribute('d', d);
-    hit.setAttribute('fill', 'none');
-    hit.setAttribute('stroke', '#ffffff');
-    hit.setAttribute('stroke-width', '14');
-    hit.setAttribute('opacity', '0');
-    hit.setAttribute('class', 'arrow-hit');
-    hit.style.cursor = 'pointer';
-    hit.style.pointerEvents = 'stroke';
-    hit.addEventListener('click', e => { e.stopPropagation(); selectArrow(a.id); });
-    hit.addEventListener('mouseenter', e => { showArrowTooltip(e, a); });
-    hit.addEventListener('mousemove', e => { positionArrowTooltip(e); });
-    hit.addEventListener('mouseleave', () => { hideArrowTooltip(); });
-    arrowGroup.appendChild(hit);
-
-    if (isSelected) {
-      const selectionPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      selectionPath.setAttribute('d', d);
-      selectionPath.setAttribute('fill', 'none');
-      selectionPath.setAttribute('stroke', accentStroke);
-      selectionPath.setAttribute('stroke-width', '5');
-      selectionPath.setAttribute('opacity', '0.28');
-      selectionPath.style.pointerEvents = 'none';
-      const selectionDasharray = getArrowStrokeDasharray(a);
-      if (selectionDasharray) selectionPath.setAttribute('stroke-dasharray', selectionDasharray);
-      arrowGroup.appendChild(selectionPath);
-    }
-
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', d);
-    path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', stroke);
-    path.setAttribute('stroke-width', isSelected ? '2' : '1.5');
-    path.setAttribute('class', 'arrow-path');
-    path.style.pointerEvents = 'none';
-    const dasharray = getArrowStrokeDasharray(a);
-    if (dasharray) path.setAttribute('stroke-dasharray', dasharray);
-    if (a.direction === 'directed') {
-      path.setAttribute('marker-end', `url(#${markerIds.fwd})`);
-    } else if (a.direction === 'bidirectional') {
-      path.setAttribute('marker-end', `url(#${markerIds.fwd})`);
-      path.setAttribute('marker-start', `url(#${markerIds.bwd})`);
-    }
-    arrowGroup.appendChild(path);
-
-    if (isSelected) {
-      [
-        { end: 'from', point: p1, nodeId: a.from, pos: a.fromPos || 'e' },
-        { end: 'to', point: p2, nodeId: a.to, pos: a.toPos || 'w' }
-      ].forEach(handle => {
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.setAttribute('class', 'arrow-endpoint-handle' + (epDragActive && epDragArrowId === a.id && epDragEnd === handle.end ? ' dragging' : ''));
-        g.setAttribute('transform', `translate(${handle.point.x},${handle.point.y})`);
-        const handleHit = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        handleHit.setAttribute('class', 'hit');
-        handleHit.setAttribute('r', '16');
-        g.appendChild(handleHit);
-        const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        c.setAttribute('class', 'dot');
-        c.setAttribute('r', '5.5');
-        g.appendChild(c);
-        g.addEventListener('mousedown', e => startEndpointDrag(a.id, handle.nodeId, handle.pos, e, handle.end));
-        arrowGroup.appendChild(g);
-      });
-    }
-
-    if (a.label) {
-      const lx = _lx + (a.labelOffsetX || 0);
-      const ly = _ly + (a.labelOffsetY || 0);
-      const lines = a.label.split('\n');
-      const lBold = !!a.labelBold;
-      const lItalic = !!a.labelItalic;
-      const lColor = a.labelColor || 'var(--text2)';
-      const fontSize = 11;
-      const lineH = fontSize + 4;
-      const totalH = lines.length * lineH;
-      const maxW = Math.max(...lines.map(l => l.length)) * (lBold ? 7 : 6.5);
-
-      const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      bg.setAttribute('x', lx - maxW / 2 - 5);
-      bg.setAttribute('y', ly - totalH / 2 - 5);
-      bg.setAttribute('width', maxW + 10);
-      bg.setAttribute('height', totalH + 8);
-      bg.setAttribute('rx', '4');
-      bg.setAttribute('fill', 'var(--bg)');
-      bg.setAttribute('stroke', isSelected ? 'var(--accent3)' : 'var(--border)');
-      bg.setAttribute('stroke-width', isSelected ? '1.5' : '1');
-      arrowGroup.appendChild(bg);
-
-      const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-      txt.setAttribute('x', lx);
-      txt.setAttribute('y', ly - (lines.length - 1) * lineH / 2);
-      txt.setAttribute('fill', lColor);
-      txt.setAttribute('font-size', fontSize);
-      txt.setAttribute('font-family', 'Inter, IBM Plex Sans, sans-serif');
-      txt.setAttribute('font-weight', lBold ? '600' : '400');
-      txt.setAttribute('font-style', lItalic ? 'italic' : 'normal');
-      txt.setAttribute('text-anchor', 'middle');
-      txt.setAttribute('dominant-baseline', 'middle');
-      lines.forEach((line, i) => {
-        const ts = document.createElementNS('http://www.w3.org/2000/svg', 'tspan');
-        ts.setAttribute('x', lx);
-        ts.setAttribute('dy', i === 0 ? '0' : lineH);
-        ts.textContent = line;
-        txt.appendChild(ts);
-      });
-      arrowGroup.appendChild(txt);
-
-      bg.style.cursor = txt.style.cursor = 'move';
-      bg.style.pointerEvents = txt.style.pointerEvents = 'all';
-      const onDown = e2 => {
-        if (e2.detail === 2) return;
-        startArrowLabelDrag(a.id, e2);
-      };
-      bg.addEventListener('mousedown', onDown);
-      txt.addEventListener('mousedown', onDown);
-      const onDbl = e2 => {
-        e2.stopPropagation();
-        selectArrow(a.id);
-        startInlineLabelEdit(a, lx, ly);
-      };
-      bg.addEventListener('dblclick', onDbl);
-      txt.addEventListener('dblclick', onDbl);
-    }
-
-    if (isSelected && (a.lineStyle || 'curved') === 'orthogonal' && pathResult.hX) {
-      [
-        { info: pathResult.hX, prop: 'bend', color: 'var(--accent3)' },
-        { info: pathResult.hY, prop: 'orthoY', color: 'var(--accent2)' }
-      ].forEach(({ info, prop, color }) => {
-        const isVertSeg = info.seg === 'vertical';
-        const isXDrag = info.axis === 'x';
-        const hw = isVertSeg ? 14 : 28;
-        const hh = isVertSeg ? 28 : 14;
-
-        const pill = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-        pill.setAttribute('x', info.x - hw / 2);
-        pill.setAttribute('y', info.y - hh / 2);
-        pill.setAttribute('width', hw);
-        pill.setAttribute('height', hh);
-        pill.setAttribute('rx', '7');
-        pill.setAttribute('fill', color);
-        pill.setAttribute('opacity', '0.85');
-        pill.style.cursor = isXDrag ? 'ew-resize' : 'ns-resize';
-        pill.style.pointerEvents = 'all';
-
-        const grip = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        grip.style.pointerEvents = 'none';
-        [-4, 0, 4].forEach(off => {
-          const gl = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-          if (isVertSeg) {
-            gl.setAttribute('x1', info.x - 4); gl.setAttribute('y1', info.y + off);
-            gl.setAttribute('x2', info.x + 4); gl.setAttribute('y2', info.y + off);
-          } else {
-            gl.setAttribute('x1', info.x + off); gl.setAttribute('y1', info.y - 4);
-            gl.setAttribute('x2', info.x + off); gl.setAttribute('y2', info.y + 4);
-          }
-          gl.setAttribute('stroke', 'var(--bg)');
-          gl.setAttribute('stroke-width', '1.5');
-          gl.setAttribute('stroke-linecap', 'round');
-          grip.appendChild(gl);
-        });
-
-        arrowGroup.appendChild(pill);
-        arrowGroup.appendChild(grip);
-        pill.addEventListener('mousedown', e2 => {
-          startOrthogonalHandleDrag(a.id, prop, info, isXDrag, e2);
-        });
-      });
-    }
-
-    arrowObject.appendChild(arrowGroup);
+    const arrowObject = ensureArrowObject(a.id);
+    updateArrowObject(arrowObject, a, {
+      d,
+      p1,
+      p2,
+      pathResult,
+      stroke,
+      accentStroke,
+      isSelected,
+      zIndex: isSelected ? Number(getSelectedArrowLayerZ()) : getRenderedArrowLayerValue(a),
+      labelX: _lx + (a.labelOffsetX || 0),
+      labelY: _ly + (a.labelOffsetY || 0)
+    });
     canvas.appendChild(arrowObject);
+  });
+
+  if (targetArrowIdSet) {
+    targetArrowIdSet.forEach(arrowId => {
+      if (!state.arrows.some(arrow => arrow.id === arrowId)) removeArrowObject(arrowId);
+    });
+    return;
+  }
+
+  Array.from(_arrowObjectRegistry.keys()).forEach(arrowId => {
+    if (!seenArrowIds.has(arrowId)) removeArrowObject(arrowId);
+  });
+}
+
+function refreshRenderedArrowLayers() {
+  state.arrows.forEach(arrow => {
+    const arrowObject = _arrowObjectRegistry.get(arrow.id);
+    if (!arrowObject || !arrowObject.isConnected) return;
+    const isSelected = selectedArrow === arrow.id;
+    arrowObject.style.zIndex = String(isSelected ? Number(getSelectedArrowLayerZ()) : getRenderedArrowLayerValue(arrow));
   });
 }
 

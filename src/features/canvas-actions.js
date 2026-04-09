@@ -401,9 +401,12 @@ function moveNodeLayerRelative(sourceId, targetId, mode) {
   pushUndo();
   const moved = moveCanvasLayerRelative('node', sourceId, 'node', targetId, mode === 'front-of' ? 'after' : 'before');
   if (!moved) return false;
-  render();
-  selectNode(sourceId);
-  saveToLocalStorage();
+  selectedNode = sourceId;
+  selectedArrow = null;
+  if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
+  if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
+  if (typeof scheduleSelectionChromeRefresh === 'function') scheduleSelectionChromeRefresh();
+  scheduleSaveToLocalStorage();
 
   const targetNode = state.nodes.find(node => node.id === targetId);
   const targetName = targetNode ? (targetNode.title || targetNode.tag || 'target node').replace(/\n/g, ' ') : 'target node';
@@ -433,9 +436,12 @@ function moveNodeLayer(nodeId, mode) {
   pushUndo();
   const moved = moveCanvasLayer('node', nodeId, mode);
   if (!moved) return false;
-  render();
-  selectNode(nodeId);
-  saveToLocalStorage();
+  selectedNode = nodeId;
+  selectedArrow = null;
+  if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
+  if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
+  if (typeof scheduleSelectionChromeRefresh === 'function') scheduleSelectionChromeRefresh();
+  scheduleSaveToLocalStorage();
 
   const labels = {
     front: 'Node brought to front',
@@ -451,9 +457,12 @@ function moveArrowLayer(arrowId, mode) {
   pushUndo();
   const moved = moveCanvasLayer('arrow', arrowId, mode);
   if (!moved) return false;
-  renderNodes();
-  selectArrow(arrowId);
-  saveToLocalStorage();
+  selectedArrow = arrowId;
+  selectedNode = null;
+  if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
+  if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
+  if (typeof scheduleSelectionChromeRefresh === 'function') scheduleSelectionChromeRefresh();
+  scheduleSaveToLocalStorage();
 
   const labels = {
     front: 'Connection brought to front',
@@ -469,9 +478,12 @@ function moveNodeLayerToDisplayIndex(nodeId, displayIndex) {
   pushUndo();
   const moved = moveCanvasLayerToDisplayIndex('node', nodeId, displayIndex);
   if (!moved) return false;
-  render();
-  selectNode(nodeId);
-  saveToLocalStorage();
+  selectedNode = nodeId;
+  selectedArrow = null;
+  if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
+  if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
+  if (typeof scheduleSelectionChromeRefresh === 'function') scheduleSelectionChromeRefresh();
+  scheduleSaveToLocalStorage();
   setStatusModeMessage('Node layer order updated', { fade: true, autoClearMs: 1500 });
   return true;
 }
@@ -480,9 +492,12 @@ function moveArrowLayerToDisplayIndex(arrowId, displayIndex) {
   pushUndo();
   const moved = moveCanvasLayerToDisplayIndex('arrow', arrowId, displayIndex);
   if (!moved) return false;
-  renderNodes();
-  selectArrow(arrowId);
-  saveToLocalStorage();
+  selectedArrow = arrowId;
+  selectedNode = null;
+  if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
+  if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
+  if (typeof scheduleSelectionChromeRefresh === 'function') scheduleSelectionChromeRefresh();
+  scheduleSaveToLocalStorage();
   setStatusModeMessage('Connection layer order updated', { fade: true, autoClearMs: 1500 });
   return true;
 }
@@ -503,9 +518,10 @@ function addMode(type) {
   });
   normalizeNodeLayers();
   appendCanvasOrderEntry('node', id);
+  selectedNode = id;
+  selectedArrow = null;
   render();
-  selectNode(id);
-  saveToLocalStorage();
+  scheduleSaveToLocalStorage();
 }
 
 function addModeAt(type, canvasX, canvasY) {
@@ -524,9 +540,10 @@ function addModeAt(type, canvasX, canvasY) {
   });
   normalizeNodeLayers();
   appendCanvasOrderEntry('node', id);
+  selectedNode = id;
+  selectedArrow = null;
   render();
-  selectNode(id);
-  saveToLocalStorage();
+  scheduleSaveToLocalStorage();
 }
 
 function setStatusModeMessage(text = '', { fade = false, autoClearMs = 0, color = '' } = {}) {
