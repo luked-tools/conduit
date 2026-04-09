@@ -1031,7 +1031,7 @@
   #modal-overlay.open { display: flex; }
   .modal {
     background: var(--surface); border: 1px solid var(--border2);
-    border-radius: 10px; padding: 24px; min-width: 360px; max-width: 520px;
+    border-radius: 10px; padding: 24px; min-width: 420px; max-width: 620px;
     box-shadow: var(--shadow-floating);
   }
   .modal h3 { font-size: 14px; font-weight: 600; margin-bottom: var(--space-7); color: var(--text); }

@@ -264,5 +264,12 @@ function createNodeEl(n, selectedArrowObj = null) {
     startDrag(e, n.id);
   });
 
+  div.addEventListener('click', e => {
+    if (!_quickConnectMode) return;
+    if (e.target && e.target.classList && (e.target.classList.contains('conn-point') || e.target.classList.contains('node-resize'))) return;
+    e.stopPropagation();
+    if (n.id !== _quickConnectMode.sourceId) applyQuickConnectTarget(n.id);
+  });
+
   return div;
 }

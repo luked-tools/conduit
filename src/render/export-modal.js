@@ -101,6 +101,7 @@ function downloadExport() {
   link.download = (title || 'conduit-diagram').replace(/\s+/g, '-').toLowerCase() + '.html';
   link.click();
   closeExportModal();
+  setStatusModeMessage('Exported full draft HTML', { fade: true, autoClearMs: 1600 });
 }
 
 // Close on overlay click / Escape
