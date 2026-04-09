@@ -8,6 +8,12 @@ function isNearNodeEdge(node, mx, my, actualH, margin = 20) {
   );
 }
 
+function getConnectedArrowIds(nodeId) {
+  return state.arrows
+    .filter(arrow => arrow.from === nodeId || arrow.to === nodeId)
+    .map(arrow => arrow.id);
+}
+
 document.getElementById('canvas-wrap')?.addEventListener('mousedown', e => {
   const wrap = document.getElementById('canvas-wrap');
   if (!wrap) return;
@@ -60,7 +66,7 @@ window.addEventListener('mousemove', e => {
       el.style.left = n.x + 'px';
       el.style.top = n.y + 'px';
     }
-    scheduleRenderArrows();
+    scheduleRenderArrows(getConnectedArrowIds(n.id));
     if (typeof updateContextToolbar === 'function') updateContextToolbar();
     return;
   }
@@ -95,7 +101,7 @@ window.addEventListener('mousemove', e => {
       el.style.width = n.w + 'px';
       el.style.minHeight = n.h + 'px';
     }
-    scheduleRenderArrows();
+    scheduleRenderArrows(getConnectedArrowIds(n.id));
     if (typeof updateContextToolbar === 'function') updateContextToolbar();
     return;
   }
@@ -223,9 +229,10 @@ window.addEventListener('mouseup', e => {
   } else if (wireActive) {
     completeWire();
   } else if (wasPanning) {
-    saveToLocalStorage();
+    scheduleSaveToLocalStorage();
   } else if (wasDragging || wasResizing) {
-    saveToLocalStorage();
+    scheduleSaveToLocalStorage();
   }
+  if (typeof flushDeferredChromeRefresh === 'function') flushDeferredChromeRefresh();
   if (typeof updateContextToolbar === 'function') updateContextToolbar();
 });

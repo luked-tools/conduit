@@ -2,6 +2,7 @@ const LEGACY_LS_KEY = 'simbuilder_autosave';
 const DRAFT_INDEX_KEY = 'conduit_drafts_index';
 const ACTIVE_DRAFT_KEY = 'conduit_active_draft';
 const DRAFT_PREFIX = 'conduit_draft_';
+let _pendingDraftSaveTimer = null;
 
 function getDraftStorageKey(id) {
   return DRAFT_PREFIX + id;
@@ -116,7 +117,7 @@ function flashSavedIndicator() {
   }
 }
 
-function saveToLocalStorage() {
+function performSaveToLocalStorage() {
   try {
     if (!currentDraftId) {
       ensureDraftRecord({
@@ -140,6 +141,27 @@ function saveToLocalStorage() {
     console.warn('Auto-save failed:', e);
     if (isQuotaExceededError(e)) warnDraftStorageFull();
   }
+}
+
+function flushScheduledSaveToLocalStorage() {
+  if (!_pendingDraftSaveTimer) return false;
+  clearTimeout(_pendingDraftSaveTimer);
+  _pendingDraftSaveTimer = null;
+  performSaveToLocalStorage();
+  return true;
+}
+
+function scheduleSaveToLocalStorage(delayMs = 140) {
+  clearTimeout(_pendingDraftSaveTimer);
+  _pendingDraftSaveTimer = setTimeout(() => {
+    _pendingDraftSaveTimer = null;
+    performSaveToLocalStorage();
+  }, Math.max(0, delayMs || 0));
+}
+
+function saveToLocalStorage() {
+  flushScheduledSaveToLocalStorage();
+  performSaveToLocalStorage();
 }
 
 function loadDraftIntoCanvas(id) {
@@ -200,3 +222,7 @@ function clearAutoSave() {
     localStorage.removeItem(LEGACY_LS_KEY);
   } catch(e) {}
 }
+
+window.addEventListener('beforeunload', () => {
+  flushScheduledSaveToLocalStorage();
+});

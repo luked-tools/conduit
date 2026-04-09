@@ -191,10 +191,17 @@ function applyLayersDrop(sourceKind, sourceId, targetKind, targetId, position) {
   const storedPosition = position === 'after' ? 'before' : 'after';
   const moved = moveCanvasLayerRelative(sourceKind, sourceId, targetKind, targetId, storedPosition);
   if (!moved) return false;
-  render();
-  if (sourceKind === 'node') selectNode(sourceId);
-  else if (sourceKind === 'arrow') selectArrow(sourceId);
-  saveToLocalStorage();
+  if (sourceKind === 'node') {
+    selectedNode = sourceId;
+    selectedArrow = null;
+  } else if (sourceKind === 'arrow') {
+    selectedArrow = sourceId;
+    selectedNode = null;
+  }
+  if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
+  if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
+  if (typeof scheduleSelectionChromeRefresh === 'function') scheduleSelectionChromeRefresh();
+  scheduleSaveToLocalStorage();
   setStatusModeMessage('Layer order updated', { fade: true, autoClearMs: 1500 });
   return true;
 }
