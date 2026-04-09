@@ -200,11 +200,32 @@ function renderDiagramNavigation() {
   }).join('<span class="diagram-crumb-sep">/</span>');
 }
 
-function getDiagramLinkCount(diagramId) {
+function getDiagramInboundLinkCount(diagramId) {
   const doc = ensureDiagramDocument();
   return doc.diagrams.reduce((sum, diagram) => {
     return sum + (diagram.state?.nodes || []).filter(node => node.linkedDiagramId === diagramId).length;
   }, 0);
+}
+
+function formatDiagramRelationshipMeta(diagramId) {
+  const inboundCount = getDiagramInboundLinkCount(diagramId);
+  return `Linked from ${inboundCount} node${inboundCount === 1 ? '' : 's'}`;
+}
+
+function getDiagramDisplayTitle(diagram) {
+  return diagram?.title || 'Untitled diagram';
+}
+
+function getDiagramCanvasStats(diagram) {
+  return {
+    nodeCount: Array.isArray(diagram?.state?.nodes) ? diagram.state.nodes.length : 0,
+    arrowCount: Array.isArray(diagram?.state?.arrows) ? diagram.state.arrows.length : 0
+  };
+}
+
+function getDiagramSummaryMeta(diagram) {
+  const { nodeCount, arrowCount } = getDiagramCanvasStats(diagram);
+  return `${nodeCount} items &middot; ${arrowCount} connections &middot; ${formatDiagramRelationshipMeta(diagram.id)}`;
 }
 
 function navigateToDiagram(diagramId, { pushHistory = true } = {}) {
@@ -224,6 +245,7 @@ function navigateToDiagram(diagramId, { pushHistory = true } = {}) {
   clearHistoryStacks();
   render();
   saveToLocalStorage();
+  setStatusModeMessage(`Opened diagram "${target.title || 'Untitled diagram'}"`, { fade: true, autoClearMs: 1400 });
   return true;
 }
 
@@ -305,7 +327,7 @@ function linkNodeToDiagram(nodeId, diagramId) {
   renderSidebar();
   renderNodes();
   saveToLocalStorage();
-  setStatusModeMessage(`Linked to "${diagram.title || 'Untitled diagram'}"`, { fade: true, autoClearMs: 1800 });
+  setStatusModeMessage(`Linked diagram "${diagram.title || 'Untitled diagram'}"`, { fade: true, autoClearMs: 1800 });
   return true;
 }
 
@@ -346,6 +368,19 @@ function deleteDiagramRecordById(diagramId, { fallbackId = '' } = {}) {
   return true;
 }
 
+function setRootDiagram(diagramId) {
+  const doc = ensureDiagramDocument();
+  const diagram = getDiagramById(diagramId);
+  if (!diagram || diagram.id === doc.rootDiagramId) return false;
+  syncActiveDiagramFromCurrentState();
+  doc.rootDiagramId = diagram.id;
+  saveToLocalStorage();
+  renderDiagramNavigation();
+  renderDiagramManagerBody();
+  setStatusModeMessage(`Root diagram set to "${diagram.title || 'Untitled diagram'}"`, { fade: true, autoClearMs: 1800 });
+  return true;
+}
+
 function openDiagramNameModal({ title, initialValue, confirmLabel, onConfirm }) {
   openBasicModal({
     title,
@@ -380,24 +415,25 @@ function renderDiagramManagerBody() {
   const host = document.getElementById('diagram-manager-body');
   if (!host) return;
   const doc = ensureDiagramDocument();
-  host.innerHTML = `<div class="draft-list">${
+  const introNote = doc.diagrams.length <= 1
+    ? `<div class="draft-warning-note">This draft currently has one diagram. Select a node or boundary and create or link a deeper diagram when you need another level.</div>`
+    : `<div class="draft-modal-note">Each diagram belongs to this draft. Linked diagrams can be reused from multiple nodes, and diagram actions save immediately outside canvas undo.</div>`;
+  host.innerHTML = `${introNote}<div class="draft-list">${
     doc.diagrams.map(diagram => {
-      const nodeCount = Array.isArray(diagram.state?.nodes) ? diagram.state.nodes.length : 0;
-      const arrowCount = Array.isArray(diagram.state?.arrows) ? diagram.state.arrows.length : 0;
-      const linkCount = getDiagramLinkCount(diagram.id);
       const isActive = diagram.id === activeDiagramId;
       const isRoot = diagram.id === doc.rootDiagramId;
       return `<div class="draft-row${isActive ? ' active' : ''}" data-diagram-id="${escapeHtml(diagram.id)}">
         <div class="draft-row-main">
           <div class="draft-row-title">
-            <span class="draft-row-title-text">${escapeHtml(diagram.title || 'Untitled diagram')}</span>
+            <span class="draft-row-title-text">${escapeHtml(getDiagramDisplayTitle(diagram))}</span>
             ${isRoot ? '<span class="draft-active-badge">Root</span>' : ''}
             ${isActive ? '<span class="draft-active-badge">Active</span>' : ''}
           </div>
-          <div class="draft-row-meta">${nodeCount} items · ${arrowCount} connections · ${linkCount} link${linkCount === 1 ? '' : 's'}</div>
+          <div class="draft-row-meta">${getDiagramSummaryMeta(diagram)}</div>
         </div>
         <div class="draft-row-actions">
           ${isActive ? '' : `<button class="tb-btn" data-action="open" data-diagram-id="${escapeHtml(diagram.id)}">Open</button>`}
+          ${isRoot ? '' : `<button class="tb-btn" data-action="set-root" data-diagram-id="${escapeHtml(diagram.id)}">Set as root</button>`}
           <button class="tb-btn" data-action="rename" data-diagram-id="${escapeHtml(diagram.id)}">Rename</button>
           ${doc.diagrams.length <= 1 ? '' : `<button class="tb-btn danger" data-action="delete" data-diagram-id="${escapeHtml(diagram.id)}">Delete</button>`}
         </div>
@@ -412,6 +448,8 @@ function renderDiagramManagerBody() {
       if (action === 'open') {
         closeBasicModal();
         navigateToDiagram(id);
+      } else if (action === 'set-root') {
+        setRootDiagram(id);
       } else if (action === 'rename') {
         renameDiagramById(id);
       } else if (action === 'delete') {
@@ -425,7 +463,7 @@ function openDiagramManager() {
   syncActiveDiagramFromCurrentState();
   openBasicModal({
     title: 'Diagrams',
-    body: '<div class="draft-modal-note">Manage the diagrams inside this draft. Diagram operations are saved immediately and are not part of canvas undo.</div><div id="diagram-manager-body"></div>',
+    body: '<div class="draft-modal-note">Manage the diagrams inside this draft. Diagram actions save immediately and stay separate from canvas undo.</div><div id="diagram-manager-body"></div>',
     buttons: [
       { label: 'Close', className: 'tb-btn' }
     ]
@@ -438,7 +476,7 @@ function renameDiagramById(diagramId) {
   if (!diagram) return;
   openDiagramNameModal({
     title: 'Rename diagram',
-    initialValue: diagram.title || 'Untitled diagram',
+    initialValue: getDiagramDisplayTitle(diagram),
     confirmLabel: 'Save title',
     onConfirm: value => {
       diagram.title = value;
@@ -450,6 +488,7 @@ function renameDiagramById(diagramId) {
       saveToLocalStorage();
       openDiagramManager();
       renderDiagramNavigation();
+      setStatusModeMessage(`Renamed diagram to "${value}"`, { fade: true, autoClearMs: 1800 });
     }
   });
 }
@@ -461,7 +500,7 @@ function deleteDiagramById(diagramId) {
   syncActiveDiagramFromCurrentState();
   openBasicModal({
     title: 'Delete diagram',
-    body: `<div class="draft-modal-note">Delete <b>${escapeHtml(diagram.title || 'Untitled diagram')}</b>? Links to this diagram will be removed from any nodes that reference it.</div>`,
+    body: `<div class="draft-modal-note">Delete <b>${escapeHtml(getDiagramDisplayTitle(diagram))}</b>? Links to this diagram will be removed from any nodes that reference it.</div>`,
     buttons: [
       { label: 'Cancel', className: 'tb-btn' },
       {
@@ -484,28 +523,25 @@ function openDiagramLinkPickerForNode(nodeId) {
   syncActiveDiagramFromCurrentState();
   const candidates = ensureDiagramDocument().diagrams.filter(diagram => diagram.id !== activeDiagramId);
   if (!candidates.length) {
-    setStatusModeMessage('No other diagrams to link yet', { fade: true, autoClearMs: 1800 });
+    setStatusModeMessage('No other diagrams in this draft yet', { fade: true, autoClearMs: 1800 });
     return;
   }
   openBasicModal({
     title: 'Link diagram',
-    body: `<div class="draft-modal-note">Choose a diagram for <b>${escapeHtml(node.title || node.tag || 'this node')}</b>.</div><div id="diagram-link-picker" class="draft-list">${
+    body: `<div class="draft-modal-note">Choose a linked diagram for <b>${escapeHtml(node.title || node.tag || 'this node')}</b> inside this draft.</div><div id="diagram-link-picker" class="draft-list">${
       candidates.map(diagram => {
         const isLinked = node.linkedDiagramId === diagram.id;
         const isRoot = diagram.id === ensureDiagramDocument().rootDiagramId;
         const isActive = diagram.id === activeDiagramId;
-        const nodeCount = (diagram.state?.nodes || []).length;
-        const arrowCount = (diagram.state?.arrows || []).length;
-        const linkCount = getDiagramLinkCount(diagram.id);
         return `<button class="diagram-link-option${isLinked ? ' active' : ''}" data-diagram-id="${escapeHtml(diagram.id)}">
           <div class="diagram-link-option-main">
             <div class="diagram-link-option-title">
-              <span class="diagram-link-option-title-text">${escapeHtml(diagram.title || 'Untitled diagram')}</span>
+              <span class="diagram-link-option-title-text">${escapeHtml(getDiagramDisplayTitle(diagram))}</span>
               ${isLinked ? '<span class="draft-active-badge">Linked</span>' : ''}
               ${isRoot ? '<span class="draft-active-badge">Root</span>' : ''}
               ${isActive ? '<span class="draft-active-badge">Current</span>' : ''}
             </div>
-            <div class="diagram-link-option-meta">${nodeCount} items · ${arrowCount} connections · ${linkCount} link${linkCount === 1 ? '' : 's'}</div>
+            <div class="diagram-link-option-meta">${getDiagramSummaryMeta(diagram)}</div>
           </div>
           <span class="diagram-link-option-action">${isLinked ? 'Linked' : 'Link'}</span>
         </button>`;

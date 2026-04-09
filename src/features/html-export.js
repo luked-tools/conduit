@@ -337,11 +337,17 @@ body{background:var(--bg);font-family:'Inter',sans-serif;display:flex;flex-direc
 .export-nav-btn:disabled,.export-crumb:disabled{opacity:0.45;cursor:default;}
 #export-breadcrumbs{display:flex;align-items:center;flex-wrap:wrap;gap:6px;min-width:0;}
 .export-menu-wrap{position:relative;}
-#export-diagram-menu{position:absolute;top:calc(100% + 8px);left:0;right:auto;min-width:220px;max-width:min(320px,calc(100vw - 32px));max-height:280px;overflow:auto;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,0.18);display:flex;flex-direction:column;gap:4px;z-index:60;}
+#export-diagram-menu{position:absolute;top:calc(100% + 8px);left:0;right:auto;min-width:240px;max-width:min(360px,calc(100vw - 32px));max-height:320px;overflow:auto;padding:6px;background:var(--surface);border:1px solid var(--border);border-radius:8px;box-shadow:0 12px 32px rgba(0,0,0,0.18);display:flex;flex-direction:column;gap:4px;z-index:60;}
 #export-diagram-menu[hidden]{display:none;}
-.export-diagram-menu-item{border:1px solid transparent;background:transparent;color:var(--text2);border-radius:6px;padding:7px 9px;text-align:left;font-size:10px;font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:all 0.12s;}
+.export-diagram-menu-item{border:1px solid transparent;background:transparent;color:var(--text2);border-radius:6px;padding:8px 10px;text-align:left;font-size:10px;font-family:'IBM Plex Mono',monospace;cursor:pointer;transition:all 0.12s;}
 .export-diagram-menu-item:hover:not(:disabled){background:var(--surface2);border-color:var(--border);color:var(--text);}
 .export-diagram-menu-item:disabled{background:var(--surface2);border-color:var(--border);color:var(--text);cursor:default;}
+.export-diagram-menu-title{display:flex;align-items:center;gap:6px;min-width:0;}
+.export-diagram-menu-title-text{font-size:10px;font-weight:600;color:var(--text);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.export-diagram-menu-meta{margin-top:4px;font-size:9px;color:var(--text3);line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.export-diagram-menu-badge{padding:2px 5px;border-radius:999px;background:var(--surface3);color:var(--text3);font-size:8px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;flex-shrink:0;}
+.export-diagram-menu-badge.root{background:var(--accent-soft);color:var(--accent3);}
+.export-diagram-menu-badge.current{background:var(--surface3);color:var(--text2);}
 .export-nav-manager-btn{color:var(--text);border-color:var(--border);background:color-mix(in srgb, var(--surface2) 88%, transparent);}
 .export-nav-arrow-btn{min-width:36px;min-height:28px;padding:1px 0 3px;justify-content:center;font-size:17px;font-weight:700;line-height:1;}
 .export-crumb.active{color:var(--text);font-weight:600;background:color-mix(in srgb, var(--surface2) 88%, transparent);border-color:var(--border2);}
@@ -395,7 +401,7 @@ body{background:var(--bg);font-family:'Inter',sans-serif;display:flex;flex-direc
 .legend-box{width:18px;height:12px;border-radius:2px;}
 .legend-line{width:24px;height:2px;}
 /* Help tip */
-#help-hud{position:fixed;top:120px;left:16px;background:var(--surface);border:1px solid var(--border);backdrop-filter:blur(8px);border-radius:6px;padding:7px 11px;font-size:9.5px;color:var(--text3);z-index:20;line-height:1.75;font-family:'IBM Plex Mono',monospace;}
+#help-hud{position:fixed;top:120px;left:16px;background:var(--surface);border:1px solid var(--border);backdrop-filter:blur(8px);border-radius:6px;padding:7px 11px;font-size:9.5px;color:var(--text3);z-index:20;line-height:1.75;font-family:'IBM Plex Mono',monospace;max-width:min(420px,calc(100vw - 32px));}
 #help-hud b{color:var(--text2);font-weight:500;}
 /* Detail panel */
 #detail-overlay{position:fixed;inset:0;background:#00000060;z-index:1000;display:none;backdrop-filter:blur(2px);}
@@ -472,14 +478,14 @@ ${opts.showGrid ? '<div class="grid-bg"></div>' : ''}
   <button class="zoom-hud-btn" onclick="zoomBy(1/1.2)">&minus;</button>
   <button class="zoom-hud-btn" onclick="resetView()" style="font-size:11px;">&#8998;</button>
 </div>
-<div id="help-hud"><b>Scroll</b> to zoom &middot; <b>Drag</b> to pan &middot; Use <b>Linked diagram</b> and <b>More detail</b> for navigation and context</div>
+<div id="help-hud"><b>Scroll</b> to zoom &middot; <b>Drag</b> to pan &middot; Use <b>Diagrams</b>, <b>Linked diagram</b>, and <b>More detail</b> to move between diagrams and context</div>
   ${opts.showLegend ? `<div id="legend-wrap"><div class="legend">
     <div class="legend-item"><svg width="18" height="12" style="flex-shrink:0"><rect x="1" y="1" width="16" height="10" rx="2" fill="var(--node-internal)" stroke="var(--node-internal-border)" stroke-width="1.5"/></svg>Internal system</div>
     <div class="legend-item"><svg width="18" height="12" style="flex-shrink:0"><rect x="1" y="1" width="16" height="10" rx="2" fill="var(--node-external)" stroke="var(--node-external-border)" stroke-width="1.5" stroke-dasharray="4 2"/></svg>External entity</div>
     <div class="legend-item"><div class="legend-box" style="background:transparent;border:1.5px dashed var(--border2);"></div>Label / boundary</div>
     <div class="legend-item"><div class="legend-line" style="background:var(--accent);border-radius:1px;"></div>Connection</div>
   </div>` : ''}
-<footer style="position:fixed;bottom:4px;right:16px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text3);z-index:5;">Conduit v1.4 &middot; ${new Date().toLocaleDateString()}</footer>
+<footer style="position:fixed;bottom:4px;right:16px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text3);z-index:5;">Conduit v1.4 &middot; Full draft export &middot; ${new Date().toLocaleDateString()}</footer>
 </div>
 <scr\u0069pt>
 const _exportDoc = ${exportDocJson};
@@ -508,7 +514,7 @@ function getDiagramRecord(id){return (_exportDoc.diagrams||[]).find(diagram => S
 function getParentDiagramId(id){const targetId=String(id); const parent=(_exportDoc.diagrams||[]).find(diagram => (Array.isArray(diagram.state?.nodes)?diagram.state.nodes:[]).some(node => String(node.linkedDiagramId||'')===targetId)); return parent ? String(parent.id) : '';}
 function getDiagramAncestors(id){const path=[]; const seen=new Set(); let currentId=String(id||''); while(currentId && !seen.has(currentId)){const diagram=getDiagramRecord(currentId); if(!diagram) break; path.unshift(diagram); seen.add(currentId); currentId=getParentDiagramId(currentId);} return path;}
 function renderBreadcrumbs(){const ancestors=getDiagramAncestors(_activeDiagramId); const hasMultipleDiagrams=(_exportDoc.diagrams||[]).length>1; _navEl.hidden=!hasMultipleDiagrams && ancestors.length<=1 && _diagramBackStack.length===0 && _diagramForwardStack.length===0; _backBtn.disabled=_diagramBackStack.length===0; _forwardBtn.disabled=_diagramForwardStack.length===0; _crumbsEl.innerHTML=ancestors.map(diagram => { const active=String(diagram.id)===String(_activeDiagramId); return '<button type="button" class="export-crumb'+(active?' active':'')+'" data-diagram-id="'+escapeHtml(diagram.id)+'"'+(active?' disabled':'')+'>'+escapeHtml(diagram.title||'Untitled diagram')+'</button>'; }).join('<span class="export-crumb-sep">/</span>');}
-function renderDiagramMenu(){if(!_menuEl || !_menuToggleBtn) return; const diagrams=_exportDoc.diagrams||[]; _menuEl.innerHTML=diagrams.map(diagram => { const active=String(diagram.id)===String(_activeDiagramId); return '<button type="button" class="export-diagram-menu-item" data-diagram-id="'+escapeHtml(diagram.id)+'"'+(active?' disabled':'')+'>'+escapeHtml(diagram.title||'Untitled diagram')+'</button>'; }).join(''); _menuToggleBtn.setAttribute('aria-expanded', _menuOpen ? 'true' : 'false'); _menuEl.hidden=!_menuOpen;}
+function renderDiagramMenu(){if(!_menuEl || !_menuToggleBtn) return; const diagrams=_exportDoc.diagrams||[]; _menuEl.innerHTML=diagrams.map(diagram => { const id=String(diagram.id); const active=id===String(_activeDiagramId); const isRoot=id===String(_exportDoc.rootDiagramId); const subtitle=diagram.subtitle||''; return '<button type="button" class="export-diagram-menu-item" data-diagram-id="'+escapeHtml(id)+'"'+(active?' disabled':'')+'><div class="export-diagram-menu-title"><span class="export-diagram-menu-title-text">'+escapeHtml(diagram.title||'Untitled diagram')+'</span>'+(isRoot?'<span class="export-diagram-menu-badge root">Root</span>':'')+(active?'<span class="export-diagram-menu-badge current">Current</span>':'')+'</div>'+(subtitle?'<div class="export-diagram-menu-meta">'+escapeHtml(subtitle)+'</div>':'')+'</button>'; }).join(''); _menuToggleBtn.setAttribute('aria-expanded', _menuOpen ? 'true' : 'false'); _menuEl.hidden=!_menuOpen;}
 function closeDiagramMenu(){_menuOpen=false; renderDiagramMenu();}
 function toggleDiagramMenu(){_menuOpen=!_menuOpen; renderDiagramMenu();}
 function updateHeader(diagram){const title=diagram?.title||'Untitled diagram'; const subtitle=diagram?.subtitle||''; _titleEl.textContent=title; document.title=title; _subtitleEl.textContent=subtitle; _subtitleEl.hidden=!subtitle;}

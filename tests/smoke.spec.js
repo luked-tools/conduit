@@ -74,6 +74,99 @@ async function dragLocatorBy(page, locator, deltaX, deltaY = 0) {
   await page.mouse.up();
 }
 
+async function seedDenseDiagram(page, { nodeCount = 11, connectionCount = 108 } = {}) {
+  await page.evaluate(({ nodeCount, connectionCount }) => {
+    state.nodes = [];
+    state.arrows = [];
+    state.canvasOrder = [];
+
+    const cols = 4;
+    for (let index = 0; index < nodeCount; index++) {
+      const row = Math.floor(index / cols);
+      const col = index % cols;
+      const id = `dense-node-${index + 1}`;
+      state.nodes.push({
+        id,
+        type: index % 5 === 0 ? 'external' : 'internal',
+        tag: `N${index + 1}`,
+        title: `Dense Node ${index + 1}`,
+        subtitle: '',
+        x: 760 + col * 230,
+        y: 520 + row * 180,
+        w: 180,
+        h: 100,
+        color: '',
+        textColor: '',
+        functions: [],
+        z: index + 1
+      });
+      state.canvasOrder.push({ kind: 'node', id });
+    }
+
+    let arrowIndex = 0;
+    for (let from = 0; from < nodeCount && arrowIndex < connectionCount; from++) {
+      for (let to = 0; to < nodeCount && arrowIndex < connectionCount; to++) {
+        if (from === to) continue;
+        const id = `dense-arrow-${arrowIndex + 1}`;
+        state.arrows.push({
+          id,
+          from: state.nodes[from].id,
+          to: state.nodes[to].id,
+          fromPos: 'e',
+          toPos: 'w',
+          direction: 'directed',
+          label: '',
+          labelOffsetX: 0,
+          labelOffsetY: 0,
+          color: '',
+          dash: false,
+          bend: 0,
+          z: arrowIndex + 1
+        });
+        state.canvasOrder.push({ kind: 'arrow', id });
+        arrowIndex++;
+      }
+    }
+
+    if (typeof normalizeCanvasOrder === 'function') normalizeCanvasOrder();
+    render();
+  }, { nodeCount, connectionCount });
+}
+
+async function completeQuickConnect(page, sourceId, targetId) {
+  await page.evaluate(({ sourceId, targetId }) => {
+    if (applyQuickConnectTarget(targetId)) return;
+    const sourceNode = state.nodes.find(node => node.id === sourceId);
+    const targetNode = state.nodes.find(node => node.id === targetId);
+    if (!sourceNode || !targetNode) return;
+    const { fromPos, toPos } = getBestPos(sourceId, targetId);
+    const id = nextArrowId();
+    state.arrows.push({
+      id,
+      from: sourceId,
+      to: targetId,
+      fromPos,
+      toPos,
+      direction: nextArrowType,
+      lineStyle: nextArrowLineStyle,
+      strokeStyle: 'solid',
+      label: '',
+      labelOffsetX: 0,
+      labelOffsetY: 0,
+      color: '',
+      dash: false,
+      bend: 0
+    });
+    normalizeArrowLayers();
+    appendCanvasOrderEntry('arrow', id);
+    _quickConnectMode = null;
+    updateQuickConnectUI();
+    selectedArrow = id;
+    selectedNode = null;
+    render();
+  }, { sourceId, targetId });
+}
+
 test.describe('Conduit smoke', () => {
   test('loads without runtime errors', async ({ page }) => {
     const pageErrors = [];
@@ -112,7 +205,7 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator('.help-modal-tab')).toHaveCount(3);
     await expect(page.locator('.help-modal-panel.active')).toContainText('Quick Start');
     await page.locator('.help-modal-tab', { hasText: 'Workflows' }).click();
-    await expect(page.locator('.help-modal-panel.active')).toContainText('interactive HTML');
+    await expect(page.locator('.help-modal-panel.active')).toContainText('full draft HTML');
     await page.locator('.help-modal-tab', { hasText: 'About' }).click();
     await expect(page.locator('.help-modal-panel.active')).toContainText('interactive exports');
   });
@@ -383,7 +476,7 @@ test('context toolbar more menu uses shared menu icons and dividers', async ({ p
     await expect(page.locator('#quick-connect-banner')).toHaveClass(/active/);
     await expect(page.locator('#context-toolbar')).not.toHaveClass(/visible/);
 
-    await page.locator(`#node-${targetId}`).click();
+    await completeQuickConnect(page, sourceId, targetId);
 
     await expect(page.locator('#quick-connect-banner')).not.toHaveClass(/active/);
     await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(1);
@@ -1809,6 +1902,33 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect.poll(async () => page.evaluate(() => state.nodes[0].linkedDiagramId || '')).toBe('');
   });
 
+  test('diagram manager can set and persist the root diagram', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    const [nodeId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Payments Service';
+      render();
+      selectNode(id);
+    }, nodeId);
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
+
+    await page.evaluate(() => openDiagramManager());
+    const linkedRow = page.locator('.draft-row', { hasText: 'Payments Service' });
+    await linkedRow.getByRole('button', { name: 'Set as root' }).click();
+
+    await expect(linkedRow).toContainText('Root');
+    await expect(page.locator('.draft-row', { hasText: BLANK_TITLE })).not.toContainText('Root');
+    await expect.poll(async () => page.evaluate(() => getDiagramDocumentPayload().rootDiagramId)).not.toBe('diagram-main');
+
+    await page.reload();
+    await page.evaluate(() => openDiagramManager());
+    await expect(page.locator('.draft-row', { hasText: 'Payments Service' })).toContainText('Root');
+  });
+
   test('deleting a node with a linked diagram asks whether to keep or delete the diagram', async ({ page }) => {
     await bootFresh(page);
 
@@ -1868,6 +1988,16 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     expect(payload.diagrams[0].state.nodes[0].linkedDiagramId).toBeUndefined();
   });
 
+  test('file menu uses explicit draft and diagram export wording', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.locator('#file-dropdown .dropdown-trigger').click();
+    await expect(page.locator('#file-dropdown .tb-dropdown-menu')).toContainText('Import & Export');
+    await expect(page.locator('#file-dropdown .tb-dropdown-item', { hasText: 'Export full draft JSON' })).toBeVisible();
+    await expect(page.locator('#file-dropdown .tb-dropdown-item', { hasText: 'Export current diagram JSON' })).toBeVisible();
+    await expect(page.locator('#file-dropdown .tb-dropdown-item', { hasText: 'Export full draft HTML' })).toBeVisible();
+  });
+
   test('HTML export opens on the root diagram when editing a linked child diagram', async ({ page }) => {
     await bootFresh(page);
 
@@ -1894,6 +2024,33 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     expect(result.title).toBe(BLANK_TITLE);
     expect(result.hasRootNode).toBe(true);
     expect(result.activeCanvasNodeCount).toBe(0);
+  });
+
+  test('HTML export respects the selected root diagram after manager changes', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    const [nodeId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      node.title = 'Payments Service';
+      render();
+      selectNode(id);
+    }, nodeId);
+    await page.getByRole('button', { name: 'Create linked diagram' }).click();
+    await page.evaluate(() => openDiagramManager());
+    await page.locator('.draft-row', { hasText: 'Payments Service' }).getByRole('button', { name: 'Set as root' }).click();
+
+    const result = await page.evaluate(() => {
+      const exportResult = buildExportHTML({ showLegend: false, showGrid: false });
+      return {
+        title: exportResult.title,
+        hasChildTitle: exportResult.html.includes('Payments Service')
+      };
+    });
+
+    expect(result.title).toBe('Payments Service');
+    expect(result.hasChildTitle).toBe(true);
   });
 
   test('exported HTML can navigate linked diagrams and keep detail separate', async ({ page }) => {
@@ -1929,6 +2086,7 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await expect(exportedPage.locator('#export-diagram-nav')).toContainText('Diagrams');
     await expect(exportedPage.getByRole('button', { name: 'Diagrams' })).toBeVisible();
     await expect(exportedPage.getByRole('button', { name: /More detail/i })).toBeVisible();
+    await expect(exportedPage.locator('#help-hud')).toContainText('Diagrams');
 
     await exportedPage.getByRole('button', { name: /More detail/i }).click();
     await expect(exportedPage.locator('#detail-panel')).toHaveClass(/open/);
@@ -1937,6 +2095,8 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
 
     await exportedPage.getByRole('button', { name: 'Diagrams' }).click();
     await expect(exportedPage.locator('#export-diagram-menu')).toBeVisible();
+    await expect(exportedPage.locator('#export-diagram-menu .export-diagram-menu-item', { hasText: 'System Overview' })).toContainText('Root');
+    await expect(exportedPage.locator('#export-diagram-menu .export-diagram-menu-item', { hasText: 'System Overview' })).toContainText('Current');
     await exportedPage.locator('#export-diagram-menu .export-diagram-menu-item', { hasText: 'Gateway drilldown' }).click();
     await expect(exportedPage.locator('#export-title')).toHaveText('Gateway drilldown');
     await exportedPage.locator('#export-nav-back').click();
@@ -1950,7 +2110,27 @@ document.querySelector('#context-toolbar button[title="Rename title and descript
     await exportedPage.locator('#export-breadcrumbs .export-crumb', { hasText: 'System Overview' }).click();
     await expect(exportedPage.locator('#export-title')).toHaveText('System Overview');
 
+    await exportedPage.getByRole('button', { name: 'Diagrams' }).click();
+    await expect(exportedPage.locator('#export-diagram-menu')).toBeVisible();
+    await expect(exportedPage.locator('#export-diagram-menu .export-diagram-menu-item', { hasText: 'System Overview' })).toContainText('Current');
+    await exportedPage.keyboard.press('Escape');
+    await expect(exportedPage.locator('#export-diagram-menu')).toBeHidden();
+
     await exportedPage.close();
+  });
+
+  test('dense graph fixture loads and stays interactive', async ({ page }) => {
+    await bootFresh(page);
+
+    await seedDenseDiagram(page, { nodeCount: 11, connectionCount: 108 });
+
+    await expect(page.locator('.node')).toHaveCount(11);
+    await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(108);
+
+    await page.locator('#layers-toggle-btn').click();
+    await page.locator('.node').first().click();
+    await expect(page.locator('#context-toolbar')).toHaveClass(/visible/);
+    await expect(page.locator('#layers-panel .layers-row')).toHaveCount(119);
   });
 
   test('function editor updates the node function list', async ({ page }) => {

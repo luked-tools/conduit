@@ -9,10 +9,12 @@ function downloadDiagramJSON(data, filename) {
 
 function exportJSON() {
   downloadDiagramJSON(getDiagramDocumentPayload(), 'conduit-diagram.json');
+  setStatusModeMessage('Exported full draft JSON', { fade: true, autoClearMs: 1600 });
 }
 
 function exportCurrentDiagramJSON() {
   downloadDiagramJSON(getDiagramDocumentPayload({ currentOnly: true }), 'conduit-current-diagram.json');
+  setStatusModeMessage('Exported current diagram JSON', { fade: true, autoClearMs: 1600 });
 }
 
 function importFile() {
