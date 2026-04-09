@@ -13,6 +13,15 @@ async function bootFresh(page) {
     window.sessionStorage.clear();
   });
   await page.reload();
+  await page.evaluate(() => {
+    if (typeof toggleLayersPanel === 'function') toggleLayersPanel(false);
+    if (typeof closeAppearancePanel === 'function') closeAppearancePanel();
+    if (typeof cancelQuickConnectMode === 'function') cancelQuickConnectMode();
+    if (typeof cancelNodeLayerTargetMode === 'function') cancelNodeLayerTargetMode();
+    if (typeof cancelStyleBrush === 'function' && typeof _brushActive !== 'undefined' && _brushActive) cancelStyleBrush();
+    if (typeof closeInlineNodeEdit === 'function') closeInlineNodeEdit();
+    if (typeof deselect === 'function') deselect();
+  });
 }
 
 async function addNode(page, type = 'internal', x = 900, y = 650) {

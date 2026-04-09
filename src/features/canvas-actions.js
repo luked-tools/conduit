@@ -359,9 +359,12 @@ function applyQuickConnectTarget(targetId) {
   });
   normalizeArrowLayers();
   appendCanvasOrderEntry('arrow', id);
-  cancelQuickConnectMode();
+  _quickConnectMode = null;
+  updateQuickConnectUI();
+  selectedArrow = id;
+  selectedNode = null;
   render();
-  selectArrow(id);
+  updateQuickConnectUI();
   saveToLocalStorage();
 
   const targetName = (targetNode.title || targetNode.tag || 'target node').replace(/\n/g, ' ');
