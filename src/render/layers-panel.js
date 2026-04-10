@@ -22,7 +22,7 @@ function closeLayersPanel() {
 }
 
 function setLayersPanelFilter(filter) {
-  const next = ['all', 'nodes', 'connections'].includes(filter) ? filter : 'all';
+  const next = ['all', 'nodes', 'connections', 'annotations'].includes(filter) ? filter : 'all';
   if (_layersPanelFilter === next) return;
   _layersPanelFilter = next;
   if (_layersPanelOpen) renderLayersPanel();
@@ -137,6 +137,35 @@ function getArrowPreviewMarkup(arrow) {
   `;
 }
 
+function getLabelPreviewMarkup(label) {
+  const color = label.textColor || 'var(--text2)';
+  const backgroundStyle = label.backgroundStyle === 'soft' ? 'fill' : (label.backgroundStyle || 'none');
+  const fill = label.fillColor || 'var(--surface2)';
+  return `
+    <span class="layers-annotation-preview layers-label-preview" aria-hidden="true">
+      <svg viewBox="0 0 28 16">
+        <rect x="2.5" y="3" width="23" height="10" rx="5" fill="${backgroundStyle === 'fill' ? fill : 'transparent'}" stroke="${backgroundStyle === 'fill' ? 'var(--border)' : 'transparent'}" stroke-width="1"/>
+        <path d="M7 8h14" stroke="${color}" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </span>
+  `;
+}
+
+function getIconPreviewMarkup(icon) {
+  const color = icon.color || 'var(--text2)';
+  const backgroundStyle = icon.backgroundStyle === 'soft' ? 'fill' : (icon.backgroundStyle || 'none');
+  const fill = icon.fillColor || 'var(--surface2)';
+  const edge = backgroundStyle === 'fill' ? 'var(--border2)' : 'color-mix(in srgb, var(--border2) 88%, var(--text3) 12%)';
+  return `
+    <span class="layers-annotation-preview layers-icon-preview" aria-hidden="true">
+      <svg viewBox="0 0 28 16">
+        <rect x="6" y="2" width="16" height="12" rx="4" fill="${backgroundStyle === 'fill' ? fill : 'transparent'}" stroke="${edge}" stroke-width="1.15"/>
+        <circle cx="14" cy="8" r="3" fill="none" stroke="${color}" stroke-width="1.6"/>
+      </svg>
+    </span>
+  `;
+}
+
 function makeLayersActionButton({ title, action, disabled = false, onClick }) {
   const btn = document.createElement('button');
   btn.type = 'button';
@@ -194,12 +223,27 @@ function applyLayersDrop(sourceKind, sourceId, targetKind, targetId, position) {
   if (sourceKind === 'node') {
     selectedNode = sourceId;
     selectedArrow = null;
+    selectedLabel = null;
+    selectedIcon = null;
   } else if (sourceKind === 'arrow') {
     selectedArrow = sourceId;
     selectedNode = null;
+    selectedLabel = null;
+    selectedIcon = null;
+  } else if (sourceKind === 'label') {
+    selectedLabel = sourceId;
+    selectedNode = null;
+    selectedArrow = null;
+    selectedIcon = null;
+  } else if (sourceKind === 'icon') {
+    selectedIcon = sourceId;
+    selectedNode = null;
+    selectedArrow = null;
+    selectedLabel = null;
   }
   if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
   if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
+  if (typeof refreshRenderedAnnotationLayers === 'function') refreshRenderedAnnotationLayers();
   if (typeof scheduleSelectionChromeRefresh === 'function') scheduleSelectionChromeRefresh();
   scheduleSaveToLocalStorage();
   setStatusModeMessage('Layer order updated', { fade: true, autoClearMs: 1500 });
@@ -308,7 +352,9 @@ function makeLayersRow({ kind, id, nodeType = '', previewMarkup = '', title, met
 function renderLayersSection(body, title, badge, emptyText, rows) {
   const section = document.createElement('div');
   section.className = 'layers-section';
-  section.dataset.section = title.toLowerCase().includes('connection') ? 'connections' : 'nodes';
+  if (title.toLowerCase().includes('connection')) section.dataset.section = 'connections';
+  else if (title.toLowerCase().includes('annotation')) section.dataset.section = 'annotations';
+  else section.dataset.section = 'nodes';
 
   const header = document.createElement('div');
   header.className = 'layers-section-header';
@@ -344,6 +390,17 @@ function renderLayersPanel() {
   if (!panel || !body || !_layersPanelOpen) return;
 
   if (header) {
+    let titleRow = document.getElementById('layers-panel-title-row');
+    if (!titleRow) {
+      titleRow = document.createElement('div');
+      titleRow.id = 'layers-panel-title-row';
+      titleRow.className = 'layers-panel-title-row';
+      const titleEl = document.getElementById('layers-panel-title');
+      const closeBtn = document.getElementById('layers-panel-close');
+      if (titleEl) titleRow.appendChild(titleEl);
+      if (closeBtn) titleRow.appendChild(closeBtn);
+      header.prepend(titleRow);
+    }
     let filter = document.getElementById('layers-panel-filter');
     if (!filter) {
       filter = document.createElement('div');
@@ -356,7 +413,8 @@ function renderLayersPanel() {
       [
         ['all', 'All'],
         ['nodes', 'Nodes'],
-        ['connections', 'Connections']
+        ['connections', 'Connections'],
+        ['annotations', 'Annotations']
       ].forEach(([value, label]) => {
         const btn = document.createElement('button');
         btn.type = 'button';
@@ -366,12 +424,7 @@ function renderLayersPanel() {
         btn.addEventListener('click', () => setLayersPanelFilter(value));
         filter.appendChild(btn);
       });
-      const closeBtn = document.getElementById('layers-panel-close');
-      if (closeBtn) {
-        header.insertBefore(filter, closeBtn);
-      } else {
-        header.appendChild(filter);
-      }
+      header.appendChild(filter);
     }
     filter.querySelectorAll('.layers-filter-btn').forEach(btn => {
       const active = btn.dataset.filter === _layersPanelFilter;
@@ -441,12 +494,58 @@ function renderLayersPanel() {
     });
   });
 
+  const annotationRows = getCanvasLayerEntries()
+    .filter(entry => entry.kind === 'label' || entry.kind === 'icon')
+    .slice()
+    .reverse()
+    .map(entry => {
+      if (entry.kind === 'label') {
+        const label = entry.object;
+        const meta = `Layer ${entry.index + 1}`;
+        return makeLayersRow({
+          kind: 'label',
+          id: label.id,
+          previewMarkup: getLabelPreviewMarkup(label),
+          title: (label.text || 'Label').replace(/\n/g, ' '),
+          meta,
+          selected: selectedLabel === label.id,
+          onSelect: () => selectLabel(label.id),
+          actions: [
+            makeLayersActionButton({ title: 'To back', action: 'back', disabled: !canMoveLabelLayer(label.id, 'back'), onClick: () => moveLabelLayer(label.id, 'back') }),
+            makeLayersActionButton({ title: 'Backward', action: 'backward', disabled: !canMoveLabelLayer(label.id, 'backward'), onClick: () => moveLabelLayer(label.id, 'backward') }),
+            makeLayersActionButton({ title: 'Forward', action: 'forward', disabled: !canMoveLabelLayer(label.id, 'forward'), onClick: () => moveLabelLayer(label.id, 'forward') }),
+            makeLayersActionButton({ title: 'To front', action: 'front', disabled: !canMoveLabelLayer(label.id, 'front'), onClick: () => moveLabelLayer(label.id, 'front') })
+          ]
+        });
+      }
+      const icon = entry.object;
+      const meta = `${icon.iconTitle || 'Icon'} · Layer ${entry.index + 1}`;
+      return makeLayersRow({
+        kind: 'icon',
+        id: icon.id,
+        previewMarkup: getIconPreviewMarkup(icon),
+        title: icon.iconTitle || 'Icon',
+        meta,
+        selected: selectedIcon === icon.id,
+        onSelect: () => selectIcon(icon.id),
+        actions: [
+          makeLayersActionButton({ title: 'To back', action: 'back', disabled: !canMoveIconLayer(icon.id, 'back'), onClick: () => moveIconLayer(icon.id, 'back') }),
+          makeLayersActionButton({ title: 'Backward', action: 'backward', disabled: !canMoveIconLayer(icon.id, 'backward'), onClick: () => moveIconLayer(icon.id, 'backward') }),
+          makeLayersActionButton({ title: 'Forward', action: 'forward', disabled: !canMoveIconLayer(icon.id, 'forward'), onClick: () => moveIconLayer(icon.id, 'forward') }),
+          makeLayersActionButton({ title: 'To front', action: 'front', disabled: !canMoveIconLayer(icon.id, 'front'), onClick: () => moveIconLayer(icon.id, 'front') })
+        ]
+      });
+    });
+
   if (_layersPanelFilter === 'all') {
     renderLayersSection(body, 'Node Layers', `${state.nodes.length}`, 'No nodes yet', nodeRows);
+    renderLayersSection(body, 'Annotation Layers', `${(state.labels || []).length + (state.icons || []).length}`, 'No annotations yet', annotationRows);
     renderLayersSection(body, 'Connection Layers', `${state.arrows.length}`, 'No connections yet', arrowRows);
-  } else if (_layersPanelFilter !== 'connections') {
+  } else if (_layersPanelFilter === 'nodes') {
     renderLayersSection(body, 'Node Layers', `${state.nodes.length}`, 'No nodes yet', nodeRows);
-  } else if (_layersPanelFilter !== 'nodes') {
+  } else if (_layersPanelFilter === 'annotations') {
+    renderLayersSection(body, 'Annotation Layers', `${(state.labels || []).length + (state.icons || []).length}`, 'No annotations yet', annotationRows);
+  } else if (_layersPanelFilter === 'connections') {
     renderLayersSection(body, 'Connection Layers', `${state.arrows.length}`, 'No connections yet', arrowRows);
   }
 

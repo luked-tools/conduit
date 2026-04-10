@@ -35,12 +35,24 @@ function getContextToolbarAnchor() {
     return { rect };
   }
 
+  if (selectedLabel) {
+    const labelEl = document.getElementById(`label-${selectedLabel}`);
+    if (!labelEl) return null;
+    return { rect: labelEl.getBoundingClientRect() };
+  }
+
+  if (selectedIcon) {
+    const iconEl = document.getElementById(`icon-${selectedIcon}`);
+    if (!iconEl) return null;
+    return { rect: iconEl.getBoundingClientRect() };
+  }
+
   return null;
 }
 
 function shouldShowContextToolbar() {
-  if (!selectedNode && !selectedArrow) return false;
-  if (wireActive || epDragActive || draggingNode || resizingNode || panDragging || _inlineNodeEditor || _nodeLayerTargetMode || _quickConnectMode) return false;
+  if (!selectedNode && !selectedArrow && !selectedLabel && !selectedIcon) return false;
+  if (wireActive || epDragActive || draggingNode || draggingAnnotation || resizingAnnotation || resizingNode || panDragging || _inlineNodeEditor || _inlineAnnotationEditor || _nodeLayerTargetMode || _quickConnectMode) return false;
   return true;
 }
 
@@ -132,6 +144,66 @@ function renderContextToolbar() {
       onClick: () => deleteSelected()
     }));
     toolbar.appendChild(makeContextToolbarMoreButton('node', nodeId));
+  } else if (selectedLabel) {
+    const labelId = selectedLabel;
+    toolbar.appendChild(makeContextToolbarButton({
+      title: 'Edit label text',
+      label: 'Edit',
+      icon: '&#9998;',
+      onClick: () => startInlineAnnotationEdit(labelId)
+    }));
+    toolbar.appendChild(makeContextToolbarButton({
+      title: 'Move backward',
+      label: 'Back',
+      icon: '&#8595;',
+      disabled: !canMoveLabelLayer(labelId, 'backward'),
+      onClick: () => moveLabelLayer(labelId, 'backward')
+    }));
+    toolbar.appendChild(makeContextToolbarButton({
+      title: 'Move forward',
+      label: 'Forward',
+      icon: '&#8593;',
+      disabled: !canMoveLabelLayer(labelId, 'forward'),
+      onClick: () => moveLabelLayer(labelId, 'forward')
+    }));
+    toolbar.appendChild(makeContextToolbarButton({
+      title: 'Delete label',
+      label: 'Delete',
+      icon: 'x',
+      danger: true,
+      onClick: () => deleteSelected()
+    }));
+    toolbar.appendChild(makeContextToolbarMoreButton('label', labelId));
+  } else if (selectedIcon) {
+    const iconId = selectedIcon;
+    toolbar.appendChild(makeContextToolbarButton({
+      title: 'Choose icon',
+      label: 'Icon',
+      icon: '&#9673;',
+      onClick: () => openIconPicker({ iconId })
+    }));
+    toolbar.appendChild(makeContextToolbarButton({
+      title: 'Move backward',
+      label: 'Back',
+      icon: '&#8595;',
+      disabled: !canMoveIconLayer(iconId, 'backward'),
+      onClick: () => moveIconLayer(iconId, 'backward')
+    }));
+    toolbar.appendChild(makeContextToolbarButton({
+      title: 'Move forward',
+      label: 'Forward',
+      icon: '&#8593;',
+      disabled: !canMoveIconLayer(iconId, 'forward'),
+      onClick: () => moveIconLayer(iconId, 'forward')
+    }));
+    toolbar.appendChild(makeContextToolbarButton({
+      title: 'Delete icon',
+      label: 'Delete',
+      icon: 'x',
+      danger: true,
+      onClick: () => deleteSelected()
+    }));
+    toolbar.appendChild(makeContextToolbarMoreButton('icon', iconId));
   } else if (selectedArrow) {
     const arrowId = selectedArrow;
     toolbar.appendChild(makeContextToolbarButton({
@@ -274,6 +346,64 @@ function makeContextToolbarMenu() {
       label: 'Send behind...',
       icon: getContextMenuIcon('behind'),
       onClick: runMenuAction(() => startNodeLayerTargetMode(nodeId, 'behind'))
+    }));
+  } else if (selectedLabel) {
+    const labelId = selectedLabel;
+    menu.appendChild(createAppMenuItem({
+      className: 'context-toolbar-menu-item',
+      label: 'Duplicate',
+      icon: getContextMenuIcon('duplicate'),
+      onClick: runMenuAction(() => {
+        copySelectedNode();
+        pasteNode();
+      })
+    }));
+    menu.appendChild(createAppMenuDivider('context-toolbar-menu-divider'));
+    menu.appendChild(createAppMenuItem({
+      className: 'context-toolbar-menu-item',
+      label: 'To front',
+      icon: getContextMenuIcon('front'),
+      disabled: !canMoveLabelLayer(labelId, 'front'),
+      onClick: runMenuAction(() => moveLabelLayer(labelId, 'front'))
+    }));
+    menu.appendChild(createAppMenuItem({
+      className: 'context-toolbar-menu-item',
+      label: 'To back',
+      icon: getContextMenuIcon('back'),
+      disabled: !canMoveLabelLayer(labelId, 'back'),
+      onClick: runMenuAction(() => moveLabelLayer(labelId, 'back'))
+    }));
+  } else if (selectedIcon) {
+    const iconId = selectedIcon;
+    menu.appendChild(createAppMenuItem({
+      className: 'context-toolbar-menu-item',
+      label: 'Choose icon',
+      icon: getContextMenuIcon('details'),
+      onClick: runMenuAction(() => openIconPicker({ iconId }))
+    }));
+    menu.appendChild(createAppMenuItem({
+      className: 'context-toolbar-menu-item',
+      label: 'Duplicate',
+      icon: getContextMenuIcon('duplicate'),
+      onClick: runMenuAction(() => {
+        copySelectedNode();
+        pasteNode();
+      })
+    }));
+    menu.appendChild(createAppMenuDivider('context-toolbar-menu-divider'));
+    menu.appendChild(createAppMenuItem({
+      className: 'context-toolbar-menu-item',
+      label: 'To front',
+      icon: getContextMenuIcon('front'),
+      disabled: !canMoveIconLayer(iconId, 'front'),
+      onClick: runMenuAction(() => moveIconLayer(iconId, 'front'))
+    }));
+    menu.appendChild(createAppMenuItem({
+      className: 'context-toolbar-menu-item',
+      label: 'To back',
+      icon: getContextMenuIcon('back'),
+      disabled: !canMoveIconLayer(iconId, 'back'),
+      onClick: runMenuAction(() => moveIconLayer(iconId, 'back'))
     }));
   } else if (selectedArrow) {
     const arrowId = selectedArrow;

@@ -41,6 +41,8 @@ function undo() {
   state = JSON.parse(undoStack.pop());
   selectedNode = null;
   selectedArrow = null;
+  selectedLabel = null;
+  selectedIcon = null;
   updateHistoryBtns();
   render();
 }
@@ -53,6 +55,8 @@ function redo() {
   state = JSON.parse(redoStack.pop());
   selectedNode = null;
   selectedArrow = null;
+  selectedLabel = null;
+  selectedIcon = null;
   updateHistoryBtns();
   render();
 }

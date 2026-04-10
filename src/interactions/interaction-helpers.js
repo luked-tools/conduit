@@ -26,7 +26,7 @@ function _movePaletteDrag(e) {
   paletteDragMoved = true;
 
   // Show ghost
-  const labels = { internal: 'Internal System', external: 'External Entity', boundary: 'Boundary Box' };
+  const labels = { internal: 'Internal System', external: 'External Entity', boundary: 'Boundary Box', label: 'Label', icon: 'Icon' };
   _ghost.textContent  = labels[paletteDragType] || paletteDragType;
   _ghost.className    = paletteDragType;
   _ghost.style.display = 'block';

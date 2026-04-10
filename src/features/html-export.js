@@ -67,6 +67,8 @@ function buildExportHTML(opts) {
   function renderCurrentStateForExport(diagram) {
     const nodes = state.nodes;
     const arrows = state.arrows;
+    const labels = state.labels || [];
+    const icons = state.icons || [];
 
     function estimateExportHeight(n) {
       if (n.type === 'boundary') return n.h;
@@ -104,6 +106,21 @@ function buildExportHTML(opts) {
       minY = Math.min(minY, n.y);
       maxX = Math.max(maxX, n.x + n.w);
       maxY = Math.max(maxY, n.y + h);
+    });
+    labels.forEach(label => {
+      const width = Math.max(40, (String(label.text || 'Label').split('\n').reduce((max, line) => Math.max(max, line.length), 0) * ((label.fontWeight || 600) >= 600 ? 9 : 8)) + 20);
+      const height = (Math.max(1, String(label.text || 'Label').split('\n').length) * ((label.fontSize || 16) + 5)) + 12;
+      minX = Math.min(minX, label.x);
+      minY = Math.min(minY, label.y);
+      maxX = Math.max(maxX, label.x + width);
+      maxY = Math.max(maxY, label.y + height);
+    });
+    icons.forEach(icon => {
+      const size = Math.max(20, Number(icon.size) || 40);
+      minX = Math.min(minX, icon.x);
+      minY = Math.min(minY, icon.y);
+      maxX = Math.max(maxX, icon.x + size);
+      maxY = Math.max(maxY, icon.y + size);
     });
     if (!nodes.length) {
       minX = 0;
@@ -270,20 +287,60 @@ function buildExportHTML(opts) {
         + (n.tag ? `<div class="node-tag" style="${n.tagColor ? 'color:'+n.tagColor+';' : tc}">${escapeHtml(n.tag)}</div>` : '')
         + `<div class="node-title" style="${tc}">${escapeHtml(n.title)}</div>`
         + (n.subtitle ? `<div class="node-subtitle" style="${n.subtitleColor ? 'color:'+n.subtitleColor+';' : tc}">${escapeHtml(n.subtitle)}</div>` : '')
+        + linkChip
         + fnItems
         + `</div>`;
     }
 
       const zStyle = `z-index:${getRenderedNodeLayerValue(n, entry.index)};`;
       const clickAttr = (n.type !== 'boundary' && hasDetail && !linkedDiagram) ? `style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${zStyle}${colorStyle}cursor:pointer;" data-click-detail="1"` : `style="position:absolute;left:${n.x-minX}px;top:${n.y-minY}px;width:${n.w}px;min-height:${n.h}px;${zStyle}${colorStyle}" data-click-detail="0"`;
-      nodeHtml += `<div class="node ${nodeType}${linkedDiagram ? ' has-linked-diagram' : ''}" data-node-id="${escapeHtml(String(n.id))}" ${clickAttr}>${innerHtml}${detailBtn}${linkChip}</div>`;
+      nodeHtml += `<div class="node ${nodeType}${linkedDiagram ? ' has-linked-diagram' : ''}" data-node-id="${escapeHtml(String(n.id))}" ${clickAttr}>${innerHtml}${detailBtn}</div>`;
+    });
+
+    let annotationHtml = '';
+    labels.forEach(label => {
+      const lines = String(label.text || 'Label').split('\n').map(line => escapeHtml(line));
+      const backgroundStyle = label.backgroundStyle === 'soft' ? 'fill' : (label.backgroundStyle || 'none');
+      const fillColor = label.fillColor || 'var(--surface)';
+      const textCss = [
+        label.textColor ? `color:${label.textColor}` : '',
+        `font-size:${label.fontSize || 16}px`,
+        `font-weight:${label.fontWeight || 600}`,
+        `font-style:${label.fontStyle || 'normal'}`
+      ].filter(Boolean).join(';');
+      const style = [
+        `left:${label.x - minX}px`,
+        `top:${label.y - minY}px`,
+        `z-index:${getRenderedLabelLayerValue(label)}`,
+        `opacity:${label.opacity ?? 1}`,
+        `background:${backgroundStyle === 'fill' ? fillColor : 'transparent'}`,
+        `border-color:${backgroundStyle === 'fill' ? 'var(--border)' : 'transparent'}`
+      ].join(';');
+      annotationHtml += `<div class="canvas-annotation annotation-label" style="${style}"><div class="annotation-label-text" style="${textCss}">${lines.join('<br>')}</div></div>`;
+    });
+    icons.forEach(icon => {
+      const size = Math.max(20, Number(icon.size) || 40);
+      const backgroundStyle = icon.backgroundStyle === 'soft' ? 'fill' : (icon.backgroundStyle || 'none');
+      const fillColor = icon.fillColor || 'var(--surface)';
+      const style = [
+        `left:${icon.x - minX}px`,
+        `top:${icon.y - minY}px`,
+        `width:${size}px`,
+        `height:${size}px`,
+        `z-index:${getRenderedIconLayerValue(icon)}`,
+        `opacity:${icon.opacity ?? 1}`,
+        `color:${icon.color || 'var(--text2)'}`,
+        `background:${backgroundStyle === 'fill' ? fillColor : 'transparent'}`,
+        `border-color:${backgroundStyle === 'fill' ? 'var(--border)' : 'transparent'}`
+      ].join(';');
+      annotationHtml += `<div class="canvas-annotation annotation-icon" style="${style}"><div class="annotation-icon-glyph">${sanitizeImportedIconSvg(icon.svgMarkup || '') || getBuiltinIconDefinition(icon.iconKey)?.svg || ''}</div></div>`;
     });
 
     return {
       id: String(diagram.id),
       title: diagram.title || 'Untitled diagram',
       subtitle: diagram.subtitle || '',
-      markup: `<div class="diagram" style="width:${W}px;height:${H}px;">${nodeHtml}${svgArrows}</div>`,
+      markup: `<div class="diagram" style="width:${W}px;height:${H}px;">${nodeHtml}${annotationHtml}${svgArrows}</div>`,
       detailData: nodeDetailData,
       width: W,
       height: H,
@@ -366,8 +423,6 @@ body{background:var(--bg);font-family:'Inter',sans-serif;display:flex;flex-direc
 .node.boundary{background:transparent;border:1px dashed var(--border2);box-shadow:none;z-index:1;}
 .node-inner{padding:12px 14px;}
 .node.boundary .node-inner{padding:10px 14px;}
-.node.has-linked-diagram .node-inner{padding-bottom:42px;}
-.node.boundary.has-linked-diagram .node-inner{padding-bottom:36px;}
 .node-tag{font-family:'IBM Plex Mono',monospace;font-size:8.5px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--text3);margin-bottom:5px;}
 .node-title{font-family:'Inter',sans-serif;font-size:13px;font-weight:600;color:var(--text);margin-bottom:3px;line-height:1.35;letter-spacing:-0.02em;white-space:pre-line;}
 .node.boundary .node-title{font-size:11px;color:var(--text3);font-weight:600;font-family:'IBM Plex Mono',monospace;letter-spacing:0.06em;text-transform:uppercase;white-space:pre-line;}
@@ -386,9 +441,14 @@ body{background:var(--bg);font-family:'Inter',sans-serif;display:flex;flex-direc
 /* Detail trigger button */
 .detail-btn{position:absolute;top:8px;right:8px;border:1px solid var(--accent3);border-radius:999px;background:var(--surface);color:var(--accent2);font-size:9px;font-family:'IBM Plex Mono',monospace;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:4px 9px;opacity:0.9;transition:opacity 0.15s,background 0.15s,border-color 0.15s,color 0.15s;white-space:nowrap;}
 .detail-btn:hover{opacity:1;background:var(--surface2);border-color:var(--accent2);color:var(--text);}
-.linked-diagram-chip{position:absolute;left:12px;bottom:10px;border:1px solid var(--border2);border-radius:999px;padding:4px 10px;background:var(--surface2);color:var(--text2);font-size:9px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.04em;cursor:pointer;transition:all 0.12s;max-width:calc(100% - 24px);}
-.linked-diagram-chip:hover{border-color:var(--accent2);color:var(--text);background:var(--surface3);}
-.node.boundary .linked-diagram-chip{bottom:8px;}
+    .linked-diagram-chip{position:relative;align-self:flex-start;margin-top:9px;border:1px solid var(--border2);border-radius:999px;padding:4px 10px;background:var(--surface2);color:var(--text2);font-size:9px;font-family:'IBM Plex Mono',monospace;letter-spacing:0.04em;cursor:pointer;transition:all 0.12s;max-width:100%;}
+    .linked-diagram-chip:hover{border-color:var(--accent2);color:var(--text);background:var(--surface3);}
+.canvas-annotation{position:absolute;user-select:none;}
+.annotation-label{min-width:28px;max-width:300px;padding:6px 10px;border:1px solid transparent;border-radius:10px;color:var(--text2);line-height:1.35;white-space:pre-wrap;}
+.annotation-label-text{font-family:'Inter',sans-serif;font-size:16px;font-weight:600;color:inherit;}
+.annotation-icon{min-width:24px;min-height:24px;border:1px solid transparent;border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--text2);}
+.annotation-icon-glyph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;}
+.annotation-icon-glyph svg{width:100%;height:100%;overflow:visible;}
 /* Zoom controls */
 #zoom-hud{position:fixed;bottom:16px;right:16px;display:flex;flex-direction:column;gap:4px;z-index:20;}
 .zoom-hud-btn{width:28px;height:28px;background:var(--surface);border:1px solid var(--border);border-radius:5px;color:var(--text2);font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.12s;font-family:'IBM Plex Mono',monospace;}
@@ -483,6 +543,7 @@ ${opts.showGrid ? '<div class="grid-bg"></div>' : ''}
     <div class="legend-item"><svg width="18" height="12" style="flex-shrink:0"><rect x="1" y="1" width="16" height="10" rx="2" fill="var(--node-internal)" stroke="var(--node-internal-border)" stroke-width="1.5"/></svg>Internal system</div>
     <div class="legend-item"><svg width="18" height="12" style="flex-shrink:0"><rect x="1" y="1" width="16" height="10" rx="2" fill="var(--node-external)" stroke="var(--node-external-border)" stroke-width="1.5" stroke-dasharray="4 2"/></svg>External entity</div>
     <div class="legend-item"><div class="legend-box" style="background:transparent;border:1.5px dashed var(--border2);"></div>Label / boundary</div>
+    <div class="legend-item"><svg width="18" height="12" style="flex-shrink:0"><circle cx="9" cy="6" r="3.2" fill="none" stroke="var(--text2)" stroke-width="1.5"/></svg>Icon annotation</div>
     <div class="legend-item"><div class="legend-line" style="background:var(--accent);border-radius:1px;"></div>Connection</div>
   </div>` : ''}
 <footer style="position:fixed;bottom:4px;right:16px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text3);z-index:5;">Conduit v1.4 &middot; Full draft export &middot; ${new Date().toLocaleDateString()}</footer>

@@ -67,6 +67,7 @@ function render() {
     arrowSVG.style.zIndex = selectedArrow ? getSelectedArrowLayerZ() : String(getArrowRenderBaseZ());
   }
   renderNodes();
+  if (typeof renderAnnotations === 'function') renderAnnotations();
   renderArrows();
   renderSidebar();
   if (typeof renderLayersPanel === 'function') renderLayersPanel();
@@ -113,7 +114,7 @@ function updateWelcomeCard() {
 function updateEmptyState() {
   const el = document.getElementById('canvas-empty');
   if (!el) return;
-  const hasNodes = state.nodes.length > 0;
+  const hasNodes = state.nodes.length > 0 || (state.labels || []).length > 0 || (state.icons || []).length > 0;
   el.classList.toggle('visible', !hasNodes);
   updateWelcomeCard();
 }
@@ -173,6 +174,122 @@ function appendPropGroup(host, title) {
   return body;
 }
 
+function makeInlineToggleButton(label, active, onClick, extraStyle = '') {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'prop-inline-toggle' + (active ? ' active' : '');
+  if (extraStyle) btn.style.cssText = extraStyle;
+  btn.textContent = label;
+  btn.addEventListener('click', onClick);
+  return btn;
+}
+
+function getCanvasObjectLayerPosition(kind, id) {
+  const entries = getCanvasLayerEntries();
+  const index = entries.findIndex(entry => entry.kind === kind && entry.id === id);
+  return {
+    index,
+    count: entries.length
+  };
+}
+
+function addArrangeGroup(host, kind, id) {
+  const actionMap = {
+    node: {
+      canMove: canMoveNodeLayer,
+      move: moveNodeLayer,
+      labels: {
+        front: 'Bring to front',
+        forward: 'Move forward',
+        backward: 'Move backward',
+        back: 'Send to back'
+      }
+    },
+    label: {
+      canMove: canMoveLabelLayer,
+      move: moveLabelLayer,
+      labels: {
+        front: 'Bring to front',
+        forward: 'Move forward',
+        backward: 'Move backward',
+        back: 'Send to back'
+      }
+    },
+    icon: {
+      canMove: canMoveIconLayer,
+      move: moveIconLayer,
+      labels: {
+        front: 'Bring to front',
+        forward: 'Move forward',
+        backward: 'Move backward',
+        back: 'Send to back'
+      }
+    }
+  };
+  const config = actionMap[kind];
+  if (!config) return;
+  const layerPos = getCanvasObjectLayerPosition(kind, id);
+  const targetableCount = getCanvasLayerEntries().filter(entry => !(entry.kind === kind && entry.id === id)).length;
+  const row = document.createElement('div');
+  row.className = 'prop-row';
+  const layerBody = document.createElement('div');
+  layerBody.className = 'prop-section-body';
+  const layerHeader = createPropSectionHeader(
+    'Layer order',
+    layerPos.index >= 0 ? `Layer ${layerPos.index + 1} of ${layerPos.count}` : 'Layer',
+    `${kind}-layering`,
+    layerBody
+  );
+  row.appendChild(layerHeader);
+  const grid = document.createElement('div');
+  grid.style.cssText = 'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;';
+  const layerActions = [
+    { mode: 'front', label: 'To front', icon: '↑↑', title: `Bring ${kind} to front` },
+    { mode: 'forward', label: 'Forward', icon: '↑', title: `Move ${kind} forward` },
+    { mode: 'backward', label: 'Backward', icon: '↓', title: `Move ${kind} backward` },
+    { mode: 'back', label: 'To back', icon: '↓↓', title: `Send ${kind} to back` }
+  ];
+  layerActions.forEach(action => {
+    const btn = document.createElement('button');
+    btn.className = 'prop-btn';
+    btn.type = 'button';
+    btn.title = action.title;
+    btn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-bottom:0;';
+    btn.innerHTML = `<span style="font-family:'IBM Plex Mono',monospace;font-size:10px;line-height:1;">${action.icon}</span><span>${action.label}</span>`;
+    btn.disabled = !config.canMove(id, action.mode);
+    if (btn.disabled) btn.style.opacity = '0.45';
+    btn.addEventListener('click', () => {
+      if (!config.canMove(id, action.mode)) return;
+      config.move(id, action.mode);
+    });
+    grid.appendChild(btn);
+  });
+  [
+    { mode: 'front-of', label: 'In front of...', title: `Pick another canvas object to place this ${kind} in front of it` },
+    { mode: 'behind', label: 'Behind...', title: `Pick another canvas object to place this ${kind} behind it` }
+  ].forEach(action => {
+    const btn = document.createElement('button');
+    btn.className = 'prop-btn accent layer-target-btn';
+    btn.type = 'button';
+    btn.title = action.title;
+    btn.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:6px;width:100%;margin-bottom:0;';
+    btn.textContent = action.label;
+    if (targetableCount < 1) {
+      btn.disabled = true;
+      btn.style.opacity = '0.45';
+    }
+    if (isCanvasLayerTargetMode(kind, id, action.mode)) btn.classList.add('active');
+    btn.addEventListener('click', () => {
+      if (targetableCount < 1) return;
+      startCanvasLayerTargetMode(kind, id, action.mode);
+    });
+    grid.appendChild(btn);
+  });
+  layerBody.appendChild(grid);
+  row.appendChild(layerBody);
+  host.appendChild(row);
+}
+
 function renderSidebar() {
   const visibleNodes = state.nodes.filter(n => n.type !== 'boundary');
   document.getElementById('node-count').textContent = visibleNodes.length;
@@ -217,8 +334,8 @@ function renderSidebar() {
 function renderPropsPanel() {
   const section = document.getElementById('props-section');
   const body = document.getElementById('props-body');
-  if (!selectedNode && !selectedArrow) {
-    body.innerHTML = '<div style="font-size:11px;color:var(--text3);font-style:italic;padding:4px 0 2px;text-align:center;line-height:1.6;">Select a node or arrow<br>to view properties</div>';
+  if (!selectedNode && !selectedArrow && !selectedLabel && !selectedIcon) {
+    body.innerHTML = '<div style="font-size:11px;color:var(--text3);font-style:italic;padding:4px 0 2px;text-align:center;line-height:1.6;">Select a canvas object<br>to view properties</div>';
     return;
   }
   body.innerHTML = '';
@@ -576,7 +693,8 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       structureBody.appendChild(connSection);
     }
 
-    const layerPos = getNodeLayerPosition(n.id);
+    addArrangeGroup(arrangeBody, 'node', n.id);
+    /*
     const layerRow = document.createElement('div');
     layerRow.className = 'prop-row';
     const layerBody = document.createElement('div');
@@ -631,6 +749,7 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
     layerBody.appendChild(layerGrid);
     layerRow.appendChild(layerBody);
     arrangeBody.appendChild(layerRow);
+    */
 
     // Duplicate
     const dupBtn = document.createElement('button');
@@ -650,6 +769,236 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
     delBtn.addEventListener('click', () => deleteSelected());
     body.appendChild(delBtn);
 
+  } else if (selectedLabel) {
+    const label = getLabelById(selectedLabel);
+    if (!label) return;
+    const labelBackgroundStyle = label.backgroundStyle === 'soft' ? 'fill' : (label.backgroundStyle || 'none');
+    const defaultLabelFill = (getComputedStyle(document.documentElement).getPropertyValue('--surface').trim().match(/^#([0-9a-f]{6})[0-9a-f]{0,2}$/i)?.[0] || '#f0f2f8');
+    const identityBody = appendPropGroup(body, 'Identity');
+    const appearanceBody = appendPropGroup(body, 'Appearance');
+    const arrangeBody = appendPropGroup(body, 'Arrange');
+
+    addPropRow(identityBody, 'Text', () => {
+      const inp = document.createElement('textarea');
+      inp.className = 'prop-input';
+      inp.rows = 3;
+      inp.value = label.text || '';
+      inp.addEventListener('input', () => {
+        label.text = inp.value;
+        renderAnnotations();
+        scheduleSaveToLocalStorage();
+      });
+      return inp;
+    });
+    {
+      const wrap = document.createElement('div');
+      wrap.className = 'prop-slider-stack';
+      const inline = document.createElement('div');
+      inline.className = 'prop-row-inline';
+      const slider = document.createElement('input');
+      slider.className = 'prop-input';
+      slider.type = 'range';
+      slider.min = '10';
+      slider.max = '48';
+      slider.step = '1';
+      slider.value = String(label.fontSize || 16);
+      updateSliderPct(slider);
+      const number = document.createElement('input');
+      number.className = 'prop-input';
+      number.type = 'number';
+      number.min = '10';
+      number.max = '48';
+      number.value = String(label.fontSize || 16);
+      number.style.maxWidth = '72px';
+      const labelEl = addSliderPropRow(appearanceBody, `Font size — ${Math.round(Number(label.fontSize) || 16)}px`, wrap);
+      function updateLabelFontSize(nextValue) {
+        const size = Math.max(10, Math.min(48, Number(nextValue) || 16));
+        label.fontSize = size;
+        slider.value = String(size);
+        number.value = String(size);
+        labelEl.textContent = `Font size — ${Math.round(size)}px`;
+        updateSliderPct(slider);
+        renderAnnotations();
+        scheduleSaveToLocalStorage();
+      }
+      slider.addEventListener('input', () => updateLabelFontSize(slider.value));
+      number.addEventListener('input', () => updateLabelFontSize(number.value));
+      inline.appendChild(slider);
+      inline.appendChild(number);
+      wrap.appendChild(inline);
+    }
+    addPropRow(appearanceBody, 'Text colour', () => {
+      const inp = document.createElement('input');
+      inp.className = 'prop-input';
+      inp.type = 'color';
+      inp.value = label.textColor || '#9aa0b8';
+      inp.addEventListener('input', () => {
+        label.textColor = inp.value;
+        renderAnnotations();
+        scheduleSaveToLocalStorage();
+      });
+      return inp;
+    });
+    addPropRow(appearanceBody, 'Background', () => {
+      const row = document.createElement('div');
+      row.className = 'prop-toggle-row';
+      row.appendChild(makeInlineToggleButton('None', labelBackgroundStyle === 'none', () => {
+        label.backgroundStyle = 'none';
+        renderAnnotations();
+        renderSidebar();
+        scheduleSaveToLocalStorage();
+      }));
+      row.appendChild(makeInlineToggleButton('Fill', labelBackgroundStyle === 'fill', () => {
+        label.backgroundStyle = 'fill';
+        renderAnnotations();
+        renderSidebar();
+        scheduleSaveToLocalStorage();
+      }));
+      return row;
+    });
+    if (labelBackgroundStyle === 'fill') {
+      addPropRow(appearanceBody, 'Fill colour', () => {
+        const inp = document.createElement('input');
+        inp.className = 'prop-input';
+        inp.type = 'color';
+        inp.value = label.fillColor || defaultLabelFill;
+        inp.addEventListener('input', () => {
+          label.fillColor = inp.value;
+          renderAnnotations();
+          scheduleSaveToLocalStorage();
+        });
+        return inp;
+      });
+    }
+    addPropRow(appearanceBody, 'Style', () => {
+      const row = document.createElement('div');
+      row.className = 'prop-toggle-row';
+      row.appendChild(makeInlineToggleButton('B', Number(label.fontWeight || 600) >= 700, () => {
+        label.fontWeight = Number(label.fontWeight || 600) >= 700 ? 600 : 700;
+        renderAnnotations();
+        renderSidebar();
+        scheduleSaveToLocalStorage();
+      }, 'font-weight:700;min-width:32px;'));
+      row.appendChild(makeInlineToggleButton('I', (label.fontStyle || 'normal') === 'italic', () => {
+        label.fontStyle = (label.fontStyle || 'normal') === 'italic' ? 'normal' : 'italic';
+        renderAnnotations();
+        renderSidebar();
+        scheduleSaveToLocalStorage();
+      }, 'font-style:italic;min-width:32px;'));
+      return row;
+    });
+    addArrangeGroup(arrangeBody, 'label', label.id);
+  } else if (selectedIcon) {
+    const icon = getIconById(selectedIcon);
+    if (!icon) return;
+    const iconBackgroundStyle = icon.backgroundStyle === 'soft' ? 'fill' : (icon.backgroundStyle || 'none');
+    const defaultIconFill = (getComputedStyle(document.documentElement).getPropertyValue('--surface').trim().match(/^#([0-9a-f]{6})[0-9a-f]{0,2}$/i)?.[0] || '#f0f2f8');
+    const identityBody = appendPropGroup(body, 'Identity');
+    const appearanceBody = appendPropGroup(body, 'Appearance');
+    const arrangeBody = appendPropGroup(body, 'Arrange');
+
+    const summary = document.createElement('div');
+    summary.className = 'prop-hint';
+    summary.textContent = icon.iconTitle || 'Selected icon';
+    identityBody.appendChild(summary);
+
+    const chooseBtn = document.createElement('button');
+    chooseBtn.className = 'prop-btn accent';
+    chooseBtn.textContent = 'Choose icon';
+    chooseBtn.addEventListener('click', () => openIconPicker({ iconId: icon.id }));
+    identityBody.appendChild(chooseBtn);
+
+    {
+      const wrap = document.createElement('div');
+      wrap.className = 'prop-slider-stack';
+      const inp = document.createElement('input');
+      inp.className = 'prop-input';
+      inp.id = 'selected-icon-size-slider';
+      inp.type = 'range';
+      inp.min = '20';
+      inp.max = '160';
+      inp.step = '2';
+      inp.value = String(icon.size || 40);
+      updateSliderPct(inp);
+      const sizeLabel = addSliderPropRow(appearanceBody, `Size — ${Math.round(Number(icon.size) || 40)}px`, wrap);
+      sizeLabel.id = 'selected-icon-size-label';
+      inp.addEventListener('input', () => {
+        icon.size = Math.max(20, Math.min(160, Number(inp.value) || 40));
+        sizeLabel.textContent = `Size — ${Math.round(icon.size)}px`;
+        updateSliderPct(inp);
+        renderAnnotations();
+        scheduleSaveToLocalStorage();
+      });
+      wrap.appendChild(inp);
+    }
+    addPropRow(appearanceBody, 'Colour', () => {
+      const inp = document.createElement('input');
+      inp.className = 'prop-input';
+      inp.type = 'color';
+      inp.value = icon.color || '#9aa0b8';
+      inp.addEventListener('input', () => {
+        icon.color = inp.value;
+        renderAnnotations();
+        scheduleSaveToLocalStorage();
+      });
+      return inp;
+    });
+    {
+      const wrap = document.createElement('div');
+      wrap.className = 'prop-slider-stack';
+      const inp = document.createElement('input');
+      inp.className = 'prop-input';
+      inp.id = 'selected-icon-opacity-slider';
+      inp.type = 'range';
+      inp.min = '0.1';
+      inp.max = '1';
+      inp.step = '0.05';
+      inp.value = String(icon.opacity ?? 1);
+      updateSliderPct(inp);
+      const opacityLabel = addSliderPropRow(appearanceBody, `Opacity — ${Math.round((icon.opacity ?? 1) * 100)}%`, wrap);
+      opacityLabel.id = 'selected-icon-opacity-label';
+      inp.addEventListener('input', () => {
+        icon.opacity = Number(inp.value);
+        opacityLabel.textContent = `Opacity — ${Math.round(icon.opacity * 100)}%`;
+        updateSliderPct(inp);
+        renderAnnotations();
+        scheduleSaveToLocalStorage();
+      });
+      wrap.appendChild(inp);
+    }
+    addPropRow(appearanceBody, 'Background', () => {
+      const row = document.createElement('div');
+      row.className = 'prop-toggle-row';
+      row.appendChild(makeInlineToggleButton('None', iconBackgroundStyle === 'none', () => {
+        icon.backgroundStyle = 'none';
+        renderAnnotations();
+        renderSidebar();
+        scheduleSaveToLocalStorage();
+      }));
+      row.appendChild(makeInlineToggleButton('Fill', iconBackgroundStyle === 'fill', () => {
+        icon.backgroundStyle = 'fill';
+        renderAnnotations();
+        renderSidebar();
+        scheduleSaveToLocalStorage();
+      }));
+      return row;
+    });
+    if (iconBackgroundStyle === 'fill') {
+      addPropRow(appearanceBody, 'Fill colour', () => {
+        const inp = document.createElement('input');
+        inp.className = 'prop-input';
+        inp.id = 'selected-icon-fill-colour';
+        inp.type = 'color';
+        inp.value = icon.fillColor || defaultIconFill;
+        inp.addEventListener('input', () => {
+          icon.fillColor = inp.value;
+          renderAnnotations();
+          scheduleSaveToLocalStorage();
+        });
+        return inp;
+      });
+    }
+    addArrangeGroup(arrangeBody, 'icon', icon.id);
   } else if (selectedArrow) {
     const a = state.arrows.find(x => x.id===selectedArrow);
     if (!a) return;
@@ -955,25 +1304,21 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
     const lblStyleRow = document.createElement('div');
     lblStyleRow.style.cssText = 'display:flex;gap:5px;align-items:center;flex-wrap:wrap;';
 
-    const boldBtn = document.createElement('button');
-    boldBtn.textContent = 'B'; boldBtn.title = 'Bold';
-    boldBtn.style.cssText = 'padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:'+(a.labelBold?'var(--surface3)':'transparent')+';color:'+(a.labelBold?'var(--text)':'var(--text2)')+';font-weight:700;cursor:pointer;font-size:11px;';
-    boldBtn.addEventListener('click', () => {
-      pushUndo(); a.labelBold = !a.labelBold;
-      boldBtn.style.background = a.labelBold ? 'var(--surface3)' : 'transparent';
-      boldBtn.style.color = a.labelBold ? 'var(--text)' : 'var(--text2)';
-      renderArrows(); saveToLocalStorage();
-    });
+    const boldBtn = makeInlineToggleButton('B', !!a.labelBold, () => {
+      pushUndo();
+      a.labelBold = !a.labelBold;
+      renderArrows();
+      saveToLocalStorage();
+      renderPropsPanel();
+    }, 'font-weight:700;min-width:32px;');
 
-    const italicBtn = document.createElement('button');
-    italicBtn.textContent = 'I'; italicBtn.title = 'Italic';
-    italicBtn.style.cssText = 'padding:3px 8px;border-radius:4px;border:1px solid var(--border);background:'+(a.labelItalic?'var(--surface3)':'transparent')+';color:'+(a.labelItalic?'var(--text)':'var(--text2)')+';font-style:italic;cursor:pointer;font-size:11px;';
-    italicBtn.addEventListener('click', () => {
-      pushUndo(); a.labelItalic = !a.labelItalic;
-      italicBtn.style.background = a.labelItalic ? 'var(--surface3)' : 'transparent';
-      italicBtn.style.color = a.labelItalic ? 'var(--text)' : 'var(--text2)';
-      renderArrows(); saveToLocalStorage();
-    });
+    const italicBtn = makeInlineToggleButton('I', !!a.labelItalic, () => {
+      pushUndo();
+      a.labelItalic = !a.labelItalic;
+      renderArrows();
+      saveToLocalStorage();
+      renderPropsPanel();
+    }, 'font-style:italic;min-width:32px;');
 
     const lblColorInp = document.createElement('input');
     lblColorInp.type = 'color'; lblColorInp.title = 'Label colour';
@@ -1032,6 +1377,18 @@ function addPropTextInput(parent, label, obj, key, onChange) {
   inp.addEventListener('input', () => { obj[key]=inp.value; onChange(); saveToLocalStorage(); });
   row.appendChild(inp);
   parent.appendChild(row);
+}
+
+function addSliderPropRow(parent, labelText, controlEl) {
+  const row = document.createElement('div');
+  row.className = 'prop-row';
+  const lbl = document.createElement('div');
+  lbl.className = 'prop-label';
+  lbl.textContent = labelText;
+  row.appendChild(lbl);
+  row.appendChild(controlEl);
+  parent.appendChild(row);
+  return lbl;
 }
 
 function makePortSelect(obj, key, onChange) {

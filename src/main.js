@@ -5,23 +5,30 @@
 let state = {
   nodes: [],   // {id, type, tag, title, subtitle, x, y, w, h, color, textColor}
   arrows: [],  // {id, from, to, fromPos, toPos, direction, label, labelOffsetX, labelOffsetY, color, dash, bend}
+  labels: [],
+  icons: [],
   canvasOrder: [],
 };
 let scale = 1;
 let panX = 0, panY = 0;
 let selectedNode = null;
 let selectedArrow = null;
+let selectedLabel = null;
+let selectedIcon = null;
 let connectMode = false;
 let connectFrom = null; // {nodeId, pos}
 let nextArrowType = 'directed';
 let nextArrowLineStyle = 'curved';
 let _propSectionState = { functions: true, connections: true, layering: false };
 let draggingNode = null;
+let draggingAnnotation = null;
 let dragOffset = {x:0, y:0};
 let panDragging = false;
 let panStart = {x:0, y:0};
 let resizingNode = null;
 let resizeStart = {};
+let resizingAnnotation = null;
+let resizeAnnotationStart = {};
 let tempLine = null; // SVG line for preview
 
 const canvas = document.getElementById('canvas');
@@ -71,7 +78,7 @@ function loadSample() {
   normalizeNodeLayers(getSortedNodeLayerEntries());
   normalizeArrowLayers(getSortedArrowLayerEntries());
   rebuildCanvasOrderFromLegacyLayers();
-  setDiagramCounters(10, 20);
+  setDiagramCounters(10, 20, 1, 1);
 }
 
 function loadSampleIntoCurrentDraft() {

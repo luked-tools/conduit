@@ -224,18 +224,12 @@
     color: var(--text3); opacity: 1;
   }
   .node.boundary .node-info-hint { display: none; }
-  .node.has-linked-diagram .node-inner {
-    padding-bottom: 32px;
-  }
-  .node.boundary.has-linked-diagram .node-inner {
-    padding-bottom: 30px;
-  }
   .node-diagram-link-chip {
-    position: absolute;
-    left: 10px;
-    bottom: 8px;
-    min-height: 20px;
-    padding: 3px 8px;
+    position: relative;
+    align-self: flex-start;
+    margin-top: 9px;
+    min-height: 22px;
+    padding: 4px 10px;
     border-radius: 999px;
     display: inline-flex;
     align-items: center;
@@ -270,6 +264,208 @@
   .node-diagram-link-chip:focus-visible {
     box-shadow: 0 0 0 3px var(--accent-ring);
   }
+  .canvas-annotation {
+    position: absolute;
+    cursor: grab;
+    user-select: none;
+    transform-origin: top left;
+  }
+  .canvas-annotation:active { cursor: grabbing; }
+  .canvas-annotation.selected {
+    box-shadow: 0 0 0 2px var(--accent), 0 0 0 5px var(--accent-ring);
+    border-radius: 10px;
+  }
+  .annotation-label {
+    min-width: 28px;
+    max-width: 300px;
+    padding: 6px 10px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    color: var(--text2);
+    line-height: 1.35;
+    white-space: pre-wrap;
+  }
+  .annotation-label-text {
+    font-family: 'Inter', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    color: inherit;
+  }
+.annotation-icon {
+  min-width: 24px;
+  min-height: 24px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text2);
+  position: absolute;
+}
+.annotation-icon-glyph {
+  width: 100%;
+  height: 100%;
+  display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+.annotation-icon-glyph svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.annotation-icon-resize {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border2);
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.14);
+  cursor: se-resize;
+  opacity: 0;
+  transform: translate(35%, 35%);
+  transition: opacity 0.12s, transform 0.12s, border-color 0.12s, background 0.12s;
+  pointer-events: none;
+}
+.annotation-icon-resize::before {
+  content: '';
+  position: absolute;
+  inset: 3px;
+  border-right: 1.5px solid var(--accent2);
+  border-bottom: 1.5px solid var(--accent2);
+  border-bottom-right-radius: 2px;
+}
+.annotation-icon:hover .annotation-icon-resize {
+  opacity: 1;
+  pointer-events: auto;
+}
+.annotation-icon-resize:hover {
+  border-color: var(--accent2);
+  background: var(--surface2);
+  transform: translate(35%, 35%) scale(1.05);
+}
+  .annotation-inline-edit {
+    position: fixed;
+    z-index: 84;
+    width: 260px;
+    padding: 10px;
+    border: 1px solid var(--border2);
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+    box-shadow: var(--shadow-modal);
+    backdrop-filter: blur(10px);
+  }
+  .annotation-inline-input {
+    width: 100%;
+    min-height: 68px;
+    resize: vertical;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--field-bg);
+    color: var(--text);
+    padding: 8px 10px;
+    font: inherit;
+  }
+  .annotation-inline-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 8px;
+  }
+  .annotation-inline-btn {
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    background: var(--surface2);
+    color: var(--text2);
+    padding: 6px 10px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .annotation-inline-btn.primary {
+    border-color: var(--accent);
+    color: var(--accent3);
+    background: var(--accent-soft);
+  }
+  .icon-picker-modal {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+.icon-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.icon-picker-modal #icon-picker-grid {
+  max-height: 320px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.icon-picker-category {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.icon-picker-category-title {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text3);
+}
+.icon-picker-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 8px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--surface) 94%, var(--surface2) 6%);
+    color: var(--text2);
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s, color 0.12s;
+  }
+  .icon-picker-item:hover {
+    border-color: var(--border2);
+    background: var(--surface2);
+    color: var(--text);
+  }
+  .icon-picker-glyph {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .icon-picker-glyph svg {
+    width: 100%;
+    height: 100%;
+  }
+  .icon-picker-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    text-align: center;
+    line-height: 1.4;
+  }
+.icon-picker-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+.icon-picker-empty {
+  padding: 12px 10px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--text3);
+  font-size: 11px;
+  text-align: center;
+}
   #nm-footer {
     display: flex; align-items: center; gap: 8px;
     padding: 14px 24px;

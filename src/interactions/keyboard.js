@@ -3,7 +3,7 @@ document.addEventListener('keydown', e => {
   const inTextField = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'
     || e.target.isContentEditable;
 
-  if (!inTextField && (e.key === 'Delete' || e.key === 'Backspace') && (selectedNode || selectedArrow)) {
+  if (!inTextField && (e.key === 'Delete' || e.key === 'Backspace') && (selectedNode || selectedArrow || selectedLabel || selectedIcon)) {
     deleteSelected();
   }
 
@@ -26,7 +26,7 @@ document.addEventListener('keydown', e => {
     redo();
   }
 
-  if (!inTextField && (e.ctrlKey || e.metaKey) && e.key === 'c' && selectedNode) {
+  if (!inTextField && (e.ctrlKey || e.metaKey) && e.key === 'c' && (selectedNode || selectedLabel || selectedIcon)) {
     copySelectedNode();
   }
 
@@ -60,6 +60,8 @@ function deleteSelected({ deleteLinkedDiagram = false, skipLinkedPrompt = false 
     state.arrows = state.arrows.filter(a => a.from !== nodeId && a.to !== nodeId);
     state.nodes = state.nodes.filter(n => n.id !== nodeId);
     selectedNode = null;
+    selectedLabel = null;
+    selectedIcon = null;
     normalizeCanvasOrder();
     if (deleteLinkedDiagram && linkedDiagram) {
       syncActiveDiagramFromCurrentState();
@@ -69,6 +71,20 @@ function deleteSelected({ deleteLinkedDiagram = false, skipLinkedPrompt = false 
     pushUndo();
     state.arrows = state.arrows.filter(a => a.id !== selectedArrow);
     selectedArrow = null;
+    selectedLabel = null;
+    selectedIcon = null;
+    normalizeCanvasOrder();
+  } else if (selectedLabel) {
+    pushUndo();
+    state.labels = state.labels.filter(label => label.id !== selectedLabel);
+    selectedLabel = null;
+    selectedIcon = null;
+    normalizeCanvasOrder();
+  } else if (selectedIcon) {
+    pushUndo();
+    state.icons = state.icons.filter(icon => icon.id !== selectedIcon);
+    selectedIcon = null;
+    selectedLabel = null;
     normalizeCanvasOrder();
   }
   render();
@@ -76,34 +92,75 @@ function deleteSelected({ deleteLinkedDiagram = false, skipLinkedPrompt = false 
 }
 
 function copySelectedNode() {
-  if (!selectedNode) return;
-  const n = state.nodes.find(x => x.id === selectedNode);
-  if (!n) return;
-  _clipboardNode = JSON.parse(JSON.stringify(n));
+  if (selectedNode) {
+    const n = state.nodes.find(x => x.id === selectedNode);
+    if (!n) return;
+    _clipboardNode = { kind: 'node', data: JSON.parse(JSON.stringify(n)) };
+  } else if (selectedLabel) {
+    const label = state.labels.find(x => x.id === selectedLabel);
+    if (!label) return;
+    _clipboardNode = { kind: 'label', data: JSON.parse(JSON.stringify(label)) };
+  } else if (selectedIcon) {
+    const icon = state.icons.find(x => x.id === selectedIcon);
+    if (!icon) return;
+    _clipboardNode = { kind: 'icon', data: JSON.parse(JSON.stringify(icon)) };
+  } else {
+    return;
+  }
   setStatusModeMessage('\u2398 Copied \u2014 Ctrl+V to paste', { fade: true, autoClearMs: 1800 });
 }
 
 function pasteNode() {
   if (!_clipboardNode) return;
   pushUndo();
-  const src = _clipboardNode;
-  const id = nextNodeId();
+  const src = _clipboardNode.data || _clipboardNode;
   const OFFSET = 30;
-  const copy = {
-    ...JSON.parse(JSON.stringify(src)),
-    id,
-    x: src.x + OFFSET,
-    y: src.y + OFFSET,
-    z: Number.MAX_SAFE_INTEGER,
-  };
-  if (copy.tag && copy.type !== 'boundary') {
-    copy.tag = nextNodeTag(copy.type);
+  if ((_clipboardNode.kind || 'node') === 'node') {
+    const id = nextNodeId();
+    const copy = {
+      ...JSON.parse(JSON.stringify(src)),
+      id,
+      x: src.x + OFFSET,
+      y: src.y + OFFSET,
+      z: Number.MAX_SAFE_INTEGER,
+    };
+    if (copy.tag && copy.type !== 'boundary') {
+      copy.tag = nextNodeTag(copy.type);
+    }
+    state.nodes.push(copy);
+    normalizeNodeLayers();
+    appendCanvasOrderEntry('node', id);
+    render();
+    selectNode(id);
+    _clipboardNode = { kind: 'node', data: JSON.parse(JSON.stringify(copy)) };
+  } else if (_clipboardNode.kind === 'label') {
+    const id = nextLabelId();
+    const copy = {
+      ...JSON.parse(JSON.stringify(src)),
+      id,
+      x: src.x + OFFSET,
+      y: src.y + OFFSET,
+      z: Number.MAX_SAFE_INTEGER,
+    };
+    state.labels.push(copy);
+    appendCanvasOrderEntry('label', id);
+    render();
+    selectLabel(id);
+    _clipboardNode = { kind: 'label', data: JSON.parse(JSON.stringify(copy)) };
+  } else if (_clipboardNode.kind === 'icon') {
+    const id = nextIconId();
+    const copy = {
+      ...JSON.parse(JSON.stringify(src)),
+      id,
+      x: src.x + OFFSET,
+      y: src.y + OFFSET,
+      z: Number.MAX_SAFE_INTEGER,
+    };
+    state.icons.push(copy);
+    appendCanvasOrderEntry('icon', id);
+    render();
+    selectIcon(id);
+    _clipboardNode = { kind: 'icon', data: JSON.parse(JSON.stringify(copy)) };
   }
-  state.nodes.push(copy);
-  normalizeNodeLayers();
-  appendCanvasOrderEntry('node', id);
-  render();
-  selectNode(id);
-  _clipboardNode = JSON.parse(JSON.stringify(copy));
   saveToLocalStorage();
 }
