@@ -40,7 +40,9 @@ function resetZoom() {
 
 function fitDiagram() {
   const nonBoundary = state.nodes.filter(n => n.type !== 'boundary');
-  if (nonBoundary.length === 0) return;
+  const labels = state.labels || [];
+  const icons = state.icons || [];
+  if (nonBoundary.length === 0 && labels.length === 0 && icons.length === 0) return;
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
   nonBoundary.forEach(n => {
     const h = getNodeActualH(n);
@@ -48,6 +50,21 @@ function fitDiagram() {
     minY = Math.min(minY, n.y);
     maxX = Math.max(maxX, n.x + n.w);
     maxY = Math.max(maxY, n.y + h);
+  });
+  labels.forEach(label => {
+    const width = Math.max(40, String(label.text || 'Label').split('\n').reduce((max, line) => Math.max(max, line.length), 0) * 9 + 20);
+    const height = Math.max(28, String(label.text || 'Label').split('\n').length * ((label.fontSize || 16) + 5) + 12);
+    minX = Math.min(minX, label.x);
+    minY = Math.min(minY, label.y);
+    maxX = Math.max(maxX, label.x + width);
+    maxY = Math.max(maxY, label.y + height);
+  });
+  icons.forEach(icon => {
+    const size = Math.max(20, Number(icon.size) || 40);
+    minX = Math.min(minX, icon.x);
+    minY = Math.min(minY, icon.y);
+    maxX = Math.max(maxX, icon.x + size);
+    maxY = Math.max(maxY, icon.y + size);
   });
   const pad = 80;
   const dw = maxX - minX;

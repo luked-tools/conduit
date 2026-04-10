@@ -70,6 +70,29 @@ function createNodeEl(n, selectedArrowObj = null) {
       else if (n.textColor) sub.style.color = n.textColor;
       inner.appendChild(sub);
     }
+    if (n.linkedDiagramId && typeof getDiagramById === 'function') {
+      const linkedDiagram = getDiagramById(n.linkedDiagramId);
+      if (linkedDiagram) {
+        div.classList.add('has-linked-diagram');
+        const linkBadge = document.createElement('button');
+        linkBadge.type = 'button';
+        linkBadge.className = 'node-diagram-link-chip';
+        linkBadge.textContent = 'Linked diagram';
+        linkBadge.setAttribute('aria-label', `Open linked diagram: ${linkedDiagram.title || 'Untitled diagram'}`);
+        linkBadge.addEventListener('pointerdown', e => {
+          e.stopPropagation();
+        });
+        linkBadge.addEventListener('mousedown', e => {
+          e.stopPropagation();
+        });
+        linkBadge.addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          openLinkedDiagramForNode(n.id);
+        });
+        inner.appendChild(linkBadge);
+      }
+    }
     // Functions list
     const visibleFns = (n.functions || []).filter(fn => { const name = typeof fn === 'string' ? fn : (fn.name || ''); return name.trim() && !fn.hidden; });
     if (visibleFns.length > 0) {
@@ -139,32 +162,31 @@ function createNodeEl(n, selectedArrowObj = null) {
       else if (n.textColor) sub.style.color = n.textColor;
       inner.appendChild(sub);
     }
-  }
-  div.appendChild(inner);
-
-  if (n.linkedDiagramId && typeof getDiagramById === 'function') {
-    const linkedDiagram = getDiagramById(n.linkedDiagramId);
-    if (linkedDiagram) {
-      div.classList.add('has-linked-diagram');
-      const linkBadge = document.createElement('button');
-      linkBadge.type = 'button';
-      linkBadge.className = 'node-diagram-link-chip';
-      linkBadge.textContent = 'Linked diagram';
-      linkBadge.setAttribute('aria-label', `Open linked diagram: ${linkedDiagram.title || 'Untitled diagram'}`);
-      linkBadge.addEventListener('pointerdown', e => {
-        e.stopPropagation();
-      });
-      linkBadge.addEventListener('mousedown', e => {
-        e.stopPropagation();
-      });
-      linkBadge.addEventListener('click', e => {
-        e.preventDefault();
-        e.stopPropagation();
-        openLinkedDiagramForNode(n.id);
-      });
-      div.appendChild(linkBadge);
+    if (n.linkedDiagramId && typeof getDiagramById === 'function') {
+      const linkedDiagram = getDiagramById(n.linkedDiagramId);
+      if (linkedDiagram) {
+        div.classList.add('has-linked-diagram');
+        const linkBadge = document.createElement('button');
+        linkBadge.type = 'button';
+        linkBadge.className = 'node-diagram-link-chip';
+        linkBadge.textContent = 'Linked diagram';
+        linkBadge.setAttribute('aria-label', `Open linked diagram: ${linkedDiagram.title || 'Untitled diagram'}`);
+        linkBadge.addEventListener('pointerdown', e => {
+          e.stopPropagation();
+        });
+        linkBadge.addEventListener('mousedown', e => {
+          e.stopPropagation();
+        });
+        linkBadge.addEventListener('click', e => {
+          e.preventDefault();
+          e.stopPropagation();
+          openLinkedDiagramForNode(n.id);
+        });
+        inner.appendChild(linkBadge);
+      }
     }
   }
+  div.appendChild(inner);
 
   // Resize handles
   const rh = document.createElement('div');
@@ -201,7 +223,7 @@ function createNodeEl(n, selectedArrowObj = null) {
       cp.addEventListener('mousedown', e => {
         e.stopPropagation();
         if (_nodeLayerTargetMode) {
-          applyNodeLayerTarget(n.id);
+          applyCanvasLayerTarget('node', n.id);
           return;
         }
         if (_quickConnectMode) {
@@ -252,7 +274,7 @@ function createNodeEl(n, selectedArrowObj = null) {
     }
     if (_nodeLayerTargetMode) {
       e.stopPropagation();
-      if (n.id !== _nodeLayerTargetMode.sourceId) applyNodeLayerTarget(n.id);
+      if (!(n.id === _nodeLayerTargetMode.sourceId && _nodeLayerTargetMode.sourceKind === 'node')) applyCanvasLayerTarget('node', n.id);
       return;
     }
     if (_quickConnectMode) {

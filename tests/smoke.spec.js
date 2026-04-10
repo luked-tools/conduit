@@ -20,6 +20,7 @@ async function bootFresh(page) {
     if (typeof cancelNodeLayerTargetMode === 'function') cancelNodeLayerTargetMode();
     if (typeof cancelStyleBrush === 'function' && typeof _brushActive !== 'undefined' && _brushActive) cancelStyleBrush();
     if (typeof closeInlineNodeEdit === 'function') closeInlineNodeEdit();
+    if (typeof closeInlineAnnotationEdit === 'function') closeInlineAnnotationEdit();
     if (typeof deselect === 'function') deselect();
   });
 }
@@ -78,6 +79,8 @@ async function seedDenseDiagram(page, { nodeCount = 11, connectionCount = 108 } 
   await page.evaluate(({ nodeCount, connectionCount }) => {
     state.nodes = [];
     state.arrows = [];
+    state.labels = [];
+    state.icons = [];
     state.canvasOrder = [];
 
     const cols = 4;
@@ -218,6 +221,167 @@ test.describe('Conduit smoke', () => {
     await expect(page.locator('.node')).toHaveCount(1);
     await expect(page.locator('.node.internal')).toHaveCount(1);
     await expect(page.locator('#node-count')).toHaveText('1');
+  });
+
+  test('creating a label enters inline edit immediately', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => addModeAt('label', 920, 640));
+
+    await expect(page.locator('.canvas-annotation.annotation-label')).toHaveCount(1);
+    await expect(page.locator('.annotation-inline-edit')).toBeVisible();
+    await page.locator('.annotation-inline-input').fill('Free label');
+    await page.locator('.annotation-inline-btn.primary').click();
+    await expect(page.locator('.annotation-label-text')).toContainText('Free label');
+  });
+
+  test('can create a built-in icon and it persists after reload', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => addModeAt('icon', 980, 660));
+    await expect(page.locator('#modal-overlay')).toHaveClass(/open/);
+    await page.locator('.icon-picker-item').first().click();
+
+    await expect(page.locator('.canvas-annotation.annotation-icon')).toHaveCount(1);
+    await page.reload();
+    await expect(page.locator('.canvas-annotation.annotation-icon')).toHaveCount(1);
+  });
+
+  test('icon appearance controls use sliders fill styling and persist after reload', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      const icon = createIconAnnotationObject(980, 660, {
+        iconKey: 'gear',
+        iconTitle: 'Gear',
+        svgMarkup: getBuiltinIconDefinition('gear').svg
+      });
+      state.icons.push(icon);
+      appendCanvasOrderEntry('icon', icon.id);
+      render();
+      selectIcon(icon.id);
+    });
+
+    await expect(page.locator('#selected-icon-size-slider')).toHaveValue('40');
+    await expect(page.locator('#selected-icon-size-value')).toHaveText('40px');
+
+    await page.locator('#selected-icon-size-slider').evaluate(el => {
+      el.value = '74';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.locator('#selected-icon-opacity-slider').evaluate(el => {
+      el.value = '0.55';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await page.locator('.prop-select').first().selectOption('fill');
+    await expect(page.locator('#selected-icon-fill-colour')).toBeVisible();
+    await page.locator('#selected-icon-fill-colour').evaluate(el => {
+      el.value = '#dde7ff';
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    await expect(page.locator('#selected-icon-size-value')).toHaveText('74px');
+    await expect(page.locator('#selected-icon-opacity-value')).toHaveText('55%');
+    await expect.poll(async () => page.evaluate(() => ({
+      size: state.icons[0].size,
+      opacity: state.icons[0].opacity,
+      backgroundStyle: state.icons[0].backgroundStyle,
+      fillColor: state.icons[0].fillColor,
+      sliderPct: document.getElementById('selected-icon-opacity-slider')?.style.getPropertyValue('--slider-pct') || ''
+    }))).toEqual({
+      size: 74,
+      opacity: 0.55,
+      backgroundStyle: 'fill',
+      fillColor: '#dde7ff',
+      sliderPct: '50.0%'
+    });
+
+    await page.evaluate(() => saveToLocalStorage());
+    await page.reload();
+    await expect.poll(async () => page.evaluate(() => ({
+      size: state.icons[0].size,
+      backgroundStyle: state.icons[0].backgroundStyle,
+      fillColor: state.icons[0].fillColor
+    }))).toEqual({
+      size: 74,
+      backgroundStyle: 'fill',
+      fillColor: '#dde7ff'
+    });
+  });
+
+  test('selected icons can be resized from the canvas handle', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      const icon = createIconAnnotationObject(980, 660, {
+        iconKey: 'gear',
+        iconTitle: 'Gear',
+        svgMarkup: getBuiltinIconDefinition('gear').svg
+      });
+      state.icons.push(icon);
+      appendCanvasOrderEntry('icon', icon.id);
+      render();
+      selectIcon(icon.id);
+    });
+
+    const handle = page.locator('.canvas-annotation.annotation-icon .annotation-icon-resize');
+    await expect(handle).toBeVisible();
+    const box = await handle.boundingBox();
+    expect(box).not.toBeNull();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 28, box.y + box.height / 2 + 24);
+    await page.mouse.up();
+
+    await expect.poll(async () => page.evaluate(() => state.icons[0].size)).toBeGreaterThan(40);
+    await expect(page.locator('#selected-icon-size-value')).not.toHaveText('40px');
+  });
+
+  test('legacy icon soft backgrounds normalize to fill after reload', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      const icon = createIconAnnotationObject(980, 660, {
+        iconKey: 'gear',
+        iconTitle: 'Gear',
+        svgMarkup: getBuiltinIconDefinition('gear').svg
+      });
+      icon.backgroundStyle = 'soft';
+      state.icons.push(icon);
+      appendCanvasOrderEntry('icon', icon.id);
+      render();
+      saveToLocalStorage();
+    });
+
+    await page.reload();
+    await expect.poll(async () => page.evaluate(() => state.icons[0].backgroundStyle)).toBe('fill');
+  });
+
+  test('labels and icons can be layered against nodes and connections', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 920, 620);
+    await addNode(page, 'external', 1180, 620);
+    await dragBetween(page, '.node.internal .conn-point[data-pos="e"]', '.node.external .conn-point[data-pos="w"]');
+    await page.evaluate(() => {
+      addModeAt('label', 1030, 590);
+      const labelId = state.labels[0].id;
+      moveLabelLayer(labelId, 'front');
+    });
+
+    const labelZ = await page.locator('.canvas-annotation.annotation-label').evaluate(el => Number(getComputedStyle(el).zIndex));
+    const arrowZ = await page.locator('.arrow-object').first().evaluate(el => Number(getComputedStyle(el).zIndex));
+    expect(labelZ).toBeGreaterThan(arrowZ);
+
+    await page.evaluate(() => {
+      addModeAt('icon', 1100, 700);
+      closeBasicModal();
+      const icon = createIconAnnotationObject(1100, 700, { iconKey: 'gear', iconTitle: 'Gear', svgMarkup: getBuiltinIconDefinition('gear').svg });
+      state.icons = [icon];
+      appendCanvasOrderEntry('icon', icon.id);
+      render();
+    });
+    await expect(page.locator('.canvas-annotation.annotation-icon')).toHaveCount(1);
   });
 
   test('node layer controls reorder nodes and persist after reload', async ({ page }) => {

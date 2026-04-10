@@ -22,7 +22,7 @@ function getDiagramSubtitleInputValue() {
 }
 
 function createBlankDiagramState() {
-  return { nodes: [], arrows: [], canvasOrder: [] };
+  return { nodes: [], arrows: [], labels: [], icons: [], canvasOrder: [] };
 }
 
 function createDefaultDiagramViewport() {
@@ -33,7 +33,19 @@ function normalizeDiagramState(diagramState) {
   const nextState = cloneDiagramData(diagramState || createBlankDiagramState());
   if (!Array.isArray(nextState.nodes)) nextState.nodes = [];
   if (!Array.isArray(nextState.arrows)) nextState.arrows = [];
+  if (!Array.isArray(nextState.labels)) nextState.labels = [];
+  if (!Array.isArray(nextState.icons)) nextState.icons = [];
   if (!Array.isArray(nextState.canvasOrder)) nextState.canvasOrder = [];
+  nextState.labels = nextState.labels.map(label => ({
+    ...label,
+    backgroundStyle: label?.backgroundStyle === 'soft' ? 'fill' : (label?.backgroundStyle || 'none'),
+    fillColor: typeof label?.fillColor === 'string' ? label.fillColor : ''
+  }));
+  nextState.icons = nextState.icons.map(icon => ({
+    ...icon,
+    backgroundStyle: icon?.backgroundStyle === 'soft' ? 'fill' : (icon?.backgroundStyle || 'none'),
+    fillColor: typeof icon?.fillColor === 'string' ? icon.fillColor : ''
+  }));
   return nextState;
 }
 
@@ -146,6 +158,8 @@ function applyDiagramRecordToCanvas(diagram) {
 
   selectedNode = null;
   selectedArrow = null;
+  selectedLabel = null;
+  selectedIcon = null;
   const viewport = normalizeDiagramViewport(diagram?.viewport);
   scale = viewport.scale;
   panX = viewport.panX;
@@ -218,7 +232,7 @@ function getDiagramDisplayTitle(diagram) {
 
 function getDiagramCanvasStats(diagram) {
   return {
-    nodeCount: Array.isArray(diagram?.state?.nodes) ? diagram.state.nodes.length : 0,
+    nodeCount: Array.isArray(diagram?.state?.nodes) ? diagram.state.nodes.length + (Array.isArray(diagram?.state?.labels) ? diagram.state.labels.length : 0) + (Array.isArray(diagram?.state?.icons) ? diagram.state.icons.length : 0) : 0,
     arrowCount: Array.isArray(diagram?.state?.arrows) ? diagram.state.arrows.length : 0
   };
 }

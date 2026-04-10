@@ -70,6 +70,42 @@ window.addEventListener('mousemove', e => {
     if (typeof updateContextToolbar === 'function') updateContextToolbar();
     return;
   }
+  if (draggingAnnotation) {
+    const wrap = document.getElementById('canvas-wrap');
+    if (!wrap) return;
+    const rect = wrap.getBoundingClientRect();
+    const collection = draggingAnnotation.kind === 'label' ? state.labels : state.icons;
+    const item = collection.find(entry => entry.id === draggingAnnotation.id);
+    if (!item) return;
+    item.x = Math.round((((e.clientX - rect.left) / scale - panX / scale) - draggingAnnotation.offsetX) / 10) * 10;
+    item.y = Math.round((((e.clientY - rect.top) / scale - panY / scale) - draggingAnnotation.offsetY) / 10) * 10;
+    const el = document.getElementById(`${draggingAnnotation.kind}-${item.id}`);
+    if (el) {
+      el.style.left = item.x + 'px';
+      el.style.top = item.y + 'px';
+    }
+    if (typeof updateContextToolbar === 'function') updateContextToolbar();
+    return;
+  }
+  if (resizingAnnotation) {
+    const item = state.icons.find(entry => entry.id === resizingAnnotation);
+    if (!item) return;
+    const dx = (e.clientX - resizeAnnotationStart.mx) / scale;
+    const dy = (e.clientY - resizeAnnotationStart.my) / scale;
+    const nextSize = Math.max(20, Math.min(160, Math.round(Math.max(
+      resizeAnnotationStart.size + dx,
+      resizeAnnotationStart.size + dy
+    ))));
+    item.size = nextSize;
+    const el = document.getElementById(`icon-${item.id}`);
+    if (el) {
+      el.style.width = `${nextSize}px`;
+      el.style.height = `${nextSize}px`;
+    }
+    if (typeof syncSelectedIconInspector === 'function') syncSelectedIconInspector(item);
+    if (typeof updateContextToolbar === 'function') updateContextToolbar();
+    return;
+  }
   if (resizingNode) {
     const n = state.nodes.find(x => x.id === resizingNode);
     const dx = (e.clientX - resizeStart.mx) / scale;
@@ -220,8 +256,12 @@ window.addEventListener('mouseup', e => {
   const wasPanning = panDragging;
   panDragging = false;
   const wasDragging = draggingNode;
+  const wasDraggingAnnotation = draggingAnnotation;
+  const wasResizingAnnotation = resizingAnnotation;
   const wasResizing = resizingNode;
   draggingNode = null;
+  draggingAnnotation = null;
+  resizingAnnotation = null;
   resizingNode = null;
 
   if (epDragActive) {
@@ -230,7 +270,7 @@ window.addEventListener('mouseup', e => {
     completeWire();
   } else if (wasPanning) {
     scheduleSaveToLocalStorage();
-  } else if (wasDragging || wasResizing) {
+  } else if (wasDragging || wasDraggingAnnotation || wasResizingAnnotation || wasResizing) {
     scheduleSaveToLocalStorage();
   }
   if (typeof flushDeferredChromeRefresh === 'function') flushDeferredChromeRefresh();

@@ -42,6 +42,14 @@
       <button class="tb-dropdown-item" onclick="addMode('boundary');closeDropdowns()">
         <div class="node-dot-bnd"></div> Boundary Box
       </button>
+      <button class="tb-dropdown-item" onclick="addMode('label');closeDropdowns()">
+        <div class="node-dot-bnd" style="border-style:solid;font-family:'IBM Plex Mono',monospace;font-size:8px;display:flex;align-items:center;justify-content:center;">T</div> Label
+      </button>
+      <button class="tb-dropdown-item" onclick="addMode('icon');closeDropdowns()">
+        <div class="node-dot-bnd" style="border-style:solid;display:flex;align-items:center;justify-content:center;">
+          <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><path d="M6 1.6 9.3 2.8v3c0 2.1-1.3 3.7-3.3 4.4-2-.7-3.3-2.3-3.3-4.4v-3L6 1.6Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
+        </div> Icon
+      </button>
     </div>
   </div>
   <div class="tb-sep"></div>
@@ -188,6 +196,16 @@
         <button class="add-node-btn" data-nodetype="boundary" onclick="addMode('boundary')">
           <div class="node-preview boundary">···</div>
           Boundary Box
+        </button>
+        <button class="add-node-btn" data-nodetype="label" onclick="addMode('label')">
+          <div class="node-preview boundary" style="border-style:solid;font-family:'IBM Plex Mono',monospace;font-size:10px;">TXT</div>
+          Label
+        </button>
+        <button class="add-node-btn" data-nodetype="icon" onclick="addMode('icon')">
+          <div class="node-preview boundary" style="border-style:solid;display:flex;align-items:center;justify-content:center;">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1.6 9.3 2.8v3c0 2.1-1.3 3.7-3.3 4.4-2-.7-3.3-2.3-3.3-4.4v-3L6 1.6Z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/></svg>
+          </div>
+          Icon
         </button>
         <div style="margin-top:10px">
           <div class="prop-label">Default Arrow Type</div>
@@ -555,13 +573,16 @@
 </div>
 
 <div id="palette-drag-ghost"></div>
+<input id="icon-import-input" type="file" accept=".svg,image/svg+xml" hidden>
 <script src="src/services/ids.js"></script>
 <script src="src/services/escape.js"></script>
+<script src="src/services/icons.js"></script>
 <script src="src/services/diagrams.js"></script>
 <script src="src/services/serializer.js"></script>
 <script src="src/services/storage.js"></script>
 <script src="src/state/history.js"></script>
 <script src="src/render/nodes.js"></script>
+<script src="src/render/annotations.js"></script>
 <script src="src/render/document-panel.js"></script>
 <script src="src/render/basic-modal.js"></script>
 <script src="src/render/export-modal.js"></script>

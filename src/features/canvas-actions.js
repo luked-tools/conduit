@@ -13,13 +13,15 @@ function makeCanvasOrderEntry(kind, id) {
 }
 
 function isValidCanvasOrderKind(kind) {
-  return kind === 'node' || kind === 'arrow';
+  return kind === 'node' || kind === 'arrow' || kind === 'label' || kind === 'icon';
 }
 
 function getCanvasObjectByEntry(entry) {
   if (!entry || !isValidCanvasOrderKind(entry.kind) || !entry.id) return null;
   if (entry.kind === 'node') return state.nodes.find(node => node.id === entry.id) || null;
   if (entry.kind === 'arrow') return state.arrows.find(arrow => arrow.id === entry.id) || null;
+  if (entry.kind === 'label') return state.labels.find(label => label.id === entry.id) || null;
+  if (entry.kind === 'icon') return state.icons.find(icon => icon.id === entry.id) || null;
   return null;
 }
 
@@ -33,12 +35,16 @@ function getDefaultCanvasOrderEntries() {
   const contentNodeEntries = orderedNodes
     .filter(entry => entry.node.type !== 'boundary')
     .map(entry => makeCanvasOrderEntry('node', entry.node.id));
-  return [...boundaryEntries, ...arrowEntries, ...contentNodeEntries];
+  const labelEntries = (state.labels || []).map(label => makeCanvasOrderEntry('label', label.id));
+  const iconEntries = (state.icons || []).map(icon => makeCanvasOrderEntry('icon', icon.id));
+  return [...boundaryEntries, ...arrowEntries, ...contentNodeEntries, ...labelEntries, ...iconEntries];
 }
 
 function syncLegacyLayerValuesFromCanvasOrder() {
   let nodeLayer = 0;
   let arrowLayer = 0;
+  let labelLayer = 0;
+  let iconLayer = 0;
   (state.canvasOrder || []).forEach(entry => {
     if (entry.kind === 'node') {
       const node = state.nodes.find(item => item.id === entry.id);
@@ -48,6 +54,16 @@ function syncLegacyLayerValuesFromCanvasOrder() {
     if (entry.kind === 'arrow') {
       const arrow = state.arrows.find(item => item.id === entry.id);
       if (arrow) arrow.z = ++arrowLayer;
+      return;
+    }
+    if (entry.kind === 'label') {
+      const label = state.labels.find(item => item.id === entry.id);
+      if (label) label.z = ++labelLayer;
+      return;
+    }
+    if (entry.kind === 'icon') {
+      const icon = state.icons.find(item => item.id === entry.id);
+      if (icon) icon.z = ++iconLayer;
     }
   });
 }
@@ -213,6 +229,14 @@ function getRenderedArrowLayerValue(arrow) {
   return getCanvasRenderLayerValue('arrow', arrow?.id);
 }
 
+function getRenderedLabelLayerValue(label) {
+  return getCanvasRenderLayerValue('label', label?.id);
+}
+
+function getRenderedIconLayerValue(icon) {
+  return getCanvasRenderLayerValue('icon', icon?.id);
+}
+
 function getSortedNodeLayerEntries() {
   return state.nodes
     .map((node, index) => ({ node, index, layer: getNodeLayerValue(node, index) }))
@@ -249,19 +273,32 @@ function canMoveNodeLayer(nodeId, mode) {
   return canMoveCanvasLayer('node', nodeId, mode);
 }
 
+function canMoveLabelLayer(labelId, mode) {
+  return canMoveCanvasLayer('label', labelId, mode);
+}
+
+function canMoveIconLayer(iconId, mode) {
+  return canMoveCanvasLayer('icon', iconId, mode);
+}
+
 let _nodeLayerTargetMode = null;
 let _quickConnectMode = null;
 
-function isNodeLayerTargetMode(nodeId, mode) {
+function isCanvasLayerTargetMode(kind, id, mode) {
   return !!_nodeLayerTargetMode
-    && _nodeLayerTargetMode.sourceId === nodeId
+    && _nodeLayerTargetMode.sourceKind === kind
+    && _nodeLayerTargetMode.sourceId === id
     && _nodeLayerTargetMode.mode === mode;
 }
 
+function isNodeLayerTargetMode(nodeId, mode) {
+  return isCanvasLayerTargetMode('node', nodeId, mode);
+}
+
 function getNodeLayerTargetBannerText(mode) {
-  if (mode === 'front-of') return 'Layer order - click a node to bring this node in front of it';
-  if (mode === 'behind') return 'Layer order - click a node to place this node behind it';
-  return 'Layer order - click a node';
+  if (mode === 'front-of') return 'Layer order - click a canvas object to bring this item in front of it';
+  if (mode === 'behind') return 'Layer order - click a canvas object to place this item behind it';
+  return 'Layer order - click a canvas object';
 }
 
 function updateNodeLayerTargetUI() {
@@ -381,51 +418,72 @@ function cancelNodeLayerTargetMode() {
 }
 
 function startNodeLayerTargetMode(nodeId, mode) {
-  const node = state.nodes.find(x => x.id === nodeId);
-  if (!node) return false;
-  if (_nodeLayerTargetMode && _nodeLayerTargetMode.sourceId === nodeId && _nodeLayerTargetMode.mode === mode) {
+  return startCanvasLayerTargetMode('node', nodeId, mode);
+}
+
+function startCanvasLayerTargetMode(kind, id, mode) {
+  const source = getCanvasObjectByEntry({ kind, id });
+  if (!source) return false;
+  if (_nodeLayerTargetMode && _nodeLayerTargetMode.sourceKind === kind && _nodeLayerTargetMode.sourceId === id && _nodeLayerTargetMode.mode === mode) {
     cancelNodeLayerTargetMode();
     return false;
   }
 
   if (_brushActive) cancelStyleBrush();
   if (_inlineNodeEditor) closeInlineNodeEdit();
-  if (selectedNode !== nodeId) selectNode(nodeId);
+  if (kind === 'node' && selectedNode !== id) selectNode(id);
+  else if (kind === 'label' && selectedLabel !== id) selectLabel(id);
+  else if (kind === 'icon' && selectedIcon !== id) selectIcon(id);
+  else if (kind === 'arrow' && selectedArrow !== id) selectArrow(id);
 
-  _nodeLayerTargetMode = { sourceId: nodeId, mode };
+  _nodeLayerTargetMode = { sourceKind: kind, sourceId: id, mode };
   updateNodeLayerTargetUI();
   renderSidebar();
   if (typeof updateContextToolbar === 'function') updateContextToolbar();
   return true;
 }
 
-function moveNodeLayerRelative(sourceId, targetId, mode) {
-  if (!sourceId || !targetId || sourceId === targetId) return false;
+function moveCanvasLayerRelativeWithSelection(sourceKind, sourceId, targetKind, targetId, mode) {
+  if (!sourceId || !targetId || (sourceKind === targetKind && sourceId === targetId)) return false;
   pushUndo();
-  const moved = moveCanvasLayerRelative('node', sourceId, 'node', targetId, mode === 'front-of' ? 'after' : 'before');
+  const moved = moveCanvasLayerRelative(sourceKind, sourceId, targetKind, targetId, mode === 'front-of' ? 'after' : 'before');
   if (!moved) return false;
-  selectedNode = sourceId;
-  selectedArrow = null;
+  selectedNode = sourceKind === 'node' ? sourceId : null;
+  selectedArrow = sourceKind === 'arrow' ? sourceId : null;
+  selectedLabel = sourceKind === 'label' ? sourceId : null;
+  selectedIcon = sourceKind === 'icon' ? sourceId : null;
   if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
   if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
+  if (typeof refreshRenderedAnnotationLayers === 'function') refreshRenderedAnnotationLayers();
   if (typeof scheduleSelectionChromeRefresh === 'function') scheduleSelectionChromeRefresh();
   scheduleSaveToLocalStorage();
 
-  const targetNode = state.nodes.find(node => node.id === targetId);
-  const targetName = targetNode ? (targetNode.title || targetNode.tag || 'target node').replace(/\n/g, ' ') : 'target node';
+  const targetObject = getCanvasObjectByEntry({ kind: targetKind, id: targetId });
+  const targetName = targetObject
+    ? ((targetObject.title || targetObject.tag || targetObject.text || targetObject.iconTitle || `${targetKind}`) + '').replace(/\n/g, ' ')
+    : 'target object';
+  const sourceLabel = sourceKind === 'node' ? 'Node' : sourceKind === 'label' ? 'Label' : sourceKind === 'icon' ? 'Icon' : 'Connection';
   const labels = {
-    'front-of': `Node placed in front of ${targetName}`,
-    'behind': `Node placed behind ${targetName}`
+    'front-of': `${sourceLabel} placed in front of ${targetName}`,
+    'behind': `${sourceLabel} placed behind ${targetName}`
   };
   setStatusModeMessage(labels[mode] || 'Layer updated', { fade: true, autoClearMs: 1800 });
   return true;
 }
 
+function moveNodeLayerRelative(sourceId, targetId, mode) {
+  return moveCanvasLayerRelativeWithSelection('node', sourceId, 'node', targetId, mode);
+}
+
 function applyNodeLayerTarget(targetId) {
+  return applyCanvasLayerTarget('node', targetId);
+}
+
+function applyCanvasLayerTarget(targetKind, targetId) {
   if (!_nodeLayerTargetMode) return false;
-  const { sourceId, mode } = _nodeLayerTargetMode;
-  if (!targetId || targetId === sourceId) return false;
-  const applied = moveNodeLayerRelative(sourceId, targetId, mode);
+  const { sourceKind, sourceId, mode } = _nodeLayerTargetMode;
+  if (!targetId || (targetKind === sourceKind && targetId === sourceId)) return false;
+  const applied = moveCanvasLayerRelativeWithSelection(sourceKind, sourceId, targetKind, targetId, mode);
   cancelNodeLayerTargetMode();
   return applied;
 }
@@ -477,6 +535,40 @@ function moveArrowLayer(arrowId, mode) {
   return true;
 }
 
+function moveLabelLayer(labelId, mode) {
+  pushUndo();
+  const moved = moveCanvasLayer('label', labelId, mode);
+  if (!moved) return false;
+  selectedLabel = labelId;
+  selectedNode = null;
+  selectedArrow = null;
+  selectedIcon = null;
+  if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
+  if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
+  if (typeof refreshRenderedAnnotationLayers === 'function') refreshRenderedAnnotationLayers();
+  if (typeof scheduleSelectionChromeRefresh === 'function') scheduleSelectionChromeRefresh();
+  scheduleSaveToLocalStorage();
+  setStatusModeMessage('Label moved', { fade: true, autoClearMs: 1500 });
+  return true;
+}
+
+function moveIconLayer(iconId, mode) {
+  pushUndo();
+  const moved = moveCanvasLayer('icon', iconId, mode);
+  if (!moved) return false;
+  selectedIcon = iconId;
+  selectedNode = null;
+  selectedArrow = null;
+  selectedLabel = null;
+  if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
+  if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
+  if (typeof refreshRenderedAnnotationLayers === 'function') refreshRenderedAnnotationLayers();
+  if (typeof scheduleSelectionChromeRefresh === 'function') scheduleSelectionChromeRefresh();
+  scheduleSaveToLocalStorage();
+  setStatusModeMessage('Icon moved', { fade: true, autoClearMs: 1500 });
+  return true;
+}
+
 function moveNodeLayerToDisplayIndex(nodeId, displayIndex) {
   pushUndo();
   const moved = moveCanvasLayerToDisplayIndex('node', nodeId, displayIndex);
@@ -505,13 +597,98 @@ function moveArrowLayerToDisplayIndex(arrowId, displayIndex) {
   return true;
 }
 
-function addMode(type) {
+function moveLabelLayerToDisplayIndex(labelId, displayIndex) {
   pushUndo();
+  const moved = moveCanvasLayerToDisplayIndex('label', labelId, displayIndex);
+  if (!moved) return false;
+  selectedLabel = labelId;
+  selectedNode = null;
+  selectedArrow = null;
+  selectedIcon = null;
+  if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
+  if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
+  if (typeof refreshRenderedAnnotationLayers === 'function') refreshRenderedAnnotationLayers();
+  if (typeof scheduleSelectionChromeRefresh === 'function') scheduleSelectionChromeRefresh();
+  scheduleSaveToLocalStorage();
+  setStatusModeMessage('Label layer order updated', { fade: true, autoClearMs: 1500 });
+  return true;
+}
+
+function moveIconLayerToDisplayIndex(iconId, displayIndex) {
+  pushUndo();
+  const moved = moveCanvasLayerToDisplayIndex('icon', iconId, displayIndex);
+  if (!moved) return false;
+  selectedIcon = iconId;
+  selectedNode = null;
+  selectedArrow = null;
+  selectedLabel = null;
+  if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
+  if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
+  if (typeof refreshRenderedAnnotationLayers === 'function') refreshRenderedAnnotationLayers();
+  if (typeof scheduleSelectionChromeRefresh === 'function') scheduleSelectionChromeRefresh();
+  scheduleSaveToLocalStorage();
+  setStatusModeMessage('Icon layer order updated', { fade: true, autoClearMs: 1500 });
+  return true;
+}
+
+function createLabelAnnotationObject(x, y) {
+  return {
+    id: nextLabelId(),
+    x: Math.round(x / 10) * 10,
+    y: Math.round(y / 10) * 10,
+    text: 'Label',
+    fontSize: 16,
+    fontWeight: 600,
+    fontStyle: 'normal',
+    textColor: '',
+    backgroundStyle: 'none',
+    fillColor: '',
+    opacity: 1
+  };
+}
+
+function createIconAnnotationObject(x, y, iconData = {}) {
+  const icon = getBuiltinIconDefinition(iconData.iconKey) || getBuiltinIconDefinition('gear');
+  return {
+    id: nextIconId(),
+    x: Math.round(x / 10) * 10,
+    y: Math.round(y / 10) * 10,
+    iconKey: iconData.iconKey || icon?.key || '',
+    iconTitle: iconData.iconTitle || icon?.title || 'Icon',
+    svgMarkup: iconData.svgMarkup || icon?.svg || '',
+    size: 40,
+    color: '',
+    opacity: 1,
+    backgroundStyle: 'none',
+    fillColor: ''
+  };
+}
+
+function addMode(type) {
   lastNodeType = type;
   updatePaletteHighlight();
-  const id = nextNodeId();
   const cx = (-panX + canvasWrap.clientWidth / 2) / scale - 100;
   const cy = (-panY + canvasWrap.clientHeight / 2) / scale - 50;
+  if (type === 'icon') {
+    render();
+    openIconPicker({ createAt: { x: cx, y: cy } });
+    return;
+  }
+  pushUndo();
+  if (type === 'label') {
+    const label = createLabelAnnotationObject(cx, cy);
+    state.labels.push(label);
+    appendCanvasOrderEntry('label', label.id);
+    selectedLabel = label.id;
+    selectedNode = null;
+    selectedArrow = null;
+    selectedIcon = null;
+    render();
+    scheduleSaveToLocalStorage();
+    requestAnimationFrame(() => startInlineAnnotationEdit(label.id));
+    return;
+  }
+  const id = nextNodeId();
   state.nodes.push({
     id, type, tag: nextNodeTag(type),
     title: type === 'boundary' ? 'Boundary Box' : type === 'external' ? 'External Entity' : 'New System',
@@ -523,14 +700,34 @@ function addMode(type) {
   appendCanvasOrderEntry('node', id);
   selectedNode = id;
   selectedArrow = null;
+  selectedLabel = null;
+  selectedIcon = null;
   render();
   scheduleSaveToLocalStorage();
 }
 
 function addModeAt(type, canvasX, canvasY) {
-  pushUndo();
   lastNodeType = type;
   updatePaletteHighlight();
+  if (type === 'icon') {
+    render();
+    openIconPicker({ createAt: { x: canvasX, y: canvasY } });
+    return;
+  }
+  pushUndo();
+  if (type === 'label') {
+    const label = createLabelAnnotationObject(canvasX, canvasY);
+    state.labels.push(label);
+    appendCanvasOrderEntry('label', label.id);
+    selectedLabel = label.id;
+    selectedNode = null;
+    selectedArrow = null;
+    selectedIcon = null;
+    render();
+    scheduleSaveToLocalStorage();
+    requestAnimationFrame(() => startInlineAnnotationEdit(label.id));
+    return;
+  }
   const id = nextNodeId();
   const w = type === 'boundary' ? 300 : 180, h = type === 'boundary' ? 200 : 100;
   const x = Math.round((canvasX - w / 2) / 10) * 10;
@@ -545,6 +742,8 @@ function addModeAt(type, canvasX, canvasY) {
   appendCanvasOrderEntry('node', id);
   selectedNode = id;
   selectedArrow = null;
+  selectedLabel = null;
+  selectedIcon = null;
   render();
   scheduleSaveToLocalStorage();
 }
@@ -629,10 +828,15 @@ function clearCanvas() {
   closeFnModal();
   closeNodeModal();
   if (typeof closeAppearancePanel === 'function') closeAppearancePanel();
+  if (typeof closeInlineAnnotationEdit === 'function') closeInlineAnnotationEdit();
   selectedNode = null;
   selectedArrow = null;
+  selectedLabel = null;
+  selectedIcon = null;
   state.nodes = [];
   state.arrows = [];
+  state.labels = [];
+  state.icons = [];
   state.canvasOrder = [];
   resetDiagramCounters();
   render();
@@ -641,10 +845,10 @@ function clearCanvas() {
 }
 
 function confirmClearCanvas() {
-  if (!state.nodes.length && !state.arrows.length) return;
+  if (!state.nodes.length && !state.arrows.length && !(state.labels || []).length && !(state.icons || []).length) return;
   openBasicModal({
     title: 'Clear canvas',
-    body: '<div style="font-size:12px;color:var(--text2);line-height:1.6;">Remove all nodes, boundary boxes, and connections from the canvas? Your diagram title, subtitle, and theme will be kept. You can still undo this.</div>',
+    body: '<div style="font-size:12px;color:var(--text2);line-height:1.6;">Remove all nodes, labels, icons, boundary boxes, and connections from the canvas? Your diagram title, subtitle, and theme will be kept. You can still undo this.</div>',
     buttons: [
       { label: 'Cancel', className: 'tb-btn' },
       { label: 'Clear canvas', className: 'tb-btn danger', onClick: clearCanvas }
