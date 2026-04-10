@@ -263,7 +263,7 @@ test.describe('Conduit smoke', () => {
     });
 
     await expect(page.locator('#selected-icon-size-slider')).toHaveValue('40');
-    await expect(page.locator('#selected-icon-size-value')).toHaveText('40px');
+    await expect(page.locator('#selected-icon-size-label')).toHaveText('Size — 40px');
 
     await page.locator('#selected-icon-size-slider').evaluate(el => {
       el.value = '74';
@@ -273,15 +273,15 @@ test.describe('Conduit smoke', () => {
       el.value = '0.55';
       el.dispatchEvent(new Event('input', { bubbles: true }));
     });
-    await page.locator('.prop-select').first().selectOption('fill');
+    await page.getByRole('button', { name: 'Fill' }).click();
     await expect(page.locator('#selected-icon-fill-colour')).toBeVisible();
     await page.locator('#selected-icon-fill-colour').evaluate(el => {
       el.value = '#dde7ff';
       el.dispatchEvent(new Event('input', { bubbles: true }));
     });
 
-    await expect(page.locator('#selected-icon-size-value')).toHaveText('74px');
-    await expect(page.locator('#selected-icon-opacity-value')).toHaveText('55%');
+    await expect(page.locator('#selected-icon-size-label')).toHaveText('Size — 74px');
+    await expect(page.locator('#selected-icon-opacity-label')).toHaveText('Opacity — 55%');
     await expect.poll(async () => page.evaluate(() => ({
       size: state.icons[0].size,
       opacity: state.icons[0].opacity,
@@ -334,7 +334,7 @@ test.describe('Conduit smoke', () => {
     await page.mouse.up();
 
     await expect.poll(async () => page.evaluate(() => state.icons[0].size)).toBeGreaterThan(40);
-    await expect(page.locator('#selected-icon-size-value')).not.toHaveText('40px');
+    await expect(page.locator('#selected-icon-size-label')).not.toHaveText('Size — 40px');
   });
 
   test('legacy icon soft backgrounds normalize to fill after reload', async ({ page }) => {
@@ -707,7 +707,7 @@ test('context toolbar more menu uses shared menu icons and dividers', async ({ p
     await page.getByRole('button', { name: 'In front of...' }).click();
 
     await expect(page.locator('#layer-target-banner')).toHaveClass(/active/);
-    await expect(page.locator('#layer-target-banner')).toContainText('bring this node in front of it');
+    await expect(page.locator('#layer-target-banner')).toContainText('bring this item in front of it');
     await expect(page.locator('#context-toolbar')).not.toHaveClass(/visible/);
 
     await page.locator(`#node-${secondId}`).click();
@@ -734,7 +734,7 @@ test('context toolbar more menu uses shared menu icons and dividers', async ({ p
     });
 
     await expect(page.locator('#layer-target-banner')).toHaveClass(/active/);
-    await expect(page.locator('#layer-target-banner')).toContainText('place this node behind it');
+    await expect(page.locator('#layer-target-banner')).toContainText('place this item behind it');
 
     await page.locator(`#node-${firstId}`).click();
 
