@@ -279,11 +279,11 @@ function makeLayersRow({ kind, id, nodeType = '', previewMarkup = '', title, met
   row.dataset.id = id;
   row.setAttribute('role', 'button');
   row.tabIndex = 0;
-  row.addEventListener('click', () => onSelect());
+  row.addEventListener('click', e => onSelect(e));
   row.addEventListener('keydown', e => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      onSelect();
+      onSelect(e);
     }
   });
 
@@ -453,8 +453,8 @@ function renderLayersPanel() {
       previewMarkup: getNodePreviewMarkup(node),
       title: getNodeRowTitle(node),
       meta: getNodeRowMeta(node, entry),
-      selected: selectedNode === node.id,
-      onSelect: () => selectNode(node.id),
+      selected: isCanvasObjectSelected('node', node.id),
+      onSelect: e => selectNode(node.id, { additive: !!e.shiftKey }),
       actions: [
         makeLayersActionButton({ title: 'To back', action: 'back', disabled: !canMoveNodeLayer(node.id, 'back'), onClick: () => moveNodeLayer(node.id, 'back') }),
         makeLayersActionButton({ title: 'Backward', action: 'backward', disabled: !canMoveNodeLayer(node.id, 'backward'), onClick: () => moveNodeLayer(node.id, 'backward') }),
@@ -483,8 +483,8 @@ function renderLayersPanel() {
       previewMarkup: getArrowPreviewMarkup(arrow),
       title,
       meta,
-      selected: selectedArrow === arrow.id,
-      onSelect: () => selectArrow(arrow.id),
+      selected: isCanvasObjectSelected('arrow', arrow.id),
+      onSelect: e => selectArrow(arrow.id, { additive: !!e.shiftKey }),
       actions: [
         makeLayersActionButton({ title: 'To back', action: 'back', disabled: !canMoveArrowLayer(arrow.id, 'back'), onClick: () => moveArrowLayer(arrow.id, 'back') }),
         makeLayersActionButton({ title: 'Backward', action: 'backward', disabled: !canMoveArrowLayer(arrow.id, 'backward'), onClick: () => moveArrowLayer(arrow.id, 'backward') }),
@@ -508,8 +508,8 @@ function renderLayersPanel() {
           previewMarkup: getLabelPreviewMarkup(label),
           title: (label.text || 'Label').replace(/\n/g, ' '),
           meta,
-          selected: selectedLabel === label.id,
-          onSelect: () => selectLabel(label.id),
+          selected: isCanvasObjectSelected('label', label.id),
+          onSelect: e => selectLabel(label.id, { additive: !!e.shiftKey }),
           actions: [
             makeLayersActionButton({ title: 'To back', action: 'back', disabled: !canMoveLabelLayer(label.id, 'back'), onClick: () => moveLabelLayer(label.id, 'back') }),
             makeLayersActionButton({ title: 'Backward', action: 'backward', disabled: !canMoveLabelLayer(label.id, 'backward'), onClick: () => moveLabelLayer(label.id, 'backward') }),
@@ -526,8 +526,8 @@ function renderLayersPanel() {
         previewMarkup: getIconPreviewMarkup(icon),
         title: icon.iconTitle || 'Icon',
         meta,
-        selected: selectedIcon === icon.id,
-        onSelect: () => selectIcon(icon.id),
+        selected: isCanvasObjectSelected('icon', icon.id),
+        onSelect: e => selectIcon(icon.id, { additive: !!e.shiftKey }),
         actions: [
           makeLayersActionButton({ title: 'To back', action: 'back', disabled: !canMoveIconLayer(icon.id, 'back'), onClick: () => moveIconLayer(icon.id, 'back') }),
           makeLayersActionButton({ title: 'Backward', action: 'backward', disabled: !canMoveIconLayer(icon.id, 'backward'), onClick: () => moveIconLayer(icon.id, 'backward') }),

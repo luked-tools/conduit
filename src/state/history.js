@@ -43,6 +43,8 @@ function undo() {
   selectedArrow = null;
   selectedLabel = null;
   selectedIcon = null;
+  selectedCanvasObjects = [];
+  primarySelectedCanvasObject = null;
   updateHistoryBtns();
   render();
 }
@@ -57,6 +59,8 @@ function redo() {
   selectedArrow = null;
   selectedLabel = null;
   selectedIcon = null;
+  selectedCanvasObjects = [];
+  primarySelectedCanvasObject = null;
   updateHistoryBtns();
   render();
 }

@@ -75,6 +75,18 @@ async function dragLocatorBy(page, locator, deltaX, deltaY = 0) {
   await page.mouse.up();
 }
 
+async function marqueeSelect(page, startX, startY, endX, endY, { shift = false } = {}) {
+  const wrap = page.locator('#canvas-wrap');
+  const box = await wrap.boundingBox();
+  if (!box) throw new Error('Could not resolve canvas-wrap');
+  if (shift) await page.keyboard.down('Shift');
+  await page.mouse.move(box.x + startX, box.y + startY);
+  await page.mouse.down();
+  await page.mouse.move(box.x + endX, box.y + endY, { steps: 12 });
+  await page.mouse.up();
+  if (shift) await page.keyboard.up('Shift');
+}
+
 async function seedDenseDiagram(page, { nodeCount = 11, connectionCount = 108 } = {}) {
   await page.evaluate(({ nodeCount, connectionCount }) => {
     state.nodes = [];
@@ -962,6 +974,158 @@ test('selected connection properties are grouped and prioritize route titles ove
     expect(afterPasteIds).toHaveLength(4);
     const pastedId = afterPasteIds[afterPasteIds.length - 1];
     await expect.poll(async () => page.evaluate(id => state.nodes.find(node => node.id === id)?.z ?? null, pastedId)).toBe(4);
+  });
+
+  test('shift-click toggles a mixed canvas selection', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await page.evaluate(() => {
+      const label = createLabelAnnotationObject(1080, 680);
+      label.text = 'Selected label';
+      state.labels.push(label);
+      appendCanvasOrderEntry('label', label.id);
+      render();
+    });
+    const [nodeId] = await getNodeIds(page);
+    const labelId = await page.evaluate(() => state.labels[0].id);
+
+    await page.locator(`#node-${nodeId}`).click();
+    await page.keyboard.down('Shift');
+    await page.locator(`#label-${labelId}`).click();
+    await page.keyboard.up('Shift');
+
+    await expect.poll(async () => page.evaluate(() => ({
+      count: selectedCanvasObjects.length,
+      keys: selectedCanvasObjects.map(entry => `${entry.kind}:${entry.id}`).sort()
+    }))).toEqual({
+      count: 2,
+      keys: [`label:${labelId}`, `node:${nodeId}`].sort()
+    });
+
+    await page.keyboard.down('Shift');
+    await page.locator(`#label-${labelId}`).click();
+    await page.keyboard.up('Shift');
+
+    await expect.poll(async () => page.evaluate(() => selectedCanvasObjects.map(entry => `${entry.kind}:${entry.id}`))).toEqual([`node:${nodeId}`]);
+  });
+
+  test('empty-space marquee can select mixed canvas objects', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 820, 580);
+    await addNode(page, 'external', 1080, 760);
+    await page.evaluate(() => {
+      const label = createLabelAnnotationObject(980, 640);
+      label.text = 'Marquee label';
+      state.labels.push(label);
+      appendCanvasOrderEntry('label', label.id);
+      const arrow = {
+        id: 'multi-marquee-arrow',
+        from: state.nodes[0].id,
+        to: state.nodes[1].id,
+        fromPos: 'e',
+        toPos: 'w',
+        direction: 'directed',
+        lineStyle: 'curved',
+        strokeStyle: 'solid',
+        label: '',
+        labelOffsetX: 0,
+        labelOffsetY: 0,
+        color: '',
+        dash: false,
+        bend: 0,
+        orthoY: 0,
+        z: 1
+      };
+      state.arrows.push(arrow);
+      appendCanvasOrderEntry('arrow', arrow.id);
+      render();
+    });
+
+    await marqueeSelect(page, 700, 470, 1350, 980);
+
+    await expect.poll(async () => page.evaluate(() => ({
+      count: selectedCanvasObjects.length,
+      kinds: selectedCanvasObjects.map(entry => entry.kind).sort()
+    }))).toEqual({
+      count: 4,
+      kinds: ['arrow', 'label', 'node', 'node']
+    });
+  });
+
+  test('dragging one selected node moves the selected group together', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 820, 620);
+    await addNode(page, 'external', 1040, 700);
+    const [firstId, secondId] = await getNodeIds(page);
+
+    await page.locator(`#node-${firstId}`).click();
+    await page.keyboard.down('Shift');
+    await page.locator(`#node-${secondId}`).click();
+    await page.keyboard.up('Shift');
+
+    const before = await page.evaluate(ids => ids.map(id => {
+      const node = state.nodes.find(item => item.id === id);
+      return { id, x: node.x, y: node.y };
+    }), [firstId, secondId]);
+
+    await dragBy(page, `#node-${firstId}`, 120, 80);
+
+    await expect.poll(async () => page.evaluate(ids => ids.map(id => {
+      const node = state.nodes.find(item => item.id === id);
+      return { id, x: node.x, y: node.y };
+    }), [firstId, secondId])).toEqual(before.map(entry => ({
+      ...entry,
+      x: entry.x + 120,
+      y: entry.y + 80
+    })));
+  });
+
+  test('copy paste and delete work across a mixed selection', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await page.evaluate(() => {
+      const label = createLabelAnnotationObject(1040, 680);
+      label.text = 'Copy label';
+      state.labels.push(label);
+      appendCanvasOrderEntry('label', label.id);
+      render();
+    });
+    const [nodeId] = await getNodeIds(page);
+    const labelId = await page.evaluate(() => state.labels[0].id);
+
+    await page.locator(`#node-${nodeId}`).click();
+    await page.keyboard.down('Shift');
+    await page.locator(`#label-${labelId}`).click();
+    await page.keyboard.up('Shift');
+
+    await page.locator('body').press('Control+c');
+    await page.locator('body').press('Control+v');
+
+    await expect.poll(async () => page.evaluate(() => ({
+      nodes: state.nodes.length,
+      labels: state.labels.length,
+      selected: selectedCanvasObjects.length
+    }))).toEqual({
+      nodes: 2,
+      labels: 2,
+      selected: 2
+    });
+
+    await page.locator('body').press('Delete');
+
+    await expect.poll(async () => page.evaluate(() => ({
+      nodes: state.nodes.length,
+      labels: state.labels.length,
+      selected: selectedCanvasObjects.length
+    }))).toEqual({
+      nodes: 1,
+      labels: 1,
+      selected: 0
+    });
   });
 
   test('exported HTML keeps overlapping node layer order', async ({ page, context }) => {

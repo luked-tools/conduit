@@ -36,7 +36,7 @@ function ensureArrowObject(arrowId) {
   hit.style.pointerEvents = 'stroke';
   hit.addEventListener('click', e => {
     e.stopPropagation();
-    selectArrow(arrowId);
+    selectArrow(arrowId, { additive: e.shiftKey });
   });
   hit.addEventListener('mouseenter', e => {
     const arrow = getArrowById(arrowId);
@@ -340,7 +340,8 @@ function renderArrows(targetArrowIds = null) {
     const p1 = staggeredPortXY(fromNode, a.fromPos || 'e', a.id, 'from', getArrowEndOffset(a, 'from'));
     const p2 = staggeredPortXY(toNode, a.toPos || 'w', a.id, 'to', getArrowEndOffset(a, 'to'));
 
-    const isSelected = selectedArrow === a.id;
+    const isSelected = isCanvasObjectSelected('arrow', a.id);
+    const isEditingSelected = getCanvasSelectionCount() === 1 && selectedArrow === a.id;
     const accentStroke = accentStrokeFallback;
     const stroke = a.color || defaultArrowStroke;
 
@@ -354,11 +355,15 @@ function renderArrows(targetArrowIds = null) {
       pathResult,
       stroke,
       accentStroke,
-      isSelected,
-      zIndex: isSelected ? Number(getSelectedArrowLayerZ()) : getRenderedArrowLayerValue(a),
+      isSelected: isEditingSelected,
+      zIndex: isEditingSelected ? Number(getSelectedArrowLayerZ()) : getRenderedArrowLayerValue(a),
       labelX: _lx + (a.labelOffsetX || 0),
       labelY: _ly + (a.labelOffsetY || 0)
     });
+    if (isSelected && !isEditingSelected) {
+      const path = arrowObject._refs?.path;
+      if (path) path.setAttribute('stroke-width', '2');
+    }
     canvas.appendChild(arrowObject);
   });
 
@@ -378,7 +383,7 @@ function refreshRenderedArrowLayers() {
   state.arrows.forEach(arrow => {
     const arrowObject = _arrowObjectRegistry.get(arrow.id);
     if (!arrowObject || !arrowObject.isConnected) return;
-    const isSelected = selectedArrow === arrow.id;
+    const isSelected = getCanvasSelectionCount() === 1 && selectedArrow === arrow.id;
     arrowObject.style.zIndex = String(isSelected ? Number(getSelectedArrowLayerZ()) : getRenderedArrowLayerValue(arrow));
   });
 }

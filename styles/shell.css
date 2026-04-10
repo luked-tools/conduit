@@ -550,6 +550,18 @@
     overflow: hidden;
     background: var(--bg);
   }
+  .marquee-selection {
+    position: absolute;
+    border: 1px solid color-mix(in srgb, var(--accent3) 70%, white 30%);
+    background: color-mix(in srgb, var(--accent3) 14%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent3) 22%, transparent);
+    pointer-events: none;
+    display: none;
+    z-index: 9999;
+  }
+  .marquee-selection.active {
+    display: block;
+  }
   #canvas-wrap::before {
     content: '';
     position: absolute; inset: 0;

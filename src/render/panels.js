@@ -36,7 +36,7 @@ function scheduleSelectionChromeRefresh() {
   requestAnimationFrame(() => {
     _selectionChromeScheduled = false;
     renderSidebar();
-    if (draggingNode || resizingNode || panDragging) {
+    if (draggingNode || draggingSelection || resizingNode || panDragging || marqueeSelection) {
       _deferredLayersPanelRefresh = true;
       _deferredContextToolbarRefresh = true;
       return;
@@ -334,11 +334,63 @@ function renderSidebar() {
 function renderPropsPanel() {
   const section = document.getElementById('props-section');
   const body = document.getElementById('props-body');
-  if (!selectedNode && !selectedArrow && !selectedLabel && !selectedIcon) {
+  if (!getCanvasSelectionCount()) {
     body.innerHTML = '<div style="font-size:11px;color:var(--text3);font-style:italic;padding:4px 0 2px;text-align:center;line-height:1.6;">Select a canvas object<br>to view properties</div>';
     return;
   }
   body.innerHTML = '';
+
+  if (hasMultiCanvasSelection()) {
+    const summaryBody = appendPropGroup(body, 'Selection');
+    const arrangeBody = appendPropGroup(body, 'Arrange');
+    const entries = getSelectedCanvasObjects();
+    const counts = entries.reduce((acc, entry) => {
+      acc[entry.kind] = (acc[entry.kind] || 0) + 1;
+      return acc;
+    }, {});
+    const hint = document.createElement('div');
+    hint.className = 'prop-hint';
+    hint.textContent = `${entries.length} selected — ${Object.entries(counts).map(([kind, count]) => `${count} ${kind}${count === 1 ? '' : 's'}`).join(', ')}`;
+    summaryBody.appendChild(hint);
+
+    const duplicateBtn = document.createElement('button');
+    duplicateBtn.className = 'prop-btn accent';
+    duplicateBtn.textContent = 'Duplicate selected items';
+    duplicateBtn.addEventListener('click', () => {
+      copySelectedNode();
+      pasteNode();
+    });
+    summaryBody.appendChild(duplicateBtn);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'prop-btn danger';
+    deleteBtn.textContent = 'Delete selected items';
+    deleteBtn.addEventListener('click', () => deleteSelected());
+    summaryBody.appendChild(deleteBtn);
+
+    const copyHint = document.createElement('div');
+    copyHint.className = 'prop-hint';
+    copyHint.textContent = 'Use Shift-click or drag on empty canvas to refine the selection.';
+    summaryBody.appendChild(copyHint);
+
+    const layerHint = document.createElement('div');
+    layerHint.className = 'prop-hint';
+    layerHint.textContent = `Selected block moves together in the shared canvas order.`;
+    arrangeBody.appendChild(layerHint);
+    [
+      ['To front', 'front'],
+      ['Forward', 'forward'],
+      ['Backward', 'backward'],
+      ['To back', 'back']
+    ].forEach(([label, mode]) => {
+      const btn = document.createElement('button');
+      btn.className = 'prop-btn';
+      btn.textContent = label;
+      btn.addEventListener('click', () => moveSelectedCanvasLayer(mode));
+      arrangeBody.appendChild(btn);
+    });
+    return;
+  }
 
   if (selectedNode) {
     const n = state.nodes.find(x => x.id===selectedNode);

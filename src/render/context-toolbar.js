@@ -20,6 +20,11 @@ function getContextMenuIcon(name) {
 }
 
 function getContextToolbarAnchor() {
+  if (hasMultiCanvasSelection()) {
+    const rect = getSelectionAnchorRect();
+    if (!rect) return null;
+    return { rect };
+  }
   if (selectedNode) {
     const nodeEl = document.getElementById(`node-${selectedNode}`);
     if (!nodeEl) return null;
@@ -51,8 +56,8 @@ function getContextToolbarAnchor() {
 }
 
 function shouldShowContextToolbar() {
-  if (!selectedNode && !selectedArrow && !selectedLabel && !selectedIcon) return false;
-  if (wireActive || epDragActive || draggingNode || draggingAnnotation || resizingAnnotation || resizingNode || panDragging || _inlineNodeEditor || _inlineAnnotationEditor || _nodeLayerTargetMode || _quickConnectMode) return false;
+  if (!getCanvasSelectionCount()) return false;
+  if (wireActive || epDragActive || draggingNode || draggingAnnotation || draggingSelection || resizingAnnotation || resizingNode || panDragging || marqueeSelection || _inlineNodeEditor || _inlineAnnotationEditor || _nodeLayerTargetMode || _quickConnectMode) return false;
   return true;
 }
 
@@ -97,7 +102,36 @@ function renderContextToolbar() {
 
   toolbar.innerHTML = '';
 
-  if (selectedNode) {
+  if (hasMultiCanvasSelection()) {
+    toolbar.appendChild(makeContextToolbarButton({
+      title: 'Duplicate selected items',
+      label: 'Duplicate',
+      icon: getContextMenuIcon('duplicate'),
+      onClick: () => {
+        copySelectedNode();
+        pasteNode();
+      }
+    }));
+    toolbar.appendChild(makeContextToolbarButton({
+      title: 'Move selection backward',
+      label: 'Back',
+      icon: '&#8595;',
+      onClick: () => moveSelectedCanvasLayer('backward')
+    }));
+    toolbar.appendChild(makeContextToolbarButton({
+      title: 'Move selection forward',
+      label: 'Forward',
+      icon: '&#8593;',
+      onClick: () => moveSelectedCanvasLayer('forward')
+    }));
+    toolbar.appendChild(makeContextToolbarButton({
+      title: 'Delete selected items',
+      label: 'Delete',
+      icon: 'x',
+      danger: true,
+      onClick: () => deleteSelected()
+    }));
+  } else if (selectedNode) {
     const nodeId = selectedNode;
     toolbar.appendChild(makeContextToolbarButton({
       title: 'Rename title and description',
