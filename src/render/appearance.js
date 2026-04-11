@@ -120,48 +120,240 @@ function toHex6(val) {
 // ══════════════════════════════════════════════
 // STYLE BRUSH
 // ══════════════════════════════════════════════
-const STYLE_BRUSH_FIELDS = [
+const STYLE_BRUSH_NODE_FIELDS = [
   'color','colorOpacity',
   'textColor','tagColor','subtitleColor','fnLabelColor','fnTextColor',
   'ioInputBg','ioInputBorder','ioInputText',
   'ioOutputBg','ioOutputBorder','ioOutputText'
 ];
+const STYLE_BRUSH_LABEL_FIELDS = [
+  'textColor','fontSize','fontWeight','fontStyle','backgroundStyle','fillColor','opacity'
+];
+const STYLE_BRUSH_ICON_FIELDS = [
+  'color','size','opacity','backgroundStyle','fillColor'
+];
 
 let _brushActive = false;
 let _brushData = null;
+let _brushSource = null;
 
-function startStyleBrush(nodeId) {
-  const n = state.nodes.find(x => x.id === nodeId);
-  if (!n) return;
+function getStyleBrushSource(kind, id) {
+  if (kind === 'node') return state.nodes.find(x => x.id === id) || null;
+  if (kind === 'label') return typeof getLabelById === 'function' ? getLabelById(id) : null;
+  if (kind === 'icon') return typeof getIconById === 'function' ? getIconById(id) : null;
+  return null;
+}
+
+function getStyleBrushTargetKind(kind, object) {
+  if (kind === 'node' && object?.type === 'boundary') return 'boundary';
+  return kind;
+}
+
+function extractStyleBrushData(kind, object) {
+  const nodeData = {};
+  const labelData = {};
+  const iconData = {};
+  STYLE_BRUSH_NODE_FIELDS.forEach(field => { nodeData[field] = object?.[field]; });
+  STYLE_BRUSH_LABEL_FIELDS.forEach(field => { labelData[field] = object?.[field]; });
+  STYLE_BRUSH_ICON_FIELDS.forEach(field => { iconData[field] = object?.[field]; });
+
+  let foregroundColor = null;
+  let fillColor = null;
+  let fillEnabled = false;
+  let opacity = null;
+
+  if (kind === 'node') {
+    foregroundColor = object?.textColor || object?.subtitleColor || object?.tagColor || null;
+    fillColor = object?.color || null;
+    fillEnabled = !!object?.color;
+    opacity = typeof object?.colorOpacity === 'number' ? Math.max(0, Math.min(1, object.colorOpacity / 255)) : null;
+  } else if (kind === 'label') {
+    foregroundColor = object?.textColor || null;
+    fillColor = object?.fillColor || null;
+    fillEnabled = (object?.backgroundStyle === 'fill') && !!fillColor;
+    opacity = typeof object?.opacity === 'number' ? object.opacity : null;
+  } else if (kind === 'icon') {
+    foregroundColor = object?.color || null;
+    fillColor = object?.fillColor || null;
+    fillEnabled = (object?.backgroundStyle === 'fill') && !!fillColor;
+    opacity = typeof object?.opacity === 'number' ? object.opacity : null;
+  }
+
+  return {
+    sourceKind: getStyleBrushTargetKind(kind, object),
+    node: nodeData,
+    label: labelData,
+    icon: iconData,
+    shared: {
+      foregroundColor,
+      fillColor,
+      fillEnabled,
+      opacity
+    }
+  };
+}
+
+function applyNodeStyleBrush(target, brushData) {
+  let changed = false;
+  if (brushData?.node) {
+    STYLE_BRUSH_NODE_FIELDS.forEach(field => {
+      if (brushData.node[field] === undefined) return;
+      if (target[field] === brushData.node[field]) return;
+      target[field] = brushData.node[field];
+      changed = true;
+    });
+  }
+  const shared = brushData?.shared || {};
+  if (shared.foregroundColor) {
+    ['textColor', 'subtitleColor', 'tagColor', 'fnLabelColor', 'fnTextColor'].forEach(field => {
+      if (target[field] === shared.foregroundColor) return;
+      target[field] = shared.foregroundColor;
+      changed = true;
+    });
+  }
+  if (shared.fillEnabled && shared.fillColor) {
+    if (target.color !== shared.fillColor) {
+      target.color = shared.fillColor;
+      changed = true;
+    }
+    const nextOpacity = typeof shared.opacity === 'number'
+      ? Math.max(0, Math.min(255, Math.round(shared.opacity * 255)))
+      : 255;
+    if (target.colorOpacity !== nextOpacity) {
+      target.colorOpacity = nextOpacity;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+function applyLabelStyleBrush(target, brushData) {
+  let changed = false;
+  if (brushData?.label) {
+    STYLE_BRUSH_LABEL_FIELDS.forEach(field => {
+      if (brushData.label[field] === undefined) return;
+      if (target[field] === brushData.label[field]) return;
+      target[field] = brushData.label[field];
+      changed = true;
+    });
+  }
+  const shared = brushData?.shared || {};
+  if (shared.foregroundColor && target.textColor !== shared.foregroundColor) {
+    target.textColor = shared.foregroundColor;
+    changed = true;
+  }
+  if (typeof shared.opacity === 'number' && target.opacity !== shared.opacity) {
+    target.opacity = shared.opacity;
+    changed = true;
+  }
+  if (shared.fillEnabled && shared.fillColor) {
+    if (target.backgroundStyle !== 'fill') {
+      target.backgroundStyle = 'fill';
+      changed = true;
+    }
+    if (target.fillColor !== shared.fillColor) {
+      target.fillColor = shared.fillColor;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+function applyIconStyleBrush(target, brushData) {
+  let changed = false;
+  if (brushData?.icon) {
+    STYLE_BRUSH_ICON_FIELDS.forEach(field => {
+      if (brushData.icon[field] === undefined) return;
+      if (target[field] === brushData.icon[field]) return;
+      target[field] = brushData.icon[field];
+      changed = true;
+    });
+  }
+  const shared = brushData?.shared || {};
+  if (shared.foregroundColor && target.color !== shared.foregroundColor) {
+    target.color = shared.foregroundColor;
+    changed = true;
+  }
+  if (typeof shared.opacity === 'number' && target.opacity !== shared.opacity) {
+    target.opacity = shared.opacity;
+    changed = true;
+  }
+  if (shared.fillEnabled && shared.fillColor) {
+    if (target.backgroundStyle !== 'fill') {
+      target.backgroundStyle = 'fill';
+      changed = true;
+    }
+    if (target.fillColor !== shared.fillColor) {
+      target.fillColor = shared.fillColor;
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+function startStyleBrush(kindOrId, maybeId = null) {
+  const kind = maybeId === null ? 'node' : kindOrId;
+  const id = maybeId === null ? kindOrId : maybeId;
+  const source = getStyleBrushSource(kind, id);
+  if (!source) return;
   if (_quickConnectMode) cancelQuickConnectMode();
-  _brushData = {};
-  STYLE_BRUSH_FIELDS.forEach(f => { _brushData[f] = n[f]; });
+  _brushData = extractStyleBrushData(kind, source);
+  _brushSource = { kind, id };
   _brushActive = true;
-  document.getElementById('style-brush-banner').classList.add('active');
-  document.getElementById('canvas-wrap').classList.add('brush-mode');
-  document.getElementById('canvas-wrap').style.cursor = 'crosshair';
+  const banner = document.getElementById('style-brush-banner');
+  if (banner) {
+    banner.classList.add('active');
+    const textNode = banner.childNodes[2];
+    if (textNode) textNode.textContent = ' Style brush — click a canvas object to apply ';
+  }
+  const wrap = document.getElementById('canvas-wrap');
+  if (wrap) {
+    wrap.classList.add('brush-mode');
+    wrap.style.cursor = 'crosshair';
+  }
   document.querySelectorAll('.brush-btn').forEach(b => b.classList.add('active'));
 }
 
 function cancelStyleBrush() {
   _brushActive = false;
   _brushData = null;
-  document.getElementById('style-brush-banner').classList.remove('active');
-  document.getElementById('canvas-wrap').classList.remove('brush-mode');
-  document.getElementById('canvas-wrap').style.cursor = '';
+  _brushSource = null;
+  const banner = document.getElementById('style-brush-banner');
+  if (banner) {
+    banner.classList.remove('active');
+    const textNode = banner.childNodes[2];
+    if (textNode) textNode.textContent = ' Style brush — click a canvas object to apply ';
+  }
+  const wrap = document.getElementById('canvas-wrap');
+  if (wrap) {
+    wrap.classList.remove('brush-mode');
+    wrap.style.cursor = '';
+  }
   document.querySelectorAll('.brush-btn').forEach(b => b.classList.remove('active'));
 }
 
-function applyStyleBrush(nodeId) {
+function applyStyleBrush(kindOrId, maybeId = null) {
   if (!_brushActive || !_brushData) return;
-  const n = state.nodes.find(x => x.id === nodeId);
-  if (!n) return;
+  const kind = maybeId === null ? 'node' : kindOrId;
+  const id = maybeId === null ? kindOrId : maybeId;
+  const target = getStyleBrushSource(kind, id);
+  if (!target) return;
+  if (_brushSource && _brushSource.kind === kind && _brushSource.id === id) return;
   pushUndo();
-  STYLE_BRUSH_FIELDS.forEach(f => { n[f] = _brushData[f]; });
-  renderNodes();
+  let changed = false;
+  if (kind === 'node') changed = applyNodeStyleBrush(target, _brushData);
+  else if (kind === 'label') changed = applyLabelStyleBrush(target, _brushData);
+  else if (kind === 'icon') changed = applyIconStyleBrush(target, _brushData);
+  if (!changed) {
+    setStatusModeMessage('No compatible style fields to apply', { fade: true, autoClearMs: 1500 });
+    return;
+  }
+  if (kind === 'node') renderNodes();
+  else if (typeof renderAnnotations === 'function') renderAnnotations();
+  if (typeof renderLayersPanel === 'function' && typeof _layersPanelOpen !== 'undefined' && _layersPanelOpen) renderLayersPanel();
+  renderSidebar();
   saveToLocalStorage();
-  // Re-render sidebar only if this was the selected node (to update pickers)
-  if (selectedNode === nodeId) renderSidebar();
+  setStatusModeMessage('Style applied', { fade: true, autoClearMs: 1200 });
 }
 function updateSliderPct(el) {
   const pct = ((el.value - el.min) / (el.max - el.min) * 100).toFixed(1) + '%';

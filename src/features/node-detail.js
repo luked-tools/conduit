@@ -126,11 +126,122 @@ function buildNMPanel(tab, panel) {
 
   if (tab === 'overview') {
     buildNMOverview(n, panel);
+  } else if (tab === 'diagram') {
+    buildNMDiagram(n, panel);
   } else if (tab === 'connections') {
     buildNMConnections(n, panel);
   } else if (tab === 'functions') {
     buildNMFunctions(n, panel);
   }
+}
+
+function buildNMDiagram(n, panel) {
+  panel.innerHTML = '';
+
+  const linkedDiagram = n.linkedDiagramId ? getDiagramById(n.linkedDiagramId) : null;
+  if (!linkedDiagram) {
+    const empty = document.createElement('div');
+    empty.className = 'nm-empty';
+    empty.textContent = 'No linked diagram yet.';
+    panel.appendChild(empty);
+
+    const hint = document.createElement('div');
+    hint.className = 'nm-notes-hint';
+    hint.textContent = 'Linked diagrams let this node open a deeper map inside the same draft.';
+    panel.appendChild(hint);
+
+    const createBtn = document.createElement('button');
+    createBtn.className = 'nm-fn-add-btn';
+    createBtn.textContent = 'Create linked diagram';
+    createBtn.addEventListener('click', () => {
+      closeNodeModal();
+      createLinkedDiagramForNode(n.id);
+    });
+    panel.appendChild(createBtn);
+
+    const linkBtn = document.createElement('button');
+    linkBtn.className = 'nm-fn-add-btn';
+    linkBtn.style.marginTop = '8px';
+    linkBtn.textContent = 'Link existing diagram';
+    linkBtn.addEventListener('click', () => {
+      closeNodeModal();
+      openDiagramLinkPickerForNode(n.id);
+    });
+    panel.appendChild(linkBtn);
+    return;
+  }
+
+  const doc = ensureDiagramDocument();
+  const isRoot = linkedDiagram.id === doc.rootDiagramId;
+  const isCurrent = linkedDiagram.id === activeDiagramId;
+  const stats = document.createElement('div');
+  stats.className = 'nm-overview-grid';
+  stats.innerHTML = `
+    <div class="nm-stat-card">
+      <div class="nm-stat-label">TITLE</div>
+      <div class="nm-stat-value" style="font-size:15px;line-height:1.3;margin-top:4px;">${escapeHtml(getDiagramDisplayTitle(linkedDiagram))}</div>
+      <div class="nm-stat-sub">${escapeHtml(linkedDiagram.subtitle || 'No subtitle')}</div>
+    </div>
+    <div class="nm-stat-card">
+      <div class="nm-stat-label">STATUS</div>
+      <div class="nm-stat-value" style="font-size:14px;margin-top:4px;">
+        ${isRoot ? '<span class="nm-badge internal">Root</span>' : ''}
+        ${isCurrent ? '<span class="nm-badge external">Current</span>' : ''}
+        ${!isRoot && !isCurrent ? '<span class="nm-badge internal">Linked</span>' : ''}
+      </div>
+      <div class="nm-stat-sub">${escapeHtml(getDiagramSummaryMeta(linkedDiagram))}</div>
+    </div>
+    <div class="nm-stat-card">
+      <div class="nm-stat-label">INBOUND LINKS</div>
+      <div class="nm-stat-value">${getDiagramInboundLinkCount(linkedDiagram.id)}</div>
+      <div class="nm-stat-sub">Nodes linking to this diagram</div>
+    </div>
+  `;
+  panel.appendChild(stats);
+
+  const summary = document.createElement('div');
+  summary.className = 'nm-diagram-summary';
+  summary.innerHTML = `
+    <div class="nm-fn-field-label">Linked diagram details</div>
+    <div class="nm-diagram-card">
+      <div class="nm-diagram-card-title">${escapeHtml(getDiagramDisplayTitle(linkedDiagram))}</div>
+      <div class="nm-diagram-card-meta">${escapeHtml(getDiagramSummaryMeta(linkedDiagram))}</div>
+      <div class="nm-diagram-card-copy">${escapeHtml(linkedDiagram.subtitle || 'Open this linked diagram to edit its own canvas and navigation.')}</div>
+    </div>
+  `;
+  panel.appendChild(summary);
+
+  const actions = document.createElement('div');
+  actions.className = 'nm-diagram-actions';
+
+  const openBtn = document.createElement('button');
+  openBtn.className = 'nm-fn-add-btn';
+  openBtn.textContent = 'Open linked diagram';
+  openBtn.addEventListener('click', () => {
+    closeNodeModal();
+    openLinkedDiagramForNode(n.id);
+  });
+  actions.appendChild(openBtn);
+
+  const relinkBtn = document.createElement('button');
+  relinkBtn.className = 'nm-fn-add-btn';
+  relinkBtn.textContent = 'Link another diagram';
+  relinkBtn.addEventListener('click', () => {
+    closeNodeModal();
+    openDiagramLinkPickerForNode(n.id);
+  });
+  actions.appendChild(relinkBtn);
+
+  const unlinkBtn = document.createElement('button');
+  unlinkBtn.className = 'nm-fn-add-btn';
+  unlinkBtn.textContent = 'Unlink diagram';
+  unlinkBtn.addEventListener('click', () => {
+    closeNodeModal();
+    unlinkDiagramFromNode(n.id);
+  });
+  actions.appendChild(unlinkBtn);
+
+  panel.appendChild(actions);
 }
 
 function buildNMOverview(n, panel) {

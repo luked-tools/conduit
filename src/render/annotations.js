@@ -73,13 +73,19 @@ function applyLabelAppearance(label, el) {
 function createLabelAnnotationEl(label) {
   const el = document.createElement('div');
   el.className = 'canvas-annotation annotation-label';
-  if (selectedLabel === label.id) el.classList.add('selected');
+  if (isCanvasObjectSelected('label', label.id)) el.classList.add('selected');
   el.id = `label-${label.id}`;
   el.dataset.labelId = label.id;
   el.innerHTML = `<div class="annotation-label-text"></div>`;
   el.querySelector('.annotation-label-text').textContent = label.text || 'Label';
   applyLabelAppearance(label, el);
   el.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    if (_brushActive) {
+      e.stopPropagation();
+      applyStyleBrush('label', label.id);
+      return;
+    }
     if (_nodeLayerTargetMode) {
       e.stopPropagation();
       if (!(_nodeLayerTargetMode.sourceKind === 'label' && _nodeLayerTargetMode.sourceId === label.id)) applyCanvasLayerTarget('label', label.id);
@@ -87,7 +93,11 @@ function createLabelAnnotationEl(label) {
     }
     if (_quickConnectMode || wireActive) return;
     e.stopPropagation();
-    selectLabel(label.id);
+    if (e.shiftKey) {
+      selectLabel(label.id, { additive: true });
+      return;
+    }
+    selectLabel(label.id, { preserveExisting: true });
     startAnnotationDrag(e, 'label', label.id);
   });
   el.addEventListener('dblclick', e => {
@@ -146,12 +156,18 @@ function applyIconAppearance(icon, el) {
 function createIconAnnotationEl(icon) {
   const el = document.createElement('div');
   el.className = 'canvas-annotation annotation-icon';
-  if (selectedIcon === icon.id) el.classList.add('selected');
+  if (isCanvasObjectSelected('icon', icon.id)) el.classList.add('selected');
   el.id = `icon-${icon.id}`;
   el.dataset.iconId = icon.id;
   el.innerHTML = '<div class="annotation-icon-glyph"></div><button type="button" class="annotation-icon-resize" aria-label="Resize icon"></button>';
   applyIconAppearance(icon, el);
   el.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    if (_brushActive) {
+      e.stopPropagation();
+      applyStyleBrush('icon', icon.id);
+      return;
+    }
     if (_nodeLayerTargetMode) {
       e.stopPropagation();
       if (!(_nodeLayerTargetMode.sourceKind === 'icon' && _nodeLayerTargetMode.sourceId === icon.id)) applyCanvasLayerTarget('icon', icon.id);
@@ -160,7 +176,11 @@ function createIconAnnotationEl(icon) {
     if (_quickConnectMode || wireActive) return;
     if (e.target.closest('.annotation-icon-resize')) return;
     e.stopPropagation();
-    selectIcon(icon.id);
+    if (e.shiftKey) {
+      selectIcon(icon.id, { additive: true });
+      return;
+    }
+    selectIcon(icon.id, { preserveExisting: true });
     startAnnotationDrag(e, 'icon', icon.id);
   });
   const resizeHandle = el.querySelector('.annotation-icon-resize');
@@ -168,7 +188,7 @@ function createIconAnnotationEl(icon) {
     if (_nodeLayerTargetMode || _quickConnectMode || wireActive) return;
     e.preventDefault();
     e.stopPropagation();
-    selectIcon(icon.id);
+    selectIcon(icon.id, { preserveExisting: true });
     pushUndo();
     resizingAnnotation = icon.id;
     resizeAnnotationStart = {
@@ -185,15 +205,7 @@ function createIconAnnotationEl(icon) {
 }
 
 function startAnnotationDrag(e, kind, id) {
-  const object = kind === 'label' ? getLabelById(id) : getIconById(id);
-  if (!object) return;
-  pushUndo();
-  draggingAnnotation = {
-    kind,
-    id,
-    offsetX: (e.clientX - canvasWrap.getBoundingClientRect().left - panX) / scale - object.x,
-    offsetY: (e.clientY - canvasWrap.getBoundingClientRect().top - panY) / scale - object.y
-  };
+  startSelectionDragSession(e, kind, id);
 }
 
 function positionInlineAnnotationEdit(annotationEl, wrap) {

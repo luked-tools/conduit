@@ -359,7 +359,7 @@
 
     <div id="style-brush-banner">
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 12l3-3 5.5-5.5a1.5 1.5 0 0 0-2.1-2.1L3 7 2 12z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M9.5 3.5l1 1" stroke="currentColor" stroke-width="1.3"/><circle cx="2.5" cy="11.5" r="1" fill="currentColor" opacity="0.7"/></svg>
-      Style brush — click a node to apply
+      Style brush — click a canvas object to apply
       <button id="style-brush-cancel" onclick="cancelStyleBrush()">✕ Cancel</button>
     </div>
     <div id="layer-target-banner">
@@ -469,12 +469,14 @@
     <div id="nm-tabs">
       <div class="nm-tab active" data-tab="overview" onclick="switchNMTab('overview')">Overview</div>
       <div class="nm-tab" data-tab="connections" onclick="switchNMTab('connections')">Connections</div>
+      <div class="nm-tab" data-tab="diagram" onclick="switchNMTab('diagram')">Linked diagram</div>
       <div class="nm-tab" data-tab="functions" onclick="switchNMTab('functions')">Functions</div>
       <div class="nm-tab" data-tab="notes" onclick="switchNMTab('notes')">Notes</div>
     </div>
     <div id="nm-body">
       <div class="nm-tab-panel active" id="nm-panel-overview"></div>
       <div class="nm-tab-panel" id="nm-panel-connections"></div>
+      <div class="nm-tab-panel" id="nm-panel-diagram"></div>
       <div class="nm-tab-panel" id="nm-panel-functions"></div>
       <div class="nm-tab-panel" id="nm-panel-notes">
         <div class="nm-fn-field-label" style="margin-bottom:8px;">Free-form notes for this node</div>

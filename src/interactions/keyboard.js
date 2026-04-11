@@ -3,7 +3,7 @@ document.addEventListener('keydown', e => {
   const inTextField = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA'
     || e.target.isContentEditable;
 
-  if (!inTextField && (e.key === 'Delete' || e.key === 'Backspace') && (selectedNode || selectedArrow || selectedLabel || selectedIcon)) {
+  if (!inTextField && (e.key === 'Delete' || e.key === 'Backspace') && getCanvasSelectionCount()) {
     deleteSelected();
   }
 
@@ -26,7 +26,7 @@ document.addEventListener('keydown', e => {
     redo();
   }
 
-  if (!inTextField && (e.ctrlKey || e.metaKey) && e.key === 'c' && (selectedNode || selectedLabel || selectedIcon)) {
+  if (!inTextField && (e.ctrlKey || e.metaKey) && e.key === 'c' && getCanvasSelectionCount()) {
     copySelectedNode();
   }
 
@@ -37,14 +37,19 @@ document.addEventListener('keydown', e => {
 });
 
 function deleteSelected({ deleteLinkedDiagram = false, skipLinkedPrompt = false } = {}) {
-  if (selectedNode) {
-    const nodeId = selectedNode;
-    const node = state.nodes.find(n => n.id === nodeId);
-    const linkedDiagramId = node?.linkedDiagramId;
-    const linkedDiagram = linkedDiagramId && typeof getDiagramById === 'function'
-      ? getDiagramById(linkedDiagramId)
-      : null;
-    if (!skipLinkedPrompt && linkedDiagram) {
+  const selection = getSelectedCanvasObjects();
+  if (!selection.length) return;
+  const selectedNodes = selection
+    .filter(entry => entry.kind === 'node')
+    .map(entry => state.nodes.find(n => n.id === entry.id))
+    .filter(Boolean);
+  const linkedDiagrams = [...new Map(selectedNodes
+    .map(node => [node.linkedDiagramId, node.linkedDiagramId && typeof getDiagramById === 'function' ? getDiagramById(node.linkedDiagramId) : null])
+    .filter(([, diagram]) => !!diagram)).values()];
+  if (!skipLinkedPrompt && linkedDiagrams.length) {
+    if (selection.length === 1 && selectedNodes.length === 1) {
+      const node = selectedNodes[0];
+      const linkedDiagram = linkedDiagrams[0];
       openBasicModal({
         title: 'Delete linked node',
         body: `<div class="draft-modal-note"><b>${escapeHtml(node.title || node.tag || 'This node')}</b> links to <b>${escapeHtml(linkedDiagram.title || 'Untitled diagram')}</b>. Delete just the node, or delete the linked diagram too?</div>`,
@@ -56,66 +61,60 @@ function deleteSelected({ deleteLinkedDiagram = false, skipLinkedPrompt = false 
       });
       return;
     }
-    pushUndo();
-    state.arrows = state.arrows.filter(a => a.from !== nodeId && a.to !== nodeId);
-    state.nodes = state.nodes.filter(n => n.id !== nodeId);
-    selectedNode = null;
-    selectedLabel = null;
-    selectedIcon = null;
-    normalizeCanvasOrder();
-    if (deleteLinkedDiagram && linkedDiagram) {
-      syncActiveDiagramFromCurrentState();
-      deleteDiagramRecordById(linkedDiagram.id, { fallbackId: activeDiagramId });
-    }
-  } else if (selectedArrow) {
-    pushUndo();
-    state.arrows = state.arrows.filter(a => a.id !== selectedArrow);
-    selectedArrow = null;
-    selectedLabel = null;
-    selectedIcon = null;
-    normalizeCanvasOrder();
-  } else if (selectedLabel) {
-    pushUndo();
-    state.labels = state.labels.filter(label => label.id !== selectedLabel);
-    selectedLabel = null;
-    selectedIcon = null;
-    normalizeCanvasOrder();
-  } else if (selectedIcon) {
-    pushUndo();
-    state.icons = state.icons.filter(icon => icon.id !== selectedIcon);
-    selectedIcon = null;
-    selectedLabel = null;
-    normalizeCanvasOrder();
+    openBasicModal({
+      title: 'Delete selected items',
+      body: `<div class="draft-modal-note">${selectedNodes.length} selected node(s) link to ${linkedDiagrams.length} diagram(s). Delete the selected items only, or delete those linked diagrams too?</div>`,
+      buttons: [
+        { label: 'Cancel', className: 'tb-btn' },
+        { label: 'Delete selected items only', className: 'tb-btn', onClick: () => deleteSelected({ skipLinkedPrompt: true }) },
+        { label: 'Delete items and diagrams', className: 'tb-btn danger', onClick: () => deleteSelected({ deleteLinkedDiagram: true, skipLinkedPrompt: true }) }
+      ]
+    });
+    return;
+  }
+  pushUndo();
+  const nodeIds = new Set(selection.filter(entry => entry.kind === 'node').map(entry => entry.id));
+  const arrowIds = new Set(selection.filter(entry => entry.kind === 'arrow').map(entry => entry.id));
+  const labelIds = new Set(selection.filter(entry => entry.kind === 'label').map(entry => entry.id));
+  const iconIds = new Set(selection.filter(entry => entry.kind === 'icon').map(entry => entry.id));
+  if (nodeIds.size) {
+    state.arrows = state.arrows.filter(a => !nodeIds.has(a.from) && !nodeIds.has(a.to));
+  }
+  state.arrows = state.arrows.filter(a => !arrowIds.has(a.id));
+  state.nodes = state.nodes.filter(n => !nodeIds.has(n.id));
+  state.labels = state.labels.filter(label => !labelIds.has(label.id));
+  state.icons = state.icons.filter(icon => !iconIds.has(icon.id));
+  replaceCanvasSelection([], null);
+  normalizeCanvasOrder();
+  if (deleteLinkedDiagram && linkedDiagrams.length) {
+    syncActiveDiagramFromCurrentState();
+    linkedDiagrams.forEach(diagram => deleteDiagramRecordById(diagram.id, { fallbackId: activeDiagramId }));
   }
   render();
   saveToLocalStorage();
 }
 
 function copySelectedNode() {
-  if (selectedNode) {
-    const n = state.nodes.find(x => x.id === selectedNode);
-    if (!n) return;
-    _clipboardNode = { kind: 'node', data: JSON.parse(JSON.stringify(n)) };
-  } else if (selectedLabel) {
-    const label = state.labels.find(x => x.id === selectedLabel);
-    if (!label) return;
-    _clipboardNode = { kind: 'label', data: JSON.parse(JSON.stringify(label)) };
-  } else if (selectedIcon) {
-    const icon = state.icons.find(x => x.id === selectedIcon);
-    if (!icon) return;
-    _clipboardNode = { kind: 'icon', data: JSON.parse(JSON.stringify(icon)) };
-  } else {
-    return;
-  }
+  const selection = getSelectedCanvasObjects();
+  if (!selection.length) return;
+  _clipboardNode = {
+    kind: selection.length === 1 ? selection[0].kind : 'multi',
+    items: selection.map(entry => ({
+      kind: entry.kind,
+      data: JSON.parse(JSON.stringify(getCanvasObjectByEntry(entry)))
+    })).filter(entry => !!entry.data)
+  };
   setStatusModeMessage('\u2398 Copied \u2014 Ctrl+V to paste', { fade: true, autoClearMs: 1800 });
 }
 
 function pasteNode() {
-  if (!_clipboardNode) return;
+  if (!_clipboardNode?.items?.length) return;
   pushUndo();
-  const src = _clipboardNode.data || _clipboardNode;
   const OFFSET = 30;
-  if ((_clipboardNode.kind || 'node') === 'node') {
+  const idMap = new Map();
+  const newSelection = [];
+  _clipboardNode.items.filter(item => item.kind === 'node').forEach(item => {
+    const src = item.data;
     const id = nextNodeId();
     const copy = {
       ...JSON.parse(JSON.stringify(src)),
@@ -124,16 +123,14 @@ function pasteNode() {
       y: src.y + OFFSET,
       z: Number.MAX_SAFE_INTEGER,
     };
-    if (copy.tag && copy.type !== 'boundary') {
-      copy.tag = nextNodeTag(copy.type);
-    }
+    if (copy.tag && copy.type !== 'boundary') copy.tag = nextNodeTag(copy.type);
     state.nodes.push(copy);
-    normalizeNodeLayers();
     appendCanvasOrderEntry('node', id);
-    render();
-    selectNode(id);
-    _clipboardNode = { kind: 'node', data: JSON.parse(JSON.stringify(copy)) };
-  } else if (_clipboardNode.kind === 'label') {
+    idMap.set(src.id, id);
+    newSelection.push(makeCanvasSelectionEntry('node', id));
+  });
+  _clipboardNode.items.filter(item => item.kind === 'label').forEach(item => {
+    const src = item.data;
     const id = nextLabelId();
     const copy = {
       ...JSON.parse(JSON.stringify(src)),
@@ -144,10 +141,10 @@ function pasteNode() {
     };
     state.labels.push(copy);
     appendCanvasOrderEntry('label', id);
-    render();
-    selectLabel(id);
-    _clipboardNode = { kind: 'label', data: JSON.parse(JSON.stringify(copy)) };
-  } else if (_clipboardNode.kind === 'icon') {
+    newSelection.push(makeCanvasSelectionEntry('label', id));
+  });
+  _clipboardNode.items.filter(item => item.kind === 'icon').forEach(item => {
+    const src = item.data;
     const id = nextIconId();
     const copy = {
       ...JSON.parse(JSON.stringify(src)),
@@ -158,9 +155,33 @@ function pasteNode() {
     };
     state.icons.push(copy);
     appendCanvasOrderEntry('icon', id);
-    render();
-    selectIcon(id);
-    _clipboardNode = { kind: 'icon', data: JSON.parse(JSON.stringify(copy)) };
-  }
+    newSelection.push(makeCanvasSelectionEntry('icon', id));
+  });
+  _clipboardNode.items.filter(item => item.kind === 'arrow').forEach(item => {
+    const src = item.data;
+    const id = nextArrowId();
+    const copy = {
+      ...JSON.parse(JSON.stringify(src)),
+      id,
+      from: idMap.get(src.from) || src.from,
+      to: idMap.get(src.to) || src.to,
+      z: Number.MAX_SAFE_INTEGER,
+      labelOffsetX: (src.labelOffsetX || 0) + OFFSET,
+      labelOffsetY: (src.labelOffsetY || 0) + OFFSET
+    };
+    state.arrows.push(copy);
+    appendCanvasOrderEntry('arrow', id);
+    newSelection.push(makeCanvasSelectionEntry('arrow', id));
+  });
+  normalizeCanvasOrder();
+  render();
+  replaceCanvasSelection(newSelection, newSelection[newSelection.length - 1] || null);
+  _clipboardNode = {
+    kind: newSelection.length === 1 ? newSelection[0].kind : 'multi',
+    items: newSelection.map(entry => ({
+      kind: entry.kind,
+      data: JSON.parse(JSON.stringify(getCanvasObjectByEntry(entry)))
+    }))
+  };
   saveToLocalStorage();
 }

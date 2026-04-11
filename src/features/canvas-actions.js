@@ -229,6 +229,91 @@ function getRenderedArrowLayerValue(arrow) {
   return getCanvasRenderLayerValue('arrow', arrow?.id);
 }
 
+function getLayerMoveSelectionEntries(kind, id) {
+  const selectedEntries = typeof getSelectedCanvasObjects === 'function' ? getSelectedCanvasObjects() : [];
+  if (selectedEntries.length > 1 && selectedEntries.some(entry => entry.kind === kind && entry.id === id)) {
+    return selectedEntries;
+  }
+  return [makeCanvasOrderEntry(kind, id)];
+}
+
+function canMoveSelectedCanvasLayer(mode, selectionEntries = getSelectedCanvasObjects()) {
+  const selection = (selectionEntries || []).filter(entry => !!getCanvasObjectByEntry(entry));
+  if (!selection.length) return false;
+  const ordered = getCanvasLayerEntries();
+  const selectedKeys = new Set(selection.map(entry => getCanvasObjectKey(entry.kind, entry.id)));
+  if (mode === 'front') return ordered.some(entry => selectedKeys.has(entry.key) && entry.index < ordered.length - 1);
+  if (mode === 'back') return ordered.some(entry => selectedKeys.has(entry.key) && entry.index > 0);
+  if (mode === 'forward') return ordered.some((entry, index) => selectedKeys.has(entry.key) && index < ordered.length - 1 && !selectedKeys.has(ordered[index + 1].key));
+  if (mode === 'backward') return ordered.some((entry, index) => selectedKeys.has(entry.key) && index > 0 && !selectedKeys.has(ordered[index - 1].key));
+  return false;
+}
+
+function moveCanvasLayerEntries(selectionEntries, mode) {
+  normalizeCanvasOrder();
+  const ordered = state.canvasOrder.slice();
+  const selectedKeys = new Set((selectionEntries || []).map(entry => getCanvasObjectKey(entry.kind, entry.id)));
+  if (!selectedKeys.size) return false;
+  if (mode === 'front') {
+    const next = ordered.filter(entry => !selectedKeys.has(getCanvasObjectKey(entry.kind, entry.id)));
+    const moved = ordered.filter(entry => selectedKeys.has(getCanvasObjectKey(entry.kind, entry.id)));
+    state.canvasOrder = [...next, ...moved];
+    syncLegacyLayerValuesFromCanvasOrder();
+    return true;
+  }
+  if (mode === 'back') {
+    const moved = ordered.filter(entry => selectedKeys.has(getCanvasObjectKey(entry.kind, entry.id)));
+    const next = ordered.filter(entry => !selectedKeys.has(getCanvasObjectKey(entry.kind, entry.id)));
+    state.canvasOrder = [...moved, ...next];
+    syncLegacyLayerValuesFromCanvasOrder();
+    return true;
+  }
+  if (mode === 'forward') {
+    let changed = false;
+    for (let i = ordered.length - 2; i >= 0; i -= 1) {
+      const key = getCanvasObjectKey(ordered[i].kind, ordered[i].id);
+      const nextKey = getCanvasObjectKey(ordered[i + 1].kind, ordered[i + 1].id);
+      if (selectedKeys.has(key) && !selectedKeys.has(nextKey)) {
+        [ordered[i], ordered[i + 1]] = [ordered[i + 1], ordered[i]];
+        changed = true;
+      }
+    }
+    if (!changed) return false;
+    state.canvasOrder = ordered;
+    syncLegacyLayerValuesFromCanvasOrder();
+    return true;
+  }
+  if (mode === 'backward') {
+    let changed = false;
+    for (let i = 1; i < ordered.length; i += 1) {
+      const key = getCanvasObjectKey(ordered[i].kind, ordered[i].id);
+      const prevKey = getCanvasObjectKey(ordered[i - 1].kind, ordered[i - 1].id);
+      if (selectedKeys.has(key) && !selectedKeys.has(prevKey)) {
+        [ordered[i - 1], ordered[i]] = [ordered[i], ordered[i - 1]];
+        changed = true;
+      }
+    }
+    if (!changed) return false;
+    state.canvasOrder = ordered;
+    syncLegacyLayerValuesFromCanvasOrder();
+    return true;
+  }
+  return false;
+}
+
+function moveSelectedCanvasLayer(mode, selectionEntries = getSelectedCanvasObjects()) {
+  if (!canMoveSelectedCanvasLayer(mode, selectionEntries)) return false;
+  pushUndo();
+  const moved = moveCanvasLayerEntries(selectionEntries, mode);
+  if (!moved) return false;
+  if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
+  if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
+  if (typeof refreshRenderedAnnotationLayers === 'function') refreshRenderedAnnotationLayers();
+  if (typeof scheduleSelectionChromeRefresh === 'function') scheduleSelectionChromeRefresh();
+  scheduleSaveToLocalStorage();
+  setStatusModeMessage('Layer order updated', { fade: true, autoClearMs: 1500 });
+  return true;
+}
 function getRenderedLabelLayerValue(label) {
   return getCanvasRenderLayerValue('label', label?.id);
 }
@@ -270,15 +355,18 @@ function getArrowLayerPosition(arrowId) {
 }
 
 function canMoveNodeLayer(nodeId, mode) {
-  return canMoveCanvasLayer('node', nodeId, mode);
+  const selection = getLayerMoveSelectionEntries('node', nodeId);
+  return selection.length > 1 ? canMoveSelectedCanvasLayer(mode, selection) : canMoveCanvasLayer('node', nodeId, mode);
 }
 
 function canMoveLabelLayer(labelId, mode) {
-  return canMoveCanvasLayer('label', labelId, mode);
+  const selection = getLayerMoveSelectionEntries('label', labelId);
+  return selection.length > 1 ? canMoveSelectedCanvasLayer(mode, selection) : canMoveCanvasLayer('label', labelId, mode);
 }
 
 function canMoveIconLayer(iconId, mode) {
-  return canMoveCanvasLayer('icon', iconId, mode);
+  const selection = getLayerMoveSelectionEntries('icon', iconId);
+  return selection.length > 1 ? canMoveSelectedCanvasLayer(mode, selection) : canMoveCanvasLayer('icon', iconId, mode);
 }
 
 let _nodeLayerTargetMode = null;
@@ -489,16 +577,18 @@ function applyCanvasLayerTarget(targetKind, targetId) {
 }
 
 function canMoveArrowLayer(arrowId, mode) {
-  return canMoveCanvasLayer('arrow', arrowId, mode);
+  const selection = getLayerMoveSelectionEntries('arrow', arrowId);
+  return selection.length > 1 ? canMoveSelectedCanvasLayer(mode, selection) : canMoveCanvasLayer('arrow', arrowId, mode);
 }
 
 function moveNodeLayer(nodeId, mode) {
   if (_nodeLayerTargetMode && _nodeLayerTargetMode.sourceId === nodeId) cancelNodeLayerTargetMode();
+  const selection = getLayerMoveSelectionEntries('node', nodeId);
+  if (selection.length > 1) return moveSelectedCanvasLayer(mode, selection);
   pushUndo();
   const moved = moveCanvasLayer('node', nodeId, mode);
   if (!moved) return false;
-  selectedNode = nodeId;
-  selectedArrow = null;
+  replaceCanvasSelection([makeCanvasSelectionEntry('node', nodeId)], { kind: 'node', id: nodeId });
   if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
   if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
   if (typeof scheduleSelectionChromeRefresh === 'function') scheduleSelectionChromeRefresh();
@@ -515,11 +605,12 @@ function moveNodeLayer(nodeId, mode) {
 }
 
 function moveArrowLayer(arrowId, mode) {
+  const selection = getLayerMoveSelectionEntries('arrow', arrowId);
+  if (selection.length > 1) return moveSelectedCanvasLayer(mode, selection);
   pushUndo();
   const moved = moveCanvasLayer('arrow', arrowId, mode);
   if (!moved) return false;
-  selectedArrow = arrowId;
-  selectedNode = null;
+  replaceCanvasSelection([makeCanvasSelectionEntry('arrow', arrowId)], { kind: 'arrow', id: arrowId });
   if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
   if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
   if (typeof scheduleSelectionChromeRefresh === 'function') scheduleSelectionChromeRefresh();
@@ -536,13 +627,12 @@ function moveArrowLayer(arrowId, mode) {
 }
 
 function moveLabelLayer(labelId, mode) {
+  const selection = getLayerMoveSelectionEntries('label', labelId);
+  if (selection.length > 1) return moveSelectedCanvasLayer(mode, selection);
   pushUndo();
   const moved = moveCanvasLayer('label', labelId, mode);
   if (!moved) return false;
-  selectedLabel = labelId;
-  selectedNode = null;
-  selectedArrow = null;
-  selectedIcon = null;
+  replaceCanvasSelection([makeCanvasSelectionEntry('label', labelId)], { kind: 'label', id: labelId });
   if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
   if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
   if (typeof refreshRenderedAnnotationLayers === 'function') refreshRenderedAnnotationLayers();
@@ -553,13 +643,12 @@ function moveLabelLayer(labelId, mode) {
 }
 
 function moveIconLayer(iconId, mode) {
+  const selection = getLayerMoveSelectionEntries('icon', iconId);
+  if (selection.length > 1) return moveSelectedCanvasLayer(mode, selection);
   pushUndo();
   const moved = moveCanvasLayer('icon', iconId, mode);
   if (!moved) return false;
-  selectedIcon = iconId;
-  selectedNode = null;
-  selectedArrow = null;
-  selectedLabel = null;
+  replaceCanvasSelection([makeCanvasSelectionEntry('icon', iconId)], { kind: 'icon', id: iconId });
   if (typeof refreshRenderedNodeLayers === 'function') refreshRenderedNodeLayers();
   if (typeof refreshRenderedArrowLayers === 'function') refreshRenderedArrowLayers();
   if (typeof refreshRenderedAnnotationLayers === 'function') refreshRenderedAnnotationLayers();

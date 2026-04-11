@@ -160,6 +160,8 @@ function applyDiagramRecordToCanvas(diagram) {
   selectedArrow = null;
   selectedLabel = null;
   selectedIcon = null;
+  selectedCanvasObjects = [];
+  primarySelectedCanvasObject = null;
   const viewport = normalizeDiagramViewport(diagram?.viewport);
   scale = viewport.scale;
   panX = viewport.panX;

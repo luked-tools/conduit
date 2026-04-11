@@ -94,6 +94,35 @@
   .nm-conn-dir-badge.in { background: var(--accent2-soft); color: var(--accent2); }
   .nm-conn-dir-badge.both { background: var(--accent-soft); color: var(--accent3); }
   .nm-empty { font-size: 12px; color: var(--text3); font-style: italic; padding: 8px 0; }
+  .nm-diagram-summary { margin-top: 12px; }
+  .nm-diagram-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .nm-diagram-card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .nm-diagram-card-meta {
+    font-size: 10px;
+    color: var(--text3);
+    font-family: 'IBM Plex Mono', monospace;
+    margin-bottom: 8px;
+  }
+  .nm-diagram-card-copy {
+    font-size: 11px;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+  .nm-diagram-actions {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+  }
 
   /* Functions tab */
   .nm-fn-row {

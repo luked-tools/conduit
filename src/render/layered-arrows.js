@@ -36,7 +36,7 @@ function ensureArrowObject(arrowId) {
   hit.style.pointerEvents = 'stroke';
   hit.addEventListener('click', e => {
     e.stopPropagation();
-    selectArrow(arrowId);
+    selectArrow(arrowId, { additive: e.shiftKey });
   });
   hit.addEventListener('mouseenter', e => {
     const arrow = getArrowById(arrowId);
@@ -196,7 +196,7 @@ function renderOrthogonalHandles(adornments, arrow, pathResult) {
   });
 }
 
-function updateArrowObject(arrowObject, arrow, { d, p1, p2, pathResult, stroke, accentStroke, isSelected, zIndex, labelX, labelY }) {
+function updateArrowObject(arrowObject, arrow, { d, p1, p2, pathResult, stroke, accentStroke, isSelected, isEditingSelected, zIndex, labelX, labelY }) {
   const { hit, path, adornments } = arrowObject._refs;
   arrowObject.style.zIndex = String(zIndex);
 
@@ -236,8 +236,8 @@ function updateArrowObject(arrowObject, arrow, { d, p1, p2, pathResult, stroke, 
   }
 
   if (arrow.label) renderArrowLabel(adornments, arrowObject, arrow, isSelected, labelX, labelY);
-  if (isSelected) renderArrowSelectionHandles(adornments, arrow, p1, p2);
-  if (isSelected && (arrow.lineStyle || 'curved') === 'orthogonal' && pathResult.hX) {
+  if (isEditingSelected) renderArrowSelectionHandles(adornments, arrow, p1, p2);
+  if (isEditingSelected && (arrow.lineStyle || 'curved') === 'orthogonal' && pathResult.hX) {
     renderOrthogonalHandles(adornments, arrow, pathResult);
   }
 }
@@ -340,7 +340,8 @@ function renderArrows(targetArrowIds = null) {
     const p1 = staggeredPortXY(fromNode, a.fromPos || 'e', a.id, 'from', getArrowEndOffset(a, 'from'));
     const p2 = staggeredPortXY(toNode, a.toPos || 'w', a.id, 'to', getArrowEndOffset(a, 'to'));
 
-    const isSelected = selectedArrow === a.id;
+    const isSelected = isCanvasObjectSelected('arrow', a.id);
+    const isEditingSelected = getCanvasSelectionCount() === 1 && selectedArrow === a.id;
     const accentStroke = accentStrokeFallback;
     const stroke = a.color || defaultArrowStroke;
 
@@ -355,7 +356,8 @@ function renderArrows(targetArrowIds = null) {
       stroke,
       accentStroke,
       isSelected,
-      zIndex: isSelected ? Number(getSelectedArrowLayerZ()) : getRenderedArrowLayerValue(a),
+      isEditingSelected,
+      zIndex: isEditingSelected ? Number(getSelectedArrowLayerZ()) : getRenderedArrowLayerValue(a),
       labelX: _lx + (a.labelOffsetX || 0),
       labelY: _ly + (a.labelOffsetY || 0)
     });
@@ -378,7 +380,7 @@ function refreshRenderedArrowLayers() {
   state.arrows.forEach(arrow => {
     const arrowObject = _arrowObjectRegistry.get(arrow.id);
     if (!arrowObject || !arrowObject.isConnected) return;
-    const isSelected = selectedArrow === arrow.id;
+    const isSelected = getCanvasSelectionCount() === 1 && selectedArrow === arrow.id;
     arrowObject.style.zIndex = String(isSelected ? Number(getSelectedArrowLayerZ()) : getRenderedArrowLayerValue(arrow));
   });
 }

@@ -3,7 +3,7 @@
 function renderNodes() {
   // Remove old node elements (keep svg)
   document.querySelectorAll('.node').forEach(e => e.remove());
-  const selectedArrowObj = selectedArrow ? state.arrows.find(a => a.id === selectedArrow) : null;
+  const selectedArrowObj = getCanvasSelectionCount() === 1 && selectedArrow ? state.arrows.find(a => a.id === selectedArrow) : null;
   getSortedNodeLayerEntries().forEach(entry => {
     const n = entry.node;
     const el = createNodeEl(n, selectedArrowObj);
@@ -36,7 +36,7 @@ function createNodeEl(n, selectedArrowObj = null) {
     const hex = op.toString(16).padStart(2,'0');
     div.style.setProperty('background', n.color + hex);
   }
-  if (selectedNode === n.id) div.classList.add('selected');
+  if (isCanvasObjectSelected('node', n.id)) div.classList.add('selected');
   if (selectedArrowObj && (selectedArrowObj.from === n.id || selectedArrowObj.to === n.id)) {
     div.classList.add('arrow-endpoint');
     const hidePorts = [];
@@ -192,7 +192,7 @@ function createNodeEl(n, selectedArrowObj = null) {
   const rh = document.createElement('div');
   rh.className = 'node-resize';
   rh.addEventListener('mousedown', e => {
-    if (_nodeLayerTargetMode) {
+    if (_nodeLayerTargetMode || _brushActive) {
       e.stopPropagation();
       return;
     }
@@ -204,7 +204,7 @@ function createNodeEl(n, selectedArrowObj = null) {
       const eh = document.createElement('div');
       eh.className = 'node-boundary-edge ' + edge;
       eh.addEventListener('mousedown', e => {
-        if (_nodeLayerTargetMode) {
+        if (_nodeLayerTargetMode || _brushActive) {
           e.stopPropagation();
           return;
         }
@@ -266,6 +266,7 @@ function createNodeEl(n, selectedArrowObj = null) {
 
   div.addEventListener('mousedown', e => {
     if (e.target && e.target.classList && (e.target.classList.contains('conn-point') || e.target.classList.contains('node-resize'))) return;
+    if (e.button !== 0) return;
     if (wireActive) return;
     if (_brushActive) {
       e.stopPropagation();
@@ -282,7 +283,11 @@ function createNodeEl(n, selectedArrowObj = null) {
       if (n.id !== _quickConnectMode.sourceId) applyQuickConnectTarget(n.id);
       return;
     }
-    selectNode(n.id);
+    if (e.shiftKey) {
+      selectNode(n.id, { additive: true });
+      return;
+    }
+    selectNode(n.id, { preserveExisting: true });
     startDrag(e, n.id);
   });
 

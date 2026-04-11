@@ -36,7 +36,7 @@ function scheduleSelectionChromeRefresh() {
   requestAnimationFrame(() => {
     _selectionChromeScheduled = false;
     renderSidebar();
-    if (draggingNode || resizingNode || panDragging) {
+    if (draggingNode || draggingSelection || resizingNode || panDragging || marqueeSelection) {
       _deferredLayersPanelRefresh = true;
       _deferredContextToolbarRefresh = true;
       return;
@@ -174,6 +174,28 @@ function appendPropGroup(host, title) {
   return body;
 }
 
+function getCanvasSelectionDisplayLabel(entry) {
+  if (entry.kind === 'node') {
+    const node = getCanvasObjectByEntry(entry);
+    return node?.type === 'boundary' ? 'boundary' : 'node';
+  }
+  if (entry.kind === 'arrow') return 'connection';
+  if (entry.kind === 'label') return 'label';
+  if (entry.kind === 'icon') return 'icon';
+  return entry.kind || 'item';
+}
+
+function formatCanvasSelectionSummary(entries) {
+  const counts = entries.reduce((acc, entry) => {
+    const label = getCanvasSelectionDisplayLabel(entry);
+    acc[label] = (acc[label] || 0) + 1;
+    return acc;
+  }, {});
+  return `${entries.length} selected — ${['boundary', 'node', 'connection', 'label', 'icon']
+    .filter(label => counts[label])
+    .map(label => `${counts[label]} ${label}${counts[label] === 1 ? '' : 's'}`)
+    .join(', ')}`;
+}
 function makeInlineToggleButton(label, active, onClick, extraStyle = '') {
   const btn = document.createElement('button');
   btn.type = 'button';
@@ -334,11 +356,59 @@ function renderSidebar() {
 function renderPropsPanel() {
   const section = document.getElementById('props-section');
   const body = document.getElementById('props-body');
-  if (!selectedNode && !selectedArrow && !selectedLabel && !selectedIcon) {
+  if (!getCanvasSelectionCount()) {
     body.innerHTML = '<div style="font-size:11px;color:var(--text3);font-style:italic;padding:4px 0 2px;text-align:center;line-height:1.6;">Select a canvas object<br>to view properties</div>';
     return;
   }
   body.innerHTML = '';
+
+  if (hasMultiCanvasSelection()) {
+    const summaryBody = appendPropGroup(body, 'Selection');
+    const arrangeBody = appendPropGroup(body, 'Arrange');
+    const entries = getSelectedCanvasObjects();
+    const hint = document.createElement('div');
+    hint.className = 'prop-hint';
+    hint.textContent = formatCanvasSelectionSummary(entries);
+    summaryBody.appendChild(hint);
+
+    const duplicateBtn = document.createElement('button');
+    duplicateBtn.className = 'prop-btn accent';
+    duplicateBtn.textContent = 'Duplicate selected items';
+    duplicateBtn.addEventListener('click', () => {
+      copySelectedNode();
+      pasteNode();
+    });
+    summaryBody.appendChild(duplicateBtn);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'prop-btn danger';
+    deleteBtn.textContent = 'Delete selected items';
+    deleteBtn.addEventListener('click', () => deleteSelected());
+    summaryBody.appendChild(deleteBtn);
+
+    const copyHint = document.createElement('div');
+    copyHint.className = 'prop-hint';
+    copyHint.textContent = 'Use Shift-click or drag on empty canvas to refine the selection.';
+    summaryBody.appendChild(copyHint);
+
+    const layerHint = document.createElement('div');
+    layerHint.className = 'prop-hint';
+    layerHint.textContent = `Selected block moves together in the shared canvas order.`;
+    arrangeBody.appendChild(layerHint);
+    [
+      ['To front', 'front'],
+      ['Forward', 'forward'],
+      ['Backward', 'backward'],
+      ['To back', 'back']
+    ].forEach(([label, mode]) => {
+      const btn = document.createElement('button');
+      btn.className = 'prop-btn';
+      btn.textContent = label;
+      btn.addEventListener('click', () => moveSelectedCanvasLayer(mode));
+      arrangeBody.appendChild(btn);
+    });
+    return;
+  }
 
   if (selectedNode) {
     const n = state.nodes.find(x => x.id===selectedNode);
@@ -887,7 +957,16 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       }, 'font-style:italic;min-width:32px;'));
       return row;
     });
-    addArrangeGroup(arrangeBody, 'label', label.id);
+      const labelBrushBtn = document.createElement('button');
+      labelBrushBtn.className = 'prop-btn accent brush-btn';
+      if (_brushActive) labelBrushBtn.classList.add('active');
+    labelBrushBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 12l3-3 5.5-5.5a1.5 1.5 0 0 0-2.1-2.1L3 7 2 12z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M9.5 3.5l1 1" stroke="currentColor" stroke-width="1.3"/><circle cx="2.5" cy="11.5" r="1" fill="currentColor" opacity="0.7"/></svg> Style Brush`;
+    labelBrushBtn.addEventListener('click', () => {
+      if (_brushActive) cancelStyleBrush();
+      else startStyleBrush('label', label.id);
+      });
+      appearanceBody.appendChild(labelBrushBtn);
+      addArrangeGroup(arrangeBody, 'label', label.id);
   } else if (selectedIcon) {
     const icon = getIconById(selectedIcon);
     if (!icon) return;
@@ -998,7 +1077,16 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
         return inp;
       });
     }
-    addArrangeGroup(arrangeBody, 'icon', icon.id);
+      const iconBrushBtn = document.createElement('button');
+      iconBrushBtn.className = 'prop-btn accent brush-btn';
+      if (_brushActive) iconBrushBtn.classList.add('active');
+    iconBrushBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 12l3-3 5.5-5.5a1.5 1.5 0 0 0-2.1-2.1L3 7 2 12z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M9.5 3.5l1 1" stroke="currentColor" stroke-width="1.3"/><circle cx="2.5" cy="11.5" r="1" fill="currentColor" opacity="0.7"/></svg> Style Brush`;
+    iconBrushBtn.addEventListener('click', () => {
+      if (_brushActive) cancelStyleBrush();
+      else startStyleBrush('icon', icon.id);
+      });
+      appearanceBody.appendChild(iconBrushBtn);
+      addArrangeGroup(arrangeBody, 'icon', icon.id);
   } else if (selectedArrow) {
     const a = state.arrows.find(x => x.id===selectedArrow);
     if (!a) return;

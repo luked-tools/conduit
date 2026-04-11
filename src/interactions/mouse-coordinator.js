@@ -14,6 +14,69 @@ function getConnectedArrowIds(nodeId) {
     .map(arrow => arrow.id);
 }
 
+function getMarqueeOverlay() {
+  let overlay = document.getElementById('marquee-selection');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'marquee-selection';
+    overlay.className = 'marquee-selection';
+    canvasWrap.appendChild(overlay);
+  }
+  return overlay;
+}
+
+function updateMarqueeOverlay(rect) {
+  const overlay = getMarqueeOverlay();
+  overlay.style.left = `${rect.left}px`;
+  overlay.style.top = `${rect.top}px`;
+  overlay.style.width = `${rect.width}px`;
+  overlay.style.height = `${rect.height}px`;
+  overlay.classList.add('active');
+}
+
+function hideMarqueeOverlay() {
+  const overlay = document.getElementById('marquee-selection');
+  if (!overlay) return;
+  overlay.classList.remove('active');
+}
+
+function getMarqueeRectFromEvent(event) {
+  const wrapRect = canvasWrap.getBoundingClientRect();
+  const startX = marqueeSelection.startClientX - wrapRect.left;
+  const startY = marqueeSelection.startClientY - wrapRect.top;
+  const currentX = event.clientX - wrapRect.left;
+  const currentY = event.clientY - wrapRect.top;
+  const left = Math.min(startX, currentX);
+  const top = Math.min(startY, currentY);
+  const width = Math.abs(currentX - startX);
+  const height = Math.abs(currentY - startY);
+  return { left, top, width, height, right: left + width, bottom: top + height };
+}
+
+function rectsIntersect(a, b) {
+  return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
+}
+
+function collectMarqueeSelectionEntries(rect) {
+  return getCanvasLayerEntries().filter(entry => {
+    let element = null;
+    if (entry.kind === 'node') element = document.getElementById(`node-${entry.id}`);
+    else if (entry.kind === 'label') element = document.getElementById(`label-${entry.id}`);
+    else if (entry.kind === 'icon') element = document.getElementById(`icon-${entry.id}`);
+    else if (entry.kind === 'arrow') element = document.querySelector(`.arrow-object[data-arrow-id="${entry.id}"]`);
+    if (!element) return false;
+    const elRect = element.getBoundingClientRect();
+    const wrapRect = canvasWrap.getBoundingClientRect();
+    const localRect = {
+      left: elRect.left - wrapRect.left,
+      top: elRect.top - wrapRect.top,
+      right: elRect.right - wrapRect.left,
+      bottom: elRect.bottom - wrapRect.top
+    };
+    return rectsIntersect(rect, localRect);
+  }).map(entry => makeCanvasSelectionEntry(entry.kind, entry.id));
+}
+
 document.getElementById('canvas-wrap')?.addEventListener('mousedown', e => {
   const wrap = document.getElementById('canvas-wrap');
   if (!wrap) return;
@@ -27,9 +90,13 @@ document.getElementById('canvas-wrap')?.addEventListener('mousedown', e => {
   }
   if (wireActive) return;
   if (e.target === wrap || e.target.id === 'canvas' || e.target === arrowSVG) {
-    deselect(e);
-    panDragging = true;
-    panStart = { x: e.clientX - panX, y: e.clientY - panY };
+    if (e.button !== 0) return;
+    marqueeSelection = {
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      additive: !!e.shiftKey,
+      active: false
+    };
   }
 });
 
@@ -51,6 +118,41 @@ window.addEventListener('mousemove', e => {
     panX = e.clientX - panStart.x;
     panY = e.clientY - panStart.y;
     applyTransform();
+    if (typeof updateContextToolbar === 'function') updateContextToolbar();
+    return;
+  }
+  if (marqueeSelection) {
+    const rect = getMarqueeRectFromEvent(e);
+    if (!marqueeSelection.active && (rect.width > 4 || rect.height > 4)) marqueeSelection.active = true;
+    if (marqueeSelection.active) updateMarqueeOverlay(rect);
+    return;
+  }
+  if (draggingSelection) {
+    const wrap = document.getElementById('canvas-wrap');
+    if (!wrap) return;
+    const rect = wrap.getBoundingClientRect();
+    const pointerX = (e.clientX - rect.left - panX) / scale;
+    const pointerY = (e.clientY - rect.top - panY) / scale;
+    const dx = Math.round((pointerX - draggingSelection.startPointerX) / 10) * 10;
+    const dy = Math.round((pointerY - draggingSelection.startPointerY) / 10) * 10;
+    const connectedArrowIds = new Set();
+    draggingSelection.entries.forEach(entry => {
+      const object = getCanvasObjectByEntry(entry);
+      if (!object) return;
+      object.x = entry.x + dx;
+      object.y = entry.y + dy;
+      const el = document.getElementById(`${entry.kind}-${entry.id}`);
+      if (el) {
+        el.style.left = `${object.x}px`;
+        el.style.top = `${object.y}px`;
+      }
+      if (entry.kind === 'node') {
+        getConnectedArrowIds(entry.id).forEach(id => connectedArrowIds.add(id));
+      } else if (entry.kind === 'icon' && typeof syncSelectedIconInspector === 'function' && selectedIcon === entry.id) {
+        syncSelectedIconInspector(object);
+      }
+    });
+    if (connectedArrowIds.size) scheduleRenderArrows([...connectedArrowIds]);
     if (typeof updateContextToolbar === 'function') updateContextToolbar();
     return;
   }
@@ -255,12 +357,15 @@ window.addEventListener('mousemove', e => {
 window.addEventListener('mouseup', e => {
   const wasPanning = panDragging;
   panDragging = false;
+  const hadMarqueeSelection = marqueeSelection;
   const wasDragging = draggingNode;
   const wasDraggingAnnotation = draggingAnnotation;
+  const wasDraggingSelection = draggingSelection;
   const wasResizingAnnotation = resizingAnnotation;
   const wasResizing = resizingNode;
   draggingNode = null;
   draggingAnnotation = null;
+  draggingSelection = null;
   resizingAnnotation = null;
   resizingNode = null;
 
@@ -268,9 +373,17 @@ window.addEventListener('mouseup', e => {
     completeEndpointDrag();
   } else if (wireActive) {
     completeWire();
+  } else if (hadMarqueeSelection) {
+    if (hadMarqueeSelection.active) {
+      mergeCanvasSelection(collectMarqueeSelectionEntries(getMarqueeRectFromEvent(e)), { toggle: hadMarqueeSelection.additive });
+    } else if (!hadMarqueeSelection.additive) {
+      deselect();
+    }
+    marqueeSelection = null;
+    hideMarqueeOverlay();
   } else if (wasPanning) {
     scheduleSaveToLocalStorage();
-  } else if (wasDragging || wasDraggingAnnotation || wasResizingAnnotation || wasResizing) {
+  } else if (wasDragging || wasDraggingAnnotation || wasDraggingSelection || wasResizingAnnotation || wasResizing) {
     scheduleSaveToLocalStorage();
   }
   if (typeof flushDeferredChromeRefresh === 'function') flushDeferredChromeRefresh();
