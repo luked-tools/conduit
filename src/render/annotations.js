@@ -80,6 +80,12 @@ function createLabelAnnotationEl(label) {
   el.querySelector('.annotation-label-text').textContent = label.text || 'Label';
   applyLabelAppearance(label, el);
   el.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    if (_brushActive) {
+      e.stopPropagation();
+      applyStyleBrush('label', label.id);
+      return;
+    }
     if (_nodeLayerTargetMode) {
       e.stopPropagation();
       if (!(_nodeLayerTargetMode.sourceKind === 'label' && _nodeLayerTargetMode.sourceId === label.id)) applyCanvasLayerTarget('label', label.id);
@@ -156,6 +162,12 @@ function createIconAnnotationEl(icon) {
   el.innerHTML = '<div class="annotation-icon-glyph"></div><button type="button" class="annotation-icon-resize" aria-label="Resize icon"></button>';
   applyIconAppearance(icon, el);
   el.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    if (_brushActive) {
+      e.stopPropagation();
+      applyStyleBrush('icon', icon.id);
+      return;
+    }
     if (_nodeLayerTargetMode) {
       e.stopPropagation();
       if (!(_nodeLayerTargetMode.sourceKind === 'icon' && _nodeLayerTargetMode.sourceId === icon.id)) applyCanvasLayerTarget('icon', icon.id);

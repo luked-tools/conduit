@@ -196,7 +196,7 @@ function renderOrthogonalHandles(adornments, arrow, pathResult) {
   });
 }
 
-function updateArrowObject(arrowObject, arrow, { d, p1, p2, pathResult, stroke, accentStroke, isSelected, zIndex, labelX, labelY }) {
+function updateArrowObject(arrowObject, arrow, { d, p1, p2, pathResult, stroke, accentStroke, isSelected, isEditingSelected, zIndex, labelX, labelY }) {
   const { hit, path, adornments } = arrowObject._refs;
   arrowObject.style.zIndex = String(zIndex);
 
@@ -236,8 +236,8 @@ function updateArrowObject(arrowObject, arrow, { d, p1, p2, pathResult, stroke, 
   }
 
   if (arrow.label) renderArrowLabel(adornments, arrowObject, arrow, isSelected, labelX, labelY);
-  if (isSelected) renderArrowSelectionHandles(adornments, arrow, p1, p2);
-  if (isSelected && (arrow.lineStyle || 'curved') === 'orthogonal' && pathResult.hX) {
+  if (isEditingSelected) renderArrowSelectionHandles(adornments, arrow, p1, p2);
+  if (isEditingSelected && (arrow.lineStyle || 'curved') === 'orthogonal' && pathResult.hX) {
     renderOrthogonalHandles(adornments, arrow, pathResult);
   }
 }
@@ -355,15 +355,12 @@ function renderArrows(targetArrowIds = null) {
       pathResult,
       stroke,
       accentStroke,
-      isSelected: isEditingSelected,
+      isSelected,
+      isEditingSelected,
       zIndex: isEditingSelected ? Number(getSelectedArrowLayerZ()) : getRenderedArrowLayerValue(a),
       labelX: _lx + (a.labelOffsetX || 0),
       labelY: _ly + (a.labelOffsetY || 0)
     });
-    if (isSelected && !isEditingSelected) {
-      const path = arrowObject._refs?.path;
-      if (path) path.setAttribute('stroke-width', '2');
-    }
     canvas.appendChild(arrowObject);
   });
 

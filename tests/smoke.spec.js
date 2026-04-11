@@ -1054,6 +1054,27 @@ test('selected connection properties are grouped and prioritize route titles ove
     });
   });
 
+  test('marquee-selected boundaries show selected styling and sidebar counts them separately', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'boundary', 860, 580);
+    await addNode(page, 'internal', 1040, 700);
+
+    await marqueeSelect(page, 720, 500, 1220, 860);
+
+    const [boundaryId, nodeId] = await getNodeIds(page);
+    await expect.poll(async () => page.evaluate(({ boundaryId, nodeId }) => ({
+      boundarySelected: document.getElementById(`node-${boundaryId}`)?.classList.contains('selected') || false,
+      nodeSelected: document.getElementById(`node-${nodeId}`)?.classList.contains('selected') || false,
+      boundaryBorder: getComputedStyle(document.getElementById(`node-${boundaryId}`)).borderColor
+    }), { boundaryId, nodeId })).toMatchObject({
+      boundarySelected: true,
+      nodeSelected: true
+    });
+
+    await expect(page.locator('#props-body .prop-group').first()).toContainText('1 boundary, 1 node');
+  });
+
   test('dragging one selected node moves the selected group together', async ({ page }) => {
     await bootFresh(page);
 
@@ -1125,6 +1146,435 @@ test('selected connection properties are grouped and prioritize route titles ove
       nodes: 1,
       labels: 1,
       selected: 0
+    });
+  });
+
+  test('undo after deleting multiple connections persists after reload', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 760, 560);
+    await addNode(page, 'internal', 980, 560);
+    await addNode(page, 'external', 1200, 560);
+    const [firstId, secondId, thirdId] = await getNodeIds(page);
+
+    await dragBetween(page, `#node-${firstId} .conn-point[data-pos="e"]`, `#node-${secondId} .conn-point[data-pos="w"]`);
+    await dragBetween(page, `#node-${secondId} .conn-point[data-pos="e"]`, `#node-${thirdId} .conn-point[data-pos="w"]`);
+
+    const [firstArrowId, secondArrowId] = await page.evaluate(() => state.arrows.map(arrow => arrow.id));
+
+    await page.evaluate(id => selectArrow(id), firstArrowId);
+    await page.keyboard.down('Shift');
+    await page.evaluate(id => selectArrow(id, { additive: true }), secondArrowId);
+    await page.keyboard.up('Shift');
+
+    await page.locator('body').press('Delete');
+    await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(0);
+
+    await page.locator('body').press('Control+z');
+    await expect.poll(async () => page.evaluate(() => state.arrows.map(arrow => arrow.id))).toEqual([firstArrowId, secondArrowId]);
+
+    await page.reload();
+    await expect.poll(async () => page.evaluate(() => state.arrows.map(arrow => arrow.id))).toEqual([firstArrowId, secondArrowId]);
+  });
+
+  test('redo after deleting multiple connections persists after reload', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 760, 560);
+    await addNode(page, 'internal', 980, 560);
+    await addNode(page, 'external', 1200, 560);
+    const [firstId, secondId, thirdId] = await getNodeIds(page);
+
+    await dragBetween(page, `#node-${firstId} .conn-point[data-pos="e"]`, `#node-${secondId} .conn-point[data-pos="w"]`);
+    await dragBetween(page, `#node-${secondId} .conn-point[data-pos="e"]`, `#node-${thirdId} .conn-point[data-pos="w"]`);
+
+    const [firstArrowId, secondArrowId] = await page.evaluate(() => state.arrows.map(arrow => arrow.id));
+
+    await page.evaluate(id => selectArrow(id), firstArrowId);
+    await page.keyboard.down('Shift');
+    await page.evaluate(id => selectArrow(id, { additive: true }), secondArrowId);
+    await page.keyboard.up('Shift');
+
+    await page.locator('body').press('Delete');
+    await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(0);
+
+    await page.locator('body').press('Control+z');
+    await expect.poll(async () => page.evaluate(() => state.arrows.map(arrow => arrow.id))).toEqual([firstArrowId, secondArrowId]);
+
+    await page.locator('body').press('Control+y');
+    await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(0);
+
+    await page.reload();
+    await expect.poll(async () => page.evaluate(() => state.arrows.length)).toBe(0);
+  });
+
+  test('undo and redo restore mixed selection delete', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await page.evaluate(() => {
+      const label = createLabelAnnotationObject(1080, 680);
+      label.text = 'Delete me';
+      state.labels.push(label);
+      appendCanvasOrderEntry('label', label.id);
+      render();
+    });
+    const [nodeId] = await getNodeIds(page);
+    const labelId = await page.evaluate(() => state.labels[0].id);
+
+    await page.locator(`#node-${nodeId}`).click();
+    await page.keyboard.down('Shift');
+    await page.locator(`#label-${labelId}`).click();
+    await page.keyboard.up('Shift');
+
+    await page.locator('body').press('Delete');
+    await expect.poll(async () => page.evaluate(() => ({
+      nodes: state.nodes.length,
+      labels: state.labels.length
+    }))).toEqual({ nodes: 0, labels: 0 });
+
+    await page.locator('body').press('Control+z');
+    await expect.poll(async () => page.evaluate(() => ({
+      nodes: state.nodes.length,
+      labels: state.labels.length
+    }))).toEqual({ nodes: 1, labels: 1 });
+
+    await page.locator('body').press('Control+y');
+    await expect.poll(async () => page.evaluate(() => ({
+      nodes: state.nodes.length,
+      labels: state.labels.length
+    }))).toEqual({ nodes: 0, labels: 0 });
+  });
+
+  test('undo and redo restore node drag positions', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 900, 620);
+    const [nodeId] = await getNodeIds(page);
+    const before = await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      return { x: node.x, y: node.y };
+    }, nodeId);
+
+    await dragBy(page, `#node-${nodeId}`, 80, 50);
+    const moved = await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      return { x: node.x, y: node.y };
+    }, nodeId);
+    expect(moved).not.toEqual(before);
+
+    await page.locator('body').press('Control+z');
+    await expect.poll(async () => page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      return { x: node.x, y: node.y };
+    }, nodeId)).toEqual(before);
+
+    await page.locator('body').press('Control+y');
+    await expect.poll(async () => page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      return { x: node.x, y: node.y };
+    }, nodeId)).toEqual(moved);
+  });
+
+  test('undo and redo restore grouped drag positions', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await addNode(page, 'external', 1120, 700);
+    const [firstId, secondId] = await getNodeIds(page);
+    const before = await page.evaluate(ids => ids.map(id => {
+      const node = state.nodes.find(item => item.id === id);
+      return { id, x: node.x, y: node.y };
+    }), [firstId, secondId]);
+
+    await page.locator(`#node-${firstId}`).click();
+    await page.keyboard.down('Shift');
+    await page.locator(`#node-${secondId}`).click();
+    await page.keyboard.up('Shift');
+    await dragBy(page, `#node-${firstId}`, 90, 40);
+
+    const moved = await page.evaluate(ids => ids.map(id => {
+      const node = state.nodes.find(item => item.id === id);
+      return { id, x: node.x, y: node.y };
+    }), [firstId, secondId]);
+    expect(moved).not.toEqual(before);
+
+    await page.locator('body').press('Control+z');
+    await expect.poll(async () => page.evaluate(ids => ids.map(id => {
+      const node = state.nodes.find(item => item.id === id);
+      return { id, x: node.x, y: node.y };
+    }), [firstId, secondId])).toEqual(before);
+
+    await page.locator('body').press('Control+y');
+    await expect.poll(async () => page.evaluate(ids => ids.map(id => {
+      const node = state.nodes.find(item => item.id === id);
+      return { id, x: node.x, y: node.y };
+    }), [firstId, secondId])).toEqual(moved);
+  });
+
+  test('undo and redo restore icon resize', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      const icon = createIconAnnotationObject(980, 660, {
+        iconKey: 'gear',
+        iconTitle: 'Gear',
+        svgMarkup: getBuiltinIconDefinition('gear').svg
+      });
+      state.icons.push(icon);
+      appendCanvasOrderEntry('icon', icon.id);
+      render();
+      selectIcon(icon.id);
+    });
+
+    const handle = page.locator('.canvas-annotation.annotation-icon .annotation-icon-resize');
+    await page.locator('.canvas-annotation.annotation-icon').hover();
+    await expect(handle).toBeVisible();
+    const box = await handle.boundingBox();
+    expect(box).not.toBeNull();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + 28, box.y + box.height / 2 + 24);
+    await page.mouse.up();
+
+    const resized = await page.evaluate(() => state.icons[0].size);
+    expect(resized).toBeGreaterThan(40);
+
+    await page.locator('body').press('Control+z');
+    await expect.poll(async () => page.evaluate(() => state.icons[0].size)).toBe(40);
+
+    await page.locator('body').press('Control+y');
+    await expect.poll(async () => page.evaluate(() => state.icons[0].size)).toBe(resized);
+  });
+
+  test('undo and redo restore node layer reordering', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 820, 620);
+    await addNode(page, 'external', 940, 680);
+    await addNode(page, 'internal', 1060, 740);
+    const [firstId, secondId, thirdId] = await getNodeIds(page);
+
+    const before = await page.evaluate(ids => ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null), [firstId, secondId, thirdId]);
+    await page.evaluate(id => moveNodeLayer(id, 'front'), firstId);
+    const moved = await page.evaluate(ids => ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null), [firstId, secondId, thirdId]);
+    expect(moved).not.toEqual(before);
+
+    await page.locator('body').press('Control+z');
+    await expect.poll(async () => page.evaluate(ids => ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null), [firstId, secondId, thirdId])).toEqual(before);
+
+    await page.locator('body').press('Control+y');
+    await expect.poll(async () => page.evaluate(ids => ids.map(id => state.nodes.find(node => node.id === id)?.z ?? null), [firstId, secondId, thirdId])).toEqual(moved);
+  });
+
+  test('undo and redo restore grouped layer moves in shared canvas order', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 860, 620);
+    await page.evaluate(() => {
+      const label = createLabelAnnotationObject(1050, 620);
+      label.text = 'Layered label';
+      state.labels.push(label);
+      appendCanvasOrderEntry('label', label.id);
+      const icon = createIconAnnotationObject(1120, 700, {
+        iconKey: 'gear',
+        iconTitle: 'Gear',
+        svgMarkup: getBuiltinIconDefinition('gear').svg
+      });
+      state.icons.push(icon);
+      appendCanvasOrderEntry('icon', icon.id);
+      render();
+    });
+
+    const labelId = await page.evaluate(() => state.labels[0].id);
+    const iconId = await page.evaluate(() => state.icons[0].id);
+    const before = await page.evaluate(() => state.canvasOrder.map(entry => `${entry.kind}:${entry.id}`));
+
+    await page.evaluate(({ labelId, iconId }) => {
+      replaceCanvasSelection([
+        makeCanvasSelectionEntry('label', labelId),
+        makeCanvasSelectionEntry('icon', iconId)
+      ], makeCanvasSelectionEntry('icon', iconId));
+      moveSelectedCanvasLayer('back');
+    }, { labelId, iconId });
+
+    const moved = await page.evaluate(() => state.canvasOrder.map(entry => `${entry.kind}:${entry.id}`));
+    expect(moved).not.toEqual(before);
+
+    await page.locator('body').press('Control+z');
+    await expect.poll(async () => page.evaluate(() => state.canvasOrder.map(entry => `${entry.kind}:${entry.id}`))).toEqual(before);
+
+    await page.locator('body').press('Control+y');
+    await expect.poll(async () => page.evaluate(() => state.canvasOrder.map(entry => `${entry.kind}:${entry.id}`))).toEqual(moved);
+  });
+
+  test('undo and redo restore style brush application', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      addModeAt('internal', 860, 620);
+      const node = state.nodes[0];
+      node.textColor = '#224466';
+      node.color = '#d9ecff';
+      node.colorOpacity = 255;
+
+      const label = createLabelAnnotationObject(1080, 660);
+      label.text = 'Brush label';
+      state.labels.push(label);
+      appendCanvasOrderEntry('label', label.id);
+      render();
+      selectNode(node.id);
+    });
+
+    const labelId = await page.evaluate(() => state.labels[0].id);
+    await page.getByRole('button', { name: 'Style Brush' }).click();
+    await page.locator(`#label-${labelId}`).click();
+
+    await expect.poll(async () => page.evaluate(() => ({
+      textColor: state.labels[0].textColor,
+      backgroundStyle: state.labels[0].backgroundStyle,
+      fillColor: state.labels[0].fillColor
+    }))).toEqual({
+      textColor: '#224466',
+      backgroundStyle: 'fill',
+      fillColor: '#d9ecff'
+    });
+
+    await page.locator('body').press('Control+z');
+    await expect.poll(async () => page.evaluate(() => ({
+      textColor: state.labels[0].textColor || '',
+      backgroundStyle: state.labels[0].backgroundStyle || 'none',
+      fillColor: state.labels[0].fillColor || ''
+    }))).toEqual({
+      textColor: '',
+      backgroundStyle: 'none',
+      fillColor: ''
+    });
+
+    await page.locator('body').press('Control+y');
+    await expect.poll(async () => page.evaluate(() => ({
+      textColor: state.labels[0].textColor,
+      backgroundStyle: state.labels[0].backgroundStyle,
+      fillColor: state.labels[0].fillColor
+    }))).toEqual({
+      textColor: '#224466',
+      backgroundStyle: 'fill',
+      fillColor: '#d9ecff'
+    });
+  });
+
+  test('style brush applies compatible styles from a node to a label and icon', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      addModeAt('internal', 860, 620);
+      const node = state.nodes[0];
+      node.textColor = '#224466';
+      node.color = '#d9ecff';
+      node.colorOpacity = 255;
+
+      const label = createLabelAnnotationObject(1080, 660);
+      label.text = 'Brush label';
+      state.labels.push(label);
+      appendCanvasOrderEntry('label', label.id);
+
+      const icon = createIconAnnotationObject(1160, 720, {
+        iconKey: 'gear',
+        iconTitle: 'Gear',
+        svgMarkup: getBuiltinIconDefinition('gear').svg
+      });
+      state.icons.push(icon);
+      appendCanvasOrderEntry('icon', icon.id);
+      render();
+      selectNode(node.id);
+    });
+
+    await page.getByRole('button', { name: 'Style Brush' }).click();
+    const labelId = await page.evaluate(() => state.labels[0].id);
+    const iconId = await page.evaluate(() => state.icons[0].id);
+    await page.locator(`#label-${labelId}`).click();
+    await page.locator(`#icon-${iconId}`).click();
+
+    await expect.poll(async () => page.evaluate(() => ({
+      label: {
+        textColor: state.labels[0].textColor,
+        backgroundStyle: state.labels[0].backgroundStyle,
+        fillColor: state.labels[0].fillColor
+      },
+      icon: {
+        color: state.icons[0].color,
+        backgroundStyle: state.icons[0].backgroundStyle,
+        fillColor: state.icons[0].fillColor
+      }
+    }))).toEqual({
+      label: {
+        textColor: '#224466',
+        backgroundStyle: 'fill',
+        fillColor: '#d9ecff'
+      },
+      icon: {
+        color: '#224466',
+        backgroundStyle: 'fill',
+        fillColor: '#d9ecff'
+      }
+    });
+  });
+
+  test('style brush can start from an icon and apply compatible styles to a node and label', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      addModeAt('internal', 860, 620);
+      const label = createLabelAnnotationObject(1080, 660);
+      label.text = 'Brush label';
+      state.labels.push(label);
+      appendCanvasOrderEntry('label', label.id);
+
+      const icon = createIconAnnotationObject(980, 700, {
+        iconKey: 'gear',
+        iconTitle: 'Gear',
+        svgMarkup: getBuiltinIconDefinition('gear').svg
+      });
+      icon.color = '#6d2db7';
+      icon.backgroundStyle = 'fill';
+      icon.fillColor = '#efe3ff';
+      icon.opacity = 0.7;
+      state.icons.push(icon);
+      appendCanvasOrderEntry('icon', icon.id);
+      render();
+      selectIcon(icon.id);
+    });
+
+    await page.getByRole('button', { name: 'Style Brush' }).click();
+    const [nodeId] = await getNodeIds(page);
+    const labelId = await page.evaluate(() => state.labels[0].id);
+    await page.locator(`#node-${nodeId}`).click();
+    await page.locator(`#label-${labelId}`).click();
+
+    await expect.poll(async () => page.evaluate(() => ({
+      node: {
+        textColor: state.nodes[0].textColor,
+        color: state.nodes[0].color,
+        colorOpacity: state.nodes[0].colorOpacity
+      },
+      label: {
+        textColor: state.labels[0].textColor,
+        backgroundStyle: state.labels[0].backgroundStyle,
+        fillColor: state.labels[0].fillColor,
+        opacity: state.labels[0].opacity
+      }
+    }))).toEqual({
+      node: {
+        textColor: '#6d2db7',
+        color: '#efe3ff',
+        colorOpacity: 179
+      },
+      label: {
+        textColor: '#6d2db7',
+        backgroundStyle: 'fill',
+        fillColor: '#efe3ff',
+        opacity: 0.7
+      }
     });
   });
 
@@ -1924,6 +2374,31 @@ test('selected connection properties are grouped and prioritize route titles ove
     await expect(page.locator('#node-modal-overlay')).toHaveClass(/open/);
     await expect(page.locator('#nm-title-input')).toBeVisible();
     await expect(page.locator('#nm-panel-overview')).toHaveClass(/active/);
+  });
+
+  test('node detail modal shows linked diagram info in its own tab', async ({ page }) => {
+    await bootFresh(page);
+
+    await addNode(page, 'internal', 900, 640);
+    const [nodeId] = await getNodeIds(page);
+    await page.evaluate(id => {
+      const node = state.nodes.find(item => item.id === id);
+      if (!node) return;
+      node.title = 'Payments service';
+      render();
+      createLinkedDiagramForNode(id);
+      navigateToDiagram(ensureDiagramDocument().rootDiagramId);
+    }, nodeId);
+
+    await page.locator(`#node-${nodeId}`).dblclick();
+    await expect(page.locator('#node-modal-overlay')).toHaveClass(/open/);
+
+    await page.locator('#nm-tabs .nm-tab[data-tab="diagram"]').click();
+
+    await expect(page.locator('#nm-panel-diagram')).toHaveClass(/active/);
+    await expect(page.locator('#nm-panel-diagram')).toContainText('Payments service');
+    await expect(page.locator('#nm-panel-diagram')).toContainText('Linked diagram details');
+    await expect(page.locator('#nm-panel-diagram').getByRole('button', { name: 'Open linked diagram' })).toBeVisible();
   });
 
   test('can quick edit node title and subtitle directly on the canvas', async ({ page }) => {

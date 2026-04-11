@@ -47,6 +47,7 @@ function undo() {
   primarySelectedCanvasObject = null;
   updateHistoryBtns();
   render();
+  saveToLocalStorage();
 }
 
 function redo() {
@@ -63,6 +64,7 @@ function redo() {
   primarySelectedCanvasObject = null;
   updateHistoryBtns();
   render();
+  saveToLocalStorage();
 }
 
 function updateHistoryBtns() {

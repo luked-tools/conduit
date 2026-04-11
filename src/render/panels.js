@@ -174,6 +174,29 @@ function appendPropGroup(host, title) {
   return body;
 }
 
+function getCanvasSelectionDisplayLabel(entry) {
+  if (entry.kind === 'node') {
+    const node = getCanvasObjectByEntry(entry);
+    return node?.type === 'boundary' ? 'boundary' : 'node';
+  }
+  if (entry.kind === 'arrow') return 'connection';
+  if (entry.kind === 'label') return 'label';
+  if (entry.kind === 'icon') return 'icon';
+  return entry.kind || 'item';
+}
+
+function formatCanvasSelectionSummary(entries) {
+  const counts = entries.reduce((acc, entry) => {
+    const label = getCanvasSelectionDisplayLabel(entry);
+    acc[label] = (acc[label] || 0) + 1;
+    return acc;
+  }, {});
+  return `${entries.length} selected — ${['boundary', 'node', 'connection', 'label', 'icon']
+    .filter(label => counts[label])
+    .map(label => `${counts[label]} ${label}${counts[label] === 1 ? '' : 's'}`)
+    .join(', ')}`;
+}
+
 function makeInlineToggleButton(label, active, onClick, extraStyle = '') {
   const btn = document.createElement('button');
   btn.type = 'button';
@@ -344,13 +367,9 @@ function renderPropsPanel() {
     const summaryBody = appendPropGroup(body, 'Selection');
     const arrangeBody = appendPropGroup(body, 'Arrange');
     const entries = getSelectedCanvasObjects();
-    const counts = entries.reduce((acc, entry) => {
-      acc[entry.kind] = (acc[entry.kind] || 0) + 1;
-      return acc;
-    }, {});
     const hint = document.createElement('div');
     hint.className = 'prop-hint';
-    hint.textContent = `${entries.length} selected — ${Object.entries(counts).map(([kind, count]) => `${count} ${kind}${count === 1 ? '' : 's'}`).join(', ')}`;
+    hint.textContent = formatCanvasSelectionSummary(entries);
     summaryBody.appendChild(hint);
 
     const duplicateBtn = document.createElement('button');
@@ -939,6 +958,15 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
       }, 'font-style:italic;min-width:32px;'));
       return row;
     });
+    const labelBrushBtn = document.createElement('button');
+    labelBrushBtn.className = 'prop-btn accent brush-btn';
+    if (_brushActive) labelBrushBtn.classList.add('active');
+    labelBrushBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 12l3-3 5.5-5.5a1.5 1.5 0 0 0-2.1-2.1L3 7 2 12z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M9.5 3.5l1 1" stroke="currentColor" stroke-width="1.3"/><circle cx="2.5" cy="11.5" r="1" fill="currentColor" opacity="0.7"/></svg> Style Brush`;
+    labelBrushBtn.addEventListener('click', () => {
+      if (_brushActive) cancelStyleBrush();
+      else startStyleBrush('label', label.id);
+    });
+    appearanceBody.appendChild(labelBrushBtn);
     addArrangeGroup(arrangeBody, 'label', label.id);
   } else if (selectedIcon) {
     const icon = getIconById(selectedIcon);
@@ -1050,6 +1078,15 @@ connBtn.innerHTML = '<svg width="12" height="12" viewBox="0 0 12 12" fill="none"
         return inp;
       });
     }
+    const iconBrushBtn = document.createElement('button');
+    iconBrushBtn.className = 'prop-btn accent brush-btn';
+    if (_brushActive) iconBrushBtn.classList.add('active');
+    iconBrushBtn.innerHTML = `<svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 12l3-3 5.5-5.5a1.5 1.5 0 0 0-2.1-2.1L3 7 2 12z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M9.5 3.5l1 1" stroke="currentColor" stroke-width="1.3"/><circle cx="2.5" cy="11.5" r="1" fill="currentColor" opacity="0.7"/></svg> Style Brush`;
+    iconBrushBtn.addEventListener('click', () => {
+      if (_brushActive) cancelStyleBrush();
+      else startStyleBrush('icon', icon.id);
+    });
+    appearanceBody.appendChild(iconBrushBtn);
     addArrangeGroup(arrangeBody, 'icon', icon.id);
   } else if (selectedArrow) {
     const a = state.arrows.find(x => x.id===selectedArrow);

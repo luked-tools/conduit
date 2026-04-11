@@ -192,7 +192,7 @@ function createNodeEl(n, selectedArrowObj = null) {
   const rh = document.createElement('div');
   rh.className = 'node-resize';
   rh.addEventListener('mousedown', e => {
-    if (_nodeLayerTargetMode) {
+    if (_nodeLayerTargetMode || _brushActive) {
       e.stopPropagation();
       return;
     }
@@ -204,7 +204,7 @@ function createNodeEl(n, selectedArrowObj = null) {
       const eh = document.createElement('div');
       eh.className = 'node-boundary-edge ' + edge;
       eh.addEventListener('mousedown', e => {
-        if (_nodeLayerTargetMode) {
+        if (_nodeLayerTargetMode || _brushActive) {
           e.stopPropagation();
           return;
         }
@@ -266,6 +266,7 @@ function createNodeEl(n, selectedArrowObj = null) {
 
   div.addEventListener('mousedown', e => {
     if (e.target && e.target.classList && (e.target.classList.contains('conn-point') || e.target.classList.contains('node-resize'))) return;
+    if (e.button !== 0) return;
     if (wireActive) return;
     if (_brushActive) {
       e.stopPropagation();

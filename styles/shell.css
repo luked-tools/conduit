@@ -709,6 +709,11 @@
     box-shadow: none;
     z-index: 1;
   }
+  .node.boundary.selected {
+    border-color: var(--accent);
+    background: color-mix(in srgb, var(--accent-ring) 32%, transparent);
+    box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 5px var(--accent-ring);
+  }
   .node.internal.selected,
   .node.external.selected {
     box-shadow: 0 0 0 1.5px var(--accent), 0 0 0 5px var(--accent-ring), var(--shadow);
