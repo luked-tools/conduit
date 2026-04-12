@@ -546,7 +546,7 @@ ${opts.showGrid ? '<div class="grid-bg"></div>' : ''}
     <div class="legend-item"><svg width="18" height="12" style="flex-shrink:0"><circle cx="9" cy="6" r="3.2" fill="none" stroke="var(--text2)" stroke-width="1.5"/></svg>Icon annotation</div>
     <div class="legend-item"><div class="legend-line" style="background:var(--accent);border-radius:1px;"></div>Connection</div>
   </div>` : ''}
-<footer style="position:fixed;bottom:4px;right:16px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text3);z-index:5;">Conduit v1.4 &middot; Full draft export &middot; ${new Date().toLocaleDateString()}</footer>
+  <footer style="position:fixed;bottom:4px;right:16px;font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text3);z-index:5;">Conduit v1.5 &middot; Full draft export &middot; ${new Date().toLocaleDateString()}</footer>
 </div>
 <scr\u0069pt>
 const _exportDoc = ${exportDocJson};
