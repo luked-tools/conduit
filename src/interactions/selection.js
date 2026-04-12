@@ -52,6 +52,12 @@ function getSelectedCanvasObjectsByKind(kind) {
   return normalizeSelectedCanvasObjects().filter(entry => entry.kind === kind);
 }
 
+function getArrowSelectionIds(entries) {
+  return (entries || [])
+    .filter(entry => entry.kind === 'arrow')
+    .map(entry => entry.id);
+}
+
 function syncLegacySelectionFromPrimary() {
   const primary = getPrimarySelectedCanvasObject();
   selectedNode = primary?.kind === 'node' ? primary.id : null;
@@ -99,18 +105,30 @@ function getSelectedArrowLayerZ() {
   return String(topCanvasLayer + 10);
 }
 
-function refreshCanvasSelectionVisuals(previousArrowId = null) {
+function refreshNodeSelectionVisuals(activeArrowId = null) {
+  const activeArrow = activeArrowId ? state.arrows.find(arrow => arrow.id === activeArrowId) : null;
+  document.querySelectorAll('.node').forEach(nodeEl => {
+    const nodeId = nodeEl.id.replace(/^node-/, '');
+    nodeEl.classList.toggle('selected', isCanvasObjectSelected('node', nodeId));
+    const isArrowEndpoint = !!activeArrow && (activeArrow.from === nodeId || activeArrow.to === nodeId);
+    nodeEl.classList.toggle('arrow-endpoint', isArrowEndpoint);
+    if (isArrowEndpoint) {
+      const hidePorts = [];
+      if (activeArrow.from === nodeId) hidePorts.push(activeArrow.fromPos || 'e');
+      if (activeArrow.to === nodeId) hidePorts.push(activeArrow.toPos || 'w');
+      if (hidePorts.length) nodeEl.dataset.hidePorts = hidePorts.join(' ');
+      else nodeEl.removeAttribute('data-hide-ports');
+    } else {
+      nodeEl.removeAttribute('data-hide-ports');
+    }
+  });
+}
+
+function refreshCanvasSelectionVisuals({ previousArrowId = null, previousEntries = [], deferChrome = false, deferArrowRefresh = false } = {}) {
   syncLegacySelectionFromPrimary();
   const activeArrowId = getCanvasSelectionCount() === 1 && selectedArrow ? selectedArrow : null;
   arrowSVG.style.zIndex = activeArrowId ? getSelectedArrowLayerZ() : String(getArrowRenderBaseZ());
-  if (previousArrowId !== activeArrowId) {
-    renderNodes();
-  } else {
-    document.querySelectorAll('.node').forEach(nodeEl => {
-      const nodeId = nodeEl.id.replace(/^node-/, '');
-      nodeEl.classList.toggle('selected', isCanvasObjectSelected('node', nodeId));
-    });
-  }
+  refreshNodeSelectionVisuals(activeArrowId);
   document.querySelectorAll('.canvas-annotation.annotation-label').forEach(el => {
     const labelId = el.id.replace(/^label-/, '');
     el.classList.toggle('selected', isCanvasObjectSelected('label', labelId));
@@ -119,14 +137,33 @@ function refreshCanvasSelectionVisuals(previousArrowId = null) {
     const iconId = el.id.replace(/^icon-/, '');
     el.classList.toggle('selected', isCanvasObjectSelected('icon', iconId));
   });
-  renderArrows();
-  renderSidebar();
-  if (typeof renderContextToolbar === 'function') renderContextToolbar();
-  if (typeof renderLayersPanel === 'function' && typeof _layersPanelOpen !== 'undefined' && _layersPanelOpen) renderLayersPanel();
+
+  const arrowIdsToRefresh = new Set([
+    ...getArrowSelectionIds(previousEntries),
+    ...getArrowSelectionIds(getSelectedCanvasObjects())
+  ]);
+  if (previousArrowId) arrowIdsToRefresh.add(previousArrowId);
+  if (activeArrowId) arrowIdsToRefresh.add(activeArrowId);
+  if (arrowIdsToRefresh.size) {
+    if (deferArrowRefresh && typeof scheduleRenderArrows === 'function') scheduleRenderArrows([...arrowIdsToRefresh]);
+    else renderArrows([...arrowIdsToRefresh]);
+  } else if (previousArrowId || activeArrowId) {
+    if (deferArrowRefresh && typeof scheduleRenderArrows === 'function') scheduleRenderArrows();
+    else renderArrows();
+  }
+
+  if (deferChrome) {
+    if (typeof scheduleSelectionChromeRefresh === 'function') scheduleSelectionChromeRefresh();
+  } else {
+    renderSidebar();
+    if (typeof renderContextToolbar === 'function') renderContextToolbar();
+    if (typeof renderLayersPanel === 'function' && typeof _layersPanelOpen !== 'undefined' && _layersPanelOpen) renderLayersPanel();
+  }
 }
 
-function applyCanvasSelection(entries, primaryEntry = null) {
+function applyCanvasSelection(entries, primaryEntry = null, { deferChrome = false, deferArrowRefresh = false } = {}) {
   const previousArrowId = selectedArrow;
+  const previousEntries = getSelectedCanvasObjects();
   selectedCanvasObjects = (entries || []).map(entry => makeCanvasSelectionEntry(entry.kind, entry.id));
   primarySelectedCanvasObject = primaryEntry ? makeCanvasSelectionEntry(primaryEntry.kind, primaryEntry.id) : (selectedCanvasObjects[selectedCanvasObjects.length - 1] || null);
   normalizeSelectedCanvasObjects();
@@ -139,16 +176,16 @@ function applyCanvasSelection(entries, primaryEntry = null) {
       else if (_apNodeId !== primary.id) openAppearancePanel(primary.id);
     }
   }
-  refreshCanvasSelectionVisuals(previousArrowId);
+  refreshCanvasSelectionVisuals({ previousArrowId, previousEntries, deferChrome, deferArrowRefresh });
 }
 
-function replaceCanvasSelection(entries, primaryEntry = null) {
+function replaceCanvasSelection(entries, primaryEntry = null, options = {}) {
   if (_quickConnectMode) {
     const primary = primaryEntry || entries?.[entries.length - 1];
     if (!primary || primary.kind !== 'node' || _quickConnectMode.sourceId !== primary.id) cancelQuickConnectMode();
   }
   if (typeof _contextToolbarMenuOpen !== 'undefined') _contextToolbarMenuOpen = false;
-  applyCanvasSelection(entries, primaryEntry);
+  applyCanvasSelection(entries, primaryEntry, options);
 }
 
 function toggleCanvasSelection(kind, id) {
@@ -176,10 +213,10 @@ function isSingleSelectedCanvasObject(kind, id) {
   return getCanvasSelectionCount() === 1 && isCanvasObjectSelected(kind, id);
 }
 
-function mergeCanvasSelection(entries, { toggle = false } = {}) {
+function mergeCanvasSelection(entries, { toggle = false, deferChrome = false } = {}) {
   const current = getSelectedCanvasObjects();
   if (!toggle) {
-    replaceCanvasSelection(entries, entries[entries.length - 1] || null);
+    replaceCanvasSelection(entries, entries[entries.length - 1] || null, { deferChrome, deferArrowRefresh: deferChrome });
     return;
   }
   const map = new Map(current.map(entry => [getCanvasSelectionKey(entry.kind, entry.id), entry]));
@@ -189,7 +226,7 @@ function mergeCanvasSelection(entries, { toggle = false } = {}) {
     else map.set(key, makeCanvasSelectionEntry(entry.kind, entry.id));
   });
   const next = [...map.values()];
-  replaceCanvasSelection(next, next[next.length - 1] || null);
+  replaceCanvasSelection(next, next[next.length - 1] || null, { deferChrome, deferArrowRefresh: deferChrome });
 }
 
 function selectNode(id, options = {}) {

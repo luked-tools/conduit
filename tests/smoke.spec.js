@@ -1075,6 +1075,43 @@ test('selected connection properties are grouped and prioritize route titles ove
     await expect(page.locator('#props-body .prop-group').first()).toContainText('1 boundary, 1 node');
   });
 
+  test('connection marquee ignores single-point crossing overlap', async ({ page }) => {
+    await bootFresh(page);
+
+    await page.evaluate(() => {
+      state.nodes = [
+        { id: 'cross-a1', type: 'internal', tag: 'A1', title: 'A1', subtitle: '', x: 760, y: 520, w: 180, h: 90, color: '', textColor: '', subtitleColor: '', functions: [] },
+        { id: 'cross-a2', type: 'internal', tag: 'A2', title: 'A2', subtitle: '', x: 1120, y: 760, w: 180, h: 90, color: '', textColor: '', subtitleColor: '', functions: [] },
+        { id: 'cross-b1', type: 'internal', tag: 'B1', title: 'B1', subtitle: '', x: 1120, y: 520, w: 180, h: 90, color: '', textColor: '', subtitleColor: '', functions: [] },
+        { id: 'cross-b2', type: 'internal', tag: 'B2', title: 'B2', subtitle: '', x: 760, y: 760, w: 180, h: 90, color: '', textColor: '', subtitleColor: '', functions: [] }
+      ];
+      state.arrows = [
+        { id: 'cross-arrow-1', from: 'cross-a1', to: 'cross-a2', fromPos: 'e', toPos: 'w', direction: 'directed', label: '', color: '', dash: false, bend: 0, lineStyle: 'straight' },
+        { id: 'cross-arrow-2', from: 'cross-b1', to: 'cross-b2', fromPos: 'w', toPos: 'e', direction: 'directed', label: '', color: '', dash: false, bend: 0, lineStyle: 'straight' }
+      ];
+      state.labels = [];
+      state.icons = [];
+      rebuildCanvasOrderFromLegacyLayers();
+      selectedCanvasObjects = [];
+      primarySelectedCanvasObject = null;
+      selectedNode = null;
+      selectedArrow = null;
+      render();
+    });
+
+    await marqueeSelect(page, 1010, 640, 1050, 680);
+
+    await expect.poll(async () => page.evaluate(() => ({
+      selectedCount: selectedCanvasObjects.length,
+      selectedKinds: selectedCanvasObjects.map(entry => entry.kind),
+      allArrows: selectedCanvasObjects.every(entry => entry.kind === 'arrow')
+    }))).toEqual({
+      selectedCount: 1,
+      selectedKinds: ['arrow'],
+      allArrows: true
+    });
+  });
+
   test('dragging one selected node moves the selected group together', async ({ page }) => {
     await bootFresh(page);
 
