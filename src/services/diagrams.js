@@ -241,7 +241,7 @@ function getDiagramCanvasStats(diagram) {
 
 function getDiagramSummaryMeta(diagram) {
   const { nodeCount, arrowCount } = getDiagramCanvasStats(diagram);
-  return `${nodeCount} items &middot; ${arrowCount} connections &middot; ${formatDiagramRelationshipMeta(diagram.id)}`;
+  return `${nodeCount} items · ${arrowCount} connections · ${formatDiagramRelationshipMeta(diagram.id)}`;
 }
 
 function navigateToDiagram(diagramId, { pushHistory = true } = {}) {
