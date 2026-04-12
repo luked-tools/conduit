@@ -57,23 +57,122 @@ function rectsIntersect(a, b) {
   return !(a.right < b.left || a.left > b.right || a.bottom < b.top || a.top > b.bottom);
 }
 
+function isPointInsideRect(rect, x, y) {
+  return x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+function getMarqueeElementForEntry(entry) {
+  if (entry.kind === 'node') return document.getElementById(`node-${entry.id}`);
+  if (entry.kind === 'label') return document.getElementById(`label-${entry.id}`);
+  if (entry.kind === 'icon') return document.getElementById(`icon-${entry.id}`);
+  if (entry.kind === 'arrow') {
+    const arrowObject = typeof _arrowObjectRegistry !== 'undefined' ? _arrowObjectRegistry.get(entry.id) : null;
+    return arrowObject?._refs?.path || document.querySelector(`.arrow-object[data-arrow-id="${entry.id}"] .arrow-path`);
+  }
+  return null;
+}
+
+function getLocalRectForElement(element) {
+  if (!element || !canvasWrap) return null;
+  const wrapRect = canvasWrap.getBoundingClientRect();
+
+  if (typeof SVGGraphicsElement !== 'undefined' && element instanceof SVGGraphicsElement && typeof element.getBBox === 'function') {
+    try {
+      const bbox = element.getBBox();
+      const matrix = typeof element.getScreenCTM === 'function' ? element.getScreenCTM() : null;
+      if (matrix && Number.isFinite(bbox.x) && Number.isFinite(bbox.y) && Number.isFinite(bbox.width) && Number.isFinite(bbox.height)) {
+        const points = [
+          new DOMPoint(bbox.x, bbox.y),
+          new DOMPoint(bbox.x + bbox.width, bbox.y),
+          new DOMPoint(bbox.x, bbox.y + bbox.height),
+          new DOMPoint(bbox.x + bbox.width, bbox.y + bbox.height)
+        ].map(point => point.matrixTransform(matrix));
+        const xs = points.map(point => point.x);
+        const ys = points.map(point => point.y);
+        return {
+          left: Math.min(...xs) - wrapRect.left,
+          top: Math.min(...ys) - wrapRect.top,
+          right: Math.max(...xs) - wrapRect.left,
+          bottom: Math.max(...ys) - wrapRect.top
+        };
+      }
+    } catch (e) {
+      // Fall back to DOM bounds if the SVG geometry box is unavailable.
+    }
+  }
+
+  const elRect = element.getBoundingClientRect();
+  return {
+    left: elRect.left - wrapRect.left,
+    top: elRect.top - wrapRect.top,
+    right: elRect.right - wrapRect.left,
+    bottom: elRect.bottom - wrapRect.top
+  };
+}
+
+function doesArrowPathMeaningfullyIntersectRect(path, rect) {
+  if (!path || !canvasWrap || typeof path.getTotalLength !== 'function') return false;
+  const wrapRect = canvasWrap.getBoundingClientRect();
+  const matrix = typeof path.getScreenCTM === 'function' ? path.getScreenCTM() : null;
+  if (!matrix) return false;
+
+  let totalLength = 0;
+  try {
+    totalLength = path.getTotalLength();
+  } catch (e) {
+    return false;
+  }
+  if (!Number.isFinite(totalLength) || totalLength <= 0) return false;
+
+  const sampleStep = 4;
+  const samples = Math.max(2, Math.ceil(totalLength / sampleStep));
+  let previousLocalPoint = null;
+  let previousInside = false;
+  let currentInsideRun = 0;
+  let longestInsideRun = 0;
+  let totalInsideLength = 0;
+
+  for (let index = 0; index <= samples; index += 1) {
+    const length = totalLength * (index / samples);
+    const point = path.getPointAtLength(length);
+    const screenPoint = new DOMPoint(point.x, point.y).matrixTransform(matrix);
+    const localPoint = {
+      x: screenPoint.x - wrapRect.left,
+      y: screenPoint.y - wrapRect.top
+    };
+    const inside = isPointInsideRect(rect, localPoint.x, localPoint.y);
+
+    if (previousLocalPoint) {
+      const segmentLength = Math.hypot(localPoint.x - previousLocalPoint.x, localPoint.y - previousLocalPoint.y);
+      if (inside && previousInside) {
+        currentInsideRun += segmentLength;
+        totalInsideLength += segmentLength;
+      } else if (inside) {
+        currentInsideRun = segmentLength;
+        totalInsideLength += segmentLength;
+      } else {
+        currentInsideRun = 0;
+      }
+      if (currentInsideRun > longestInsideRun) longestInsideRun = currentInsideRun;
+    }
+
+    previousLocalPoint = localPoint;
+    previousInside = inside;
+  }
+
+  return longestInsideRun >= 10 || totalInsideLength >= 14;
+}
+
 function collectMarqueeSelectionEntries(rect) {
   return getCanvasLayerEntries().filter(entry => {
-    let element = null;
-    if (entry.kind === 'node') element = document.getElementById(`node-${entry.id}`);
-    else if (entry.kind === 'label') element = document.getElementById(`label-${entry.id}`);
-    else if (entry.kind === 'icon') element = document.getElementById(`icon-${entry.id}`);
-    else if (entry.kind === 'arrow') element = document.querySelector(`.arrow-object[data-arrow-id="${entry.id}"]`);
+    const element = getMarqueeElementForEntry(entry);
     if (!element) return false;
-    const elRect = element.getBoundingClientRect();
-    const wrapRect = canvasWrap.getBoundingClientRect();
-    const localRect = {
-      left: elRect.left - wrapRect.left,
-      top: elRect.top - wrapRect.top,
-      right: elRect.right - wrapRect.left,
-      bottom: elRect.bottom - wrapRect.top
-    };
-    return rectsIntersect(rect, localRect);
+    const localRect = getLocalRectForElement(element);
+    if (!localRect || !rectsIntersect(rect, localRect)) return false;
+    if (entry.kind === 'arrow') {
+      return doesArrowPathMeaningfullyIntersectRect(element, rect);
+    }
+    return true;
   }).map(entry => makeCanvasSelectionEntry(entry.kind, entry.id));
 }
 
@@ -375,7 +474,7 @@ window.addEventListener('mouseup', e => {
     completeWire();
   } else if (hadMarqueeSelection) {
     if (hadMarqueeSelection.active) {
-      mergeCanvasSelection(collectMarqueeSelectionEntries(getMarqueeRectFromEvent(e)), { toggle: hadMarqueeSelection.additive });
+      mergeCanvasSelection(collectMarqueeSelectionEntries(getMarqueeRectFromEvent(e)), { toggle: hadMarqueeSelection.additive, deferChrome: true });
     } else if (!hadMarqueeSelection.additive) {
       deselect();
     }
